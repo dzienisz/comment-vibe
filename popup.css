@@ -1,0 +1,91 @@
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  width: 300px;
+  background: #fff;
+  color: #111827;
+}
+
+.wrap {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* ── Header ── */
+.header { display: flex; align-items: center; gap: 10px; }
+.header-icon { font-size: 28px; line-height: 1; }
+.header-text h1 { font-size: 16px; font-weight: 700; }
+.header-text p  { font-size: 11px; color: #6b7280; margin-top: 1px; }
+
+/* ── Status pill ── */
+.status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 500;
+}
+.status-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.status--checking { background: #f3f4f6; color: #374151; }
+.status--checking .status-dot { background: #f59e0b; animation: pulse 1s infinite; }
+.status--ok  { background: #f0fdf4; color: #15803d; }
+.status--ok  .status-dot { background: #22c55e; }
+.status--err { background: #fef2f2; color: #b91c1c; }
+.status--err .status-dot { background: #ef4444; }
+
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.25; } }
+
+/* ── Info blurb ── */
+.info { font-size: 12px; color: #6b7280; line-height: 1.6; }
+
+/* ── Setup instructions (shown only when AI unavailable) ── */
+.setup {
+  display: none;
+  background: #fffbeb;
+  border: 1px solid #fcd34d;
+  border-radius: 10px;
+  padding: 12px;
+  font-size: 12px;
+  color: #78350f;
+  line-height: 1.65;
+}
+.setup strong { display: block; font-size: 13px; margin-bottom: 6px; }
+.setup ol { padding-left: 18px; }
+.setup code {
+  background: rgba(0,0,0,0.07);
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-family: ui-monospace, monospace;
+  font-size: 11px;
+}
+.setup.visible { display: block; }
+
+/* ── Sentiment legend ── */
+.legend { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid transparent;
+}
+.pill--positive { background: #dcfce7; color: #15803d; border-color: #86efac; }
+.pill--neutral  { background: #fef3c7; color: #92400e; border-color: #fcd34d; }
+.pill--negative { background: #fee2e2; color: #b91c1c; border-color: #fca5a5; }
+.pill--toxic    { background: #f3e8ff; color: #6d28d9; border-color: #c4b5fd; }
+
+/* ── Footer ── */
+.footer { font-size: 10px; color: #d1d5db; text-align: center; }

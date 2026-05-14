@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Comment Vibe</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="wrap">
+
+    <div class="header">
+      <div class="header-icon">💬</div>
+      <div class="header-text">
+        <h1>Comment Vibe</h1>
+        <p>Write kinder, more constructive comments</p>
+      </div>
+    </div>
+
+    <div id="status" class="status status--checking">
+      <span class="status-dot"></span>
+      <span id="status-text">Checking Chrome AI…</span>
+    </div>
+
+    <div class="info">
+      Comment Vibe uses <strong>Chrome's built-in AI</strong> (Gemini Nano) to analyse
+      the tone of your comments in real time — completely on-device, no data sent anywhere.
+    </div>
+
+    <div id="setup" class="setup">
+      <strong>⚠️ Chrome AI not available</strong>
+      <p>To enable it:</p>
+      <ol>
+        <li>Open <code>chrome://flags</code></li>
+        <li>Search for <em>"Prompt API"</em></li>
+        <li>Set it to <strong>Enabled</strong></li>
+        <li>Relaunch Chrome</li>
+        <li>Visit <code>chrome://components</code> and update <em>Optimization Guide On Device Model</em></li>
+      </ol>
+    </div>
+
+    <div class="legend">
+      <span class="pill pill--positive">😊 Positive</span>
+      <span class="pill pill--neutral">😐 Neutral</span>
+      <span class="pill pill--negative">😕 Negative</span>
+      <span class="pill pill--toxic">🚫 Toxic</span>
+    </div>
+
+    <div class="footer">Works on LinkedIn · Twitter/X · YouTube · and more</div>
+
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>

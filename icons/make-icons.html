@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Generate Comment Vibe Icons</title>
+  <style>
+    body { font-family: system-ui, sans-serif; padding: 24px; background: #f9fafb; }
+    h2 { margin: 0 0 16px; }
+    .previews { display: flex; gap: 24px; align-items: flex-end; margin-bottom: 24px; }
+    .preview { text-align: center; }
+    .preview span { display: block; font-size: 12px; color: #6b7280; margin-top: 6px; }
+    button {
+      background: #4f46e5; color: #fff; border: none; border-radius: 8px;
+      padding: 10px 20px; font-size: 14px; cursor: pointer;
+    }
+    button:hover { background: #4338ca; }
+  </style>
+</head>
+<body>
+  <h2>Comment Vibe — Icon Generator</h2>
+  <div class="previews" id="previews"></div>
+  <button onclick="downloadAll()">⬇️ Download all icons</button>
+
+  <script>
+    function drawIcon(size) {
+      const canvas = document.createElement('canvas');
+      canvas.width  = size;
+      canvas.height = size;
+      const ctx = canvas.getContext('2d');
+      const s = size;
+
+      // Rounded background
+      const grad = ctx.createLinearGradient(0, 0, s, s);
+      grad.addColorStop(0, '#4f46e5');
+      grad.addColorStop(1, '#7c3aed');
+      ctx.beginPath();
+      ctx.roundRect(0, 0, s, s, s * 0.18);
+      ctx.fillStyle = grad;
+      ctx.fill();
+
+      // Speech bubble body
+      const bx = s * 0.13, by = s * 0.13;
+      const bw = s * 0.74, bh = s * 0.54;
+      const br = s * 0.10;
+      ctx.beginPath();
+      ctx.roundRect(bx, by, bw, bh, br);
+      ctx.fillStyle = 'rgba(255,255,255,0.95)';
+      ctx.fill();
+
+      // Bubble tail
+      ctx.beginPath();
+      ctx.moveTo(s * 0.22, by + bh);
+      ctx.lineTo(s * 0.16, by + bh + s * 0.17);
+      ctx.lineTo(s * 0.36, by + bh);
+      ctx.fillStyle = 'rgba(255,255,255,0.95)';
+      ctx.fill();
+
+      // Three sentiment dots
+      if (size >= 48) {
+        const dotY  = by + bh * 0.52;
+        const dotR  = s * 0.064;
+        const dots  = [
+          { x: s * 0.32, color: '#22c55e' },
+          { x: s * 0.50, color: '#f59e0b' },
+          { x: s * 0.68, color: '#ef4444' },
+        ];
+        dots.forEach(d => {
+          ctx.beginPath();
+          ctx.arc(d.x, dotY, dotR, 0, Math.PI * 2);
+          ctx.fillStyle = d.color;
+          ctx.fill();
+        });
+      } else {
+        // 16px: single dot only
+        ctx.beginPath();
+        ctx.arc(s * 0.50, by + bh * 0.52, s * 0.14, 0, Math.PI * 2);
+        ctx.fillStyle = '#4f46e5';
+        ctx.fill();
+      }
+
+      return canvas;
+    }
+
+    const sizes = [16, 48, 128];
+    const previews = document.getElementById('previews');
+
+    sizes.forEach(size => {
+      const canvas = drawIcon(size);
+      const wrap = document.createElement('div');
+      wrap.className = 'preview';
+      const label = document.createElement('span');
+      label.textContent = `${size}×${size}`;
+      wrap.appendChild(canvas);
+      wrap.appendChild(label);
+      previews.appendChild(wrap);
+    });
+
+    function downloadAll() {
+      sizes.forEach(size => {
+        const canvas = drawIcon(size);
+        const a = document.createElement('a');
+        a.download = `icon${size}.png`;
+        a.href = canvas.toDataURL('image/png');
+        a.click();
+      });
+    }
+  </script>
+</body>
+</html>
