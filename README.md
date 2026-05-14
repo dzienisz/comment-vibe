@@ -83,6 +83,27 @@ Click the Comment Vibe icon in the Chrome toolbar. The popup should show **Chrom
 
 ---
 
+## Roadmap
+
+### Near-term
+- [ ] **Rewriter API** — swap the raw Prompt rewrite for Chrome's dedicated Rewriter API, purpose-built for this and likely better quality
+- [ ] **Proofreader API** — layer grammar and spelling fixes on top of tone analysis
+- [ ] **Streaming** — switch to `promptStreaming()` so the badge updates as the model responds instead of waiting for the full result
+- [ ] **Keyboard shortcut** — manually trigger analysis instead of waiting for the debounce
+
+### Medium-term
+- [ ] **Language Detector + Translator API** — detect the comment's language and show the badge and suggestion in the user's own language, not just English
+- [ ] **Context-aware analysis** — read the post being replied to and factor it into the tone judgement ("measured reply to an aggressive post" vs "unprovoked attack")
+- [ ] **Personal vibe stats** — popup dashboard showing positive/neutral/negative breakdown over 7 and 30 days, stored locally via `chrome.storage`
+- [ ] **Platform tone calibration** — stricter system prompt on LinkedIn, more relaxed on Reddit, different norms per domain
+
+### Longer-term
+- [ ] **Summarizer API** — summarise a long comment thread before the user replies so the suggestion accounts for the full context
+- [ ] **Proactive coaching** — suggest how to phrase something before you start typing, based on the post topic and thread mood (Summarizer + Prompt working together)
+- [ ] **Multimodal** — once the Prompt API image/audio input stabilises: analyse screenshots pasted into comments, or audio in voice-to-text boxes
+
+---
+
 ## Development
 
 ### Load the extension locally
