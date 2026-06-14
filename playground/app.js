@@ -18,15 +18,32 @@ function el(tag, props = {}, children = []) {
   return node;
 }
 
+// ── Logi w konsoli ────────────────────────────────────────────────────────────
+// DevTools nie ma panelu „które API AI wywołano", a Network jest puste (model
+// liczy lokalnie). Dlatego logujemy każde wywołanie sami — wygodne do debugowania
+// i pod demo na żywo. Filtruj w konsoli po „[Built-in AI]".
+
+const LOG_BADGE = 'background:#3b6ef5;color:#fff;padding:1px 6px;border-radius:4px;font-weight:700';
+
+function aiLog(msg, extra) {
+  if (extra !== undefined) console.log('%c[Built-in AI]%c ' + msg, LOG_BADGE, 'color:#3b6ef5', extra);
+  else console.log('%c[Built-in AI]%c ' + msg, LOG_BADGE, 'color:#3b6ef5');
+}
+
 // ── Live availability ─────────────────────────────────────────────────────────
 
 async function checkApi(api) {
   const ctor = window[api.globalName];
-  if (!ctor || typeof ctor.availability !== 'function') return 'no-api';
+  if (!ctor || typeof ctor.availability !== 'function') {
+    aiLog(`${api.globalName}: brak tego API w przeglądarce`);
+    return 'no-api';
+  }
   try {
-    return await ctor.availability(api.availabilityOptions || undefined);
+    const state = await ctor.availability(api.availabilityOptions || undefined);
+    aiLog(`${api.globalName}.availability() → ${state}`);
+    return state;
   } catch (e) {
-    console.warn(`[playground] availability() rzuciło wyjątek dla ${api.name}:`, e);
+    console.warn(`[Built-in AI] ${api.globalName}.availability() rzuciło wyjątek:`, e);
     return 'error';
   }
 }
@@ -244,12 +261,17 @@ function buildDemo(api) {
     bar.style.display = 'none';
     bar.querySelector('.progress-fill').style.width = '0%';
 
+    console.group(`%c Built-in AI %c ${api.name} · ${api.globalName}`, LOG_BADGE, 'color:#3b6ef5;font-weight:600');
+    aiLog('wywołuję demo — dane wejściowe:', values);
+
     const report = {
-      status: msg => { status.textContent = msg; },
+      status: msg => { status.textContent = msg; aiLog(msg); },
       progress: frac => {
+        const pct = Math.round(frac * 100);
         bar.style.display = 'block';
-        bar.querySelector('.progress-fill').style.width = `${Math.round(frac * 100)}%`;
-        status.textContent = `Pobieram model… ${Math.round(frac * 100)}%`;
+        bar.querySelector('.progress-fill').style.width = `${pct}%`;
+        status.textContent = `Pobieram model… ${pct}%`;
+        aiLog(`pobieranie modelu: ${pct}%`);
       },
     };
 
@@ -260,6 +282,7 @@ function buildDemo(api) {
       status.textContent = `Gotowe w ${ms} ms`;
       bar.style.display = 'none';
       output.textContent = out;
+      aiLog(`✅ gotowe w ${ms} ms — wynik:`, out);
     } catch (e) {
       bar.style.display = 'none';
       status.textContent = '';
@@ -270,9 +293,11 @@ function buildDemo(api) {
         `• Model nie został jeszcze pobrany — uruchom ponownie\n` +
         `• Strona nie jest w bezpiecznym kontekście (użyj http://localhost)`;
       setTimeout(() => output.classList.remove('error'), 4000);
-      console.error(`[playground] demo „${api.name}" rzuciło:`, e);
+      aiLog(`❌ błąd: ${e?.message || e}`);
+      console.error('[Built-in AI] pełny błąd:', e);
     } finally {
       runBtn.disabled = false;
+      console.groupEnd();
     }
   }});
 
@@ -319,3 +344,6 @@ function route() {
 buildSidebar();
 window.addEventListener('hashchange', route);
 route();
+
+aiLog('Otwórz DevTools → Console. Każde wywołanie API loguje się tutaj. ' +
+  'Inferencja jest w 100% lokalna — w zakładce Network nie zobaczysz żądań do modelu.');
