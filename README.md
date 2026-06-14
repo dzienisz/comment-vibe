@@ -23,27 +23,29 @@ All analysis runs locally using Chrome's on-device Gemini Nano model. Your comme
 
 ## Chrome AI availability — what you need to know
 
-> **TL;DR — as of mid-2025 this extension requires manual setup. No-flag support is coming in Chrome 148+.**
+> **TL;DR — the Prompt API is now stable for Chrome Extensions (Chrome 138+). Most users need no flags; Chrome just downloads the Gemini Nano model on first use.**
 
-### Current status (Chrome 127–147)
+### Current status
 
-Chrome's built-in Prompt API (the API that powers this extension) is still in **origin trial / early access**. It is not enabled by default. To use the extension today you must:
+The **Prompt API** (the `LanguageModel` API that powers this extension) reached **stable for Chrome Extensions in Chrome 138**. Inside an extension it is no longer behind a flag — the previous `chrome://flags` dance was only needed during the origin-trial period (Chrome 127–137). On the open web the same API is still in origin trial and targets stable around Chrome 148, but that does not affect this extension because it runs as extension code.
 
-1. Be on **Chrome 127 or later** (desktop only — Windows 10/11, macOS 13+, or Linux)
-2. Enable two flags manually (see setup below)
-3. Download the Gemini Nano model (~2 GB, one-time)
+What a user needs today:
 
-### When will it work without flags?
+1. **Chrome 138 or later**, desktop only (Windows 10/11, macOS 13+, or Linux)
+2. Hardware that meets the Gemini Nano minimums (see below)
+3. The model downloaded — Chrome fetches it automatically the first time the API is used; no flags required
 
-Google is rolling out the Prompt API progressively:
-
-| Milestone | Chrome version | Status |
+| Built-in AI API | Status (June 2026) | Used here |
 |---|---|---|
-| First flag-gated release | Chrome 127 | ✅ Available now |
-| Origin trial for web pages | Chrome 138 | ✅ Available now |
-| Stable release (no flags needed) | Chrome 148+ | 🔜 Expected late 2025 |
+| Prompt API (`LanguageModel`) | ✅ Stable in extensions (Chrome 138) | ✅ Yes — core sentiment/rewrite engine |
+| Summarizer | ✅ Stable (Chrome 138) | ⏳ Roadmap (thread context) |
+| Translator | ✅ Stable (Chrome 138) | ✅ Yes — translates output to the comment's language |
+| Language Detector | ✅ Stable (Chrome 138) | ✅ Yes — detects the comment's language |
+| Rewriter | 🧪 Developer trial | ⏳ Roadmap (better rewrites) |
+| Writer | 🧪 Developer trial | — Not needed |
+| Proofreader | 🧪 Origin trial | ⏳ Roadmap (grammar layer) |
 
-Once Chrome 148 ships to stable, the extension will work out of the box for all eligible users with no setup required.
+> **Note on namespaces:** the legacy `window.ai.languageModel` namespace is deprecated in favour of the global `LanguageModel`. This extension still probes both (`content.js`, `popup.js`) so it keeps working on older builds that only expose the legacy path — see `CLAUDE.md`.
 
 ### Hardware requirements
 
@@ -60,45 +62,47 @@ Gemini Nano runs on your device. Chrome enforces these minimums:
 
 ---
 
-## Setup (required until Chrome 148)
+## Setup
 
-### Step 1 — Enable the flags
+On **Chrome 138+** with eligible hardware, no setup is required — install the extension and Chrome handles the model download on first use. The steps below are only needed on **older builds (Chrome 127–137)** or if the popup reports the AI as unavailable.
+
+### Step 1 — Verify it worked
+
+Click the Comment Vibe icon in the Chrome toolbar. The popup should show **Chrome AI ready ✓**. If so, you're done.
+
+### Step 2 — (Older builds only) Enable the flags
 
 1. Open `chrome://flags`
 2. Search for **Prompt API for Gemini Nano** → set to **Enabled**
 3. Search for **Summarization API for Gemini Nano** → set to **Enabled** (needed on some builds)
 4. Click **Relaunch**
 
-### Step 2 — Download the model
+### Step 3 — Force the model download
 
 1. Open `chrome://components`
 2. Find **Optimization Guide On Device Model**
 3. Click **Check for update** and wait for the download to finish
 
-The model is ~2 GB. Download time depends on your connection. Chrome downloads it silently in the background.
-
-### Step 3 — Verify it worked
-
-Click the Comment Vibe icon in the Chrome toolbar. The popup should show **Chrome AI ready ✓**. If it still shows "not available", restart Chrome fully (quit and reopen, not just close the tab) and try again.
+The model is ~2 GB and downloads silently in the background. If the popup still shows "not available" afterward, restart Chrome fully (quit and reopen, not just close the tab) and try again.
 
 ---
 
 ## Roadmap
 
 ### Near-term
-- [ ] **Rewriter API** — swap the raw Prompt rewrite for Chrome's dedicated Rewriter API, purpose-built for this and likely better quality
-- [ ] **Proofreader API** — layer grammar and spelling fixes on top of tone analysis
+- [ ] **Rewriter API** (🧪 developer trial) — swap the raw Prompt rewrite for Chrome's dedicated Rewriter API, purpose-built for this and likely better quality. Behind a trial today, so keep the Prompt fallback.
+- [ ] **Proofreader API** (🧪 origin trial) — layer grammar and spelling fixes on top of tone analysis
 - [ ] **Streaming** — switch to `promptStreaming()` so the badge updates as the model responds instead of waiting for the full result
 - [ ] **Keyboard shortcut** — manually trigger analysis instead of waiting for the debounce
 
 ### Medium-term
-- [ ] **Language Detector + Translator API** — detect the comment's language and show the badge and suggestion in the user's own language, not just English
+- [x] **Language Detector + Translator API** (✅ shipped in 1.1.0) — detects the comment's language and translates the badge label, reason, and rewrite into that language so the suggestion is directly pasteable. Falls back to English when a language pair is unavailable.
 - [ ] **Context-aware analysis** — read the post being replied to and factor it into the tone judgement ("measured reply to an aggressive post" vs "unprovoked attack")
 - [ ] **Personal vibe stats** — popup dashboard showing positive/neutral/negative breakdown over 7 and 30 days, stored locally via `chrome.storage`
 - [ ] **Platform tone calibration** — stricter system prompt on LinkedIn, more relaxed on Reddit, different norms per domain
 
 ### Longer-term
-- [ ] **Summarizer API** — summarise a long comment thread before the user replies so the suggestion accounts for the full context
+- [ ] **Summarizer API** (✅ stable since Chrome 138) — summarise a long comment thread before the user replies so the suggestion accounts for the full context
 - [ ] **Proactive coaching** — suggest how to phrase something before you start typing, based on the post topic and thread mood (Summarizer + Prompt working together)
 - [ ] **Multimodal** — once the Prompt API image/audio input stabilises: analyse screenshots pasted into comments, or audio in voice-to-text boxes
 
@@ -122,7 +126,8 @@ Open `icons/make-icons.html` in Chrome and click **Download all icons**. Move th
 ```
 comment-vibe/
 ├── manifest.json       # Extension manifest (MV3)
-├── content.js          # Detects comment boxes, runs AI analysis, renders badge
+├── CHANGELOG.md        # Versioned release notes
+├── content.js          # Detects comment boxes, runs AI analysis, localises, renders badge
 ├── content.css         # Badge and tooltip styles
 ├── popup.html          # Toolbar popup
 ├── popup.js            # Popup — checks Chrome AI availability
@@ -136,11 +141,10 @@ comment-vibe/
 
 ### Build for the Chrome Web Store
 
+From inside the project folder:
+
 ```bash
-zip -r comment-vibe.zip comment-vibe \
-  --exclude "comment-vibe/icons/make-icons.html" \
-  --exclude "comment-vibe/README.md" \
-  --exclude "*/.DS_Store"
+zip -r comment-vibe.zip . -x "*.DS_Store" -x "*.zip" -x "*.git*"
 ```
 
 ## How it works
@@ -149,8 +153,9 @@ zip -r comment-vibe.zip comment-vibe \
 2. Text changes are debounced (900 ms) to avoid calling the model on every keystroke
 3. The text is sent to a `LanguageModel` session (Chrome's Prompt API) using few-shot examples + prefix prompting to force structured JSON output from Gemini Nano
 4. The JSON response is parsed and normalised — the `normalize()` function maps any alternative key names the model invents back to the expected schema
-5. A fixed-position badge appears at the bottom-right corner of the input, coloured by sentiment
-6. Clicking the badge opens a dark tooltip with the reason and (for negative/toxic results) a rewrite suggestion with a one-click copy button
+5. In parallel, the **Language Detector API** identifies the comment's language. If it isn't English, the **Translator API** translates the label, reason, and rewrite into that language (cached per language pair). This is best-effort — any failure falls back to the English result
+6. A fixed-position badge appears at the bottom-right corner of the input, coloured by sentiment
+7. Clicking the badge opens a dark tooltip with the reason and (for negative/toxic results) a rewrite suggestion with a one-click copy button
 
 ## License
 
