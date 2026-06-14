@@ -2,7 +2,7 @@
 
 // ⬇️ WAŻNE: wklej tu bezpośredni link do wtyczki Comment Vibe w Chrome Web Store.
 // To jedyne miejsce — CTA w menu i na stronie głównej używają tej stałej.
-const STORE_URL = 'https://chromewebstore.google.com/'; // TODO: zamień na link do Comment Vibe
+const STORE_URL = 'https://chromewebstore.google.com/detail/comment-vibe/kibcnjcipaofjlbbnjdjaobbkoajiejp';
 const REPO_URL  = 'https://github.com/dzienisz/comment-vibe';
 
 // ── Małe helpery DOM ──────────────────────────────────────────────────────────

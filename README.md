@@ -4,6 +4,8 @@ A Chrome extension that uses Chrome's built-in AI (Gemini Nano) to analyse the t
 
 ![Chrome](https://img.shields.io/badge/Chrome-127%2B-blue) ![Manifest V3](https://img.shields.io/badge/Manifest-V3-green) ![On-device AI](https://img.shields.io/badge/AI-On--device-purple)
 
+**▶ [Install Comment Vibe from the Chrome Web Store](https://chromewebstore.google.com/detail/comment-vibe/kibcnjcipaofjlbbnjdjaobbkoajiejp)** · [Try the live playground](https://dzienko.dev/comment-vibe/)
+
 ## What it does
 
 Type a comment on LinkedIn, Twitter/X, YouTube, or any other site. A small badge appears near your text box showing the detected tone. Click it to see why — and if your comment sounds harsh or toxic, get an instant kinder rewrite suggestion you can copy in one click.
