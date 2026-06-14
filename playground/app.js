@@ -1,5 +1,10 @@
 'use strict';
 
+// ⬇️ WAŻNE: wklej tu bezpośredni link do wtyczki Comment Vibe w Chrome Web Store.
+// To jedyne miejsce — CTA w menu i na stronie głównej używają tej stałej.
+const STORE_URL = 'https://chromewebstore.google.com/'; // TODO: zamień na link do Comment Vibe
+const REPO_URL  = 'https://github.com/dzienisz/comment-vibe';
+
 // ── Małe helpery DOM ──────────────────────────────────────────────────────────
 
 function el(tag, props = {}, children = []) {
@@ -66,6 +71,14 @@ function buildSidebar() {
   for (const api of APIS) {
     nav.appendChild(navItem(api.id, api.name, STATUS_META[api.status].cls));
   }
+
+  const foot = document.getElementById('sidebar-foot');
+  foot.innerHTML = '';
+  foot.appendChild(el('a', { class: 'cta', href: STORE_URL, target: '_blank', rel: 'noopener' }, [
+    el('span', { class: 'cta-title', text: '⬇️ Pobierz Comment Vibe' }),
+    el('span', { class: 'cta-sub', text: 'wtyczka do Chrome — przetestuj' }),
+  ]));
+  foot.appendChild(el('div', { class: 'foot-note', html: 'Część projektu <strong>Comment Vibe</strong> · Chrome 149 (czerwiec 2026)' }));
 }
 
 function navItem(id, label, dotCls) {
@@ -96,6 +109,20 @@ function renderOverview() {
      Wybierz API z menu po lewej, sprawdź czy działa u Ciebie i odpal demo na żywo.
      Stan opisany na podstawie dokumentacji Chrome — aktualny stabilny kanał: <strong>Chrome 149</strong> (czerwiec 2026).` }));
 
+  // CTA wtyczki
+  const cta = el('div', { class: 'cta-card' });
+  cta.appendChild(el('div', { class: 'cta-card-text' }, [
+    el('h2', { text: '🧩 Comment Vibe — wtyczka do Chrome' }),
+    el('p', { class: 'cta-card-sub', text:
+      'Sprawdza ton Twojego komentarza, zanim go wyślesz — lokalnie, na Gemini Nano. ' +
+      'To dokładnie to samo API, które testujesz tutaj.' }),
+  ]));
+  cta.appendChild(el('div', { class: 'cta-actions' }, [
+    el('a', { class: 'btn-primary-link', href: STORE_URL, target: '_blank', rel: 'noopener', text: '⬇️ Pobierz z Chrome Web Store' }),
+    el('a', { class: 'btn-ghost-link', href: REPO_URL, target: '_blank', rel: 'noopener', text: 'Kod na GitHub' }),
+  ]));
+  main.appendChild(cta);
+
   // Środowisko
   const env = el('div', { class: 'card' });
   env.appendChild(el('h2', { text: 'Twoje środowisko' }));
@@ -110,6 +137,10 @@ function renderOverview() {
       'To API wymagają bezpiecznego kontekstu. Otwórz tę stronę przez <code>http://localhost</code> ' +
       '(np. <code>python3 -m http.server</code>), a nie z pliku <code>file://</code>.' }));
   }
+  env.appendChild(el('p', { class: 'muted', html:
+    'Model Gemini Nano (~2–4 GB) pobiera się automatycznie przy pierwszym użyciu — to ten sam komponent ' +
+    '„Optimization Guide On Device Model", o którym było głośno (pobierany bez wyraźnej zgody, maj 2026). ' +
+    'Status zobaczysz w <code>chrome://on-device-internals</code>, a wyłączyć i usunąć model możesz w ustawieniach Chrome.' }));
   main.appendChild(env);
 
   // Macierz dostępności

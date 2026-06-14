@@ -29,7 +29,7 @@ python3 -m http.server 8000
 
 - **Chrome 138+** na desktopie (Windows / macOS 13+ / Linux) — wtedy stabilne API
   (Prompt dla rozszerzeń, Summarizer, Translator, Language Detector) działają bez flag.
-- Sprzęt spełniający wymagania Gemini Nano; model (~2 GB) pobiera się przy pierwszym użyciu.
+- Sprzęt spełniający wymagania Gemini Nano; model (~2–4 GB) pobiera się przy pierwszym użyciu. Status sprawdzisz w `chrome://on-device-internals`, a wyłączysz go w ustawieniach Chrome.
 - **API w fazie trial** (Writer, Rewriter, Proofreader) mogą wymagać włączenia flag w
   `chrome://flags` lub udziału w Early Preview Program — panel „Czy zadziała u Ciebie?"
   pokaże realny stan w Twojej przeglądarce.

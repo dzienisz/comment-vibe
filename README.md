@@ -99,7 +99,9 @@ Click the Comment Vibe icon in the Chrome toolbar. The popup should show **Chrom
 2. Find **Optimization Guide On Device Model**
 3. Click **Check for update** and wait for the download to finish
 
-The model is ~2 GB and downloads silently in the background. If the popup still shows "not available" afterward, restart Chrome fully (quit and reopen, not just close the tab) and try again.
+The model is ~2–4 GB and downloads silently in the background. If the popup still shows "not available" afterward, restart Chrome fully (quit and reopen, not just close the tab) and try again.
+
+> **Note on the on-device model:** Chrome downloads Gemini Nano (the "Optimization Guide On Device Model" component) automatically on eligible hardware. In May 2026 this drew [criticism](https://www.tomsguide.com/ai/check-your-storage-chrome-may-be-downloading-a-4gb-ai-model-heres-what-we-know) for happening without a clear consent prompt; Chrome settings now let you disable and remove the model, and you can inspect its status at `chrome://on-device-internals`. Comment Vibe uses this same model — it never downloads anything itself.
 
 ---
 
