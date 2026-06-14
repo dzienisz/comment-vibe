@@ -21,6 +21,22 @@ All analysis runs locally using Chrome's on-device Gemini Nano model. Your comme
 
 ---
 
+## Playground — try every built-in AI API
+
+The [`playground/`](playground/) folder is a standalone static site for exploring **all** of Chrome's built-in AI APIs (Prompt, Summarizer, Translator, Language Detector, Writer, Rewriter, Proofreader) in one place: status, version history, links, a live "will it work for you?" check, and an interactive demo per API.
+
+**Live:** https://dzienisz.github.io/comment-vibe/ &nbsp;(deployed from `playground/` via GitHub Pages)
+
+Run it locally:
+
+```bash
+cd playground && python3 -m http.server 8000   # → http://localhost:8000
+```
+
+> Note: on the open web the **Prompt API** is still an origin trial, so it needs a trial token or a `chrome://flags` opt-in. The stable APIs (Translator, Summarizer, Language Detector) work without that on Chrome 138+.
+
+---
+
 ## Chrome AI availability — what you need to know
 
 > **TL;DR — the Prompt API is now stable for Chrome Extensions (Chrome 138+). Most users need no flags; Chrome just downloads the Gemini Nano model on first use.**
