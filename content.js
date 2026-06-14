@@ -96,6 +96,84 @@ async function getSession() {
   return aiSession;
 }
 
+// ── Localisation (Language Detector + Translator) ─────────────────────────────
+//
+// The model always reasons in English (reliable structured JSON). When the
+// comment is written in another language we translate the user-facing fields
+// into that same language, so the rewrite suggestion is directly pasteable and
+// the explanation reads in the language the user is already writing in.
+// Everything here is best-effort: if the APIs, a model download, or a specific
+// language pair are unavailable, we silently keep the English result.
+
+const MIN_DETECT_CONFIDENCE = 0.5;
+
+let detector       = null;
+let detectorBusy   = false;
+const translators  = new Map(); // targetLang -> Translator | 'unavailable'
+
+async function getDetector() {
+  if (typeof LanguageDetector === 'undefined') return null;
+  if (detector) return detector;
+  if (detectorBusy) return null; // best-effort: skip rather than queue
+  detectorBusy = true;
+  try {
+    if (await LanguageDetector.availability() === 'unavailable') return null;
+    detector = await LanguageDetector.create();
+  } catch { detector = null; }
+  finally { detectorBusy = false; }
+  return detector;
+}
+
+async function detectLanguage(text) {
+  const d = await getDetector();
+  if (!d) return null;
+  try {
+    const top = (await d.detect(text))?.[0];
+    if (top && top.confidence >= MIN_DETECT_CONFIDENCE && top.detectedLanguage !== 'und') {
+      return top.detectedLanguage.split('-')[0];
+    }
+  } catch {}
+  return null;
+}
+
+async function getTranslator(target) {
+  if (typeof Translator === 'undefined' || !target || target === 'en') return null;
+  const cached = translators.get(target);
+  if (cached) return cached === 'unavailable' ? null : cached;
+  const pair = { sourceLanguage: 'en', targetLanguage: target };
+  try {
+    if (await Translator.availability(pair) === 'unavailable') {
+      translators.set(target, 'unavailable'); // genuinely unsupported — cache permanently
+      return null;
+    }
+  } catch {
+    return null; // transient availability error — don't cache, allow retry
+  }
+  try {
+    const t = await Translator.create(pair);
+    translators.set(target, t);
+    return t;
+  } catch {
+    return null; // create can fail while the model downloads — retry next time, don't cache
+  }
+}
+
+async function translateField(translator, text) {
+  if (!translator || !text) return text;
+  try { return await translator.translate(text); } catch { return text; }
+}
+
+async function localizeResult(result, target) {
+  const translator = await getTranslator(target);
+  if (!translator) return result;
+  const [label, reason, rewrite] = await Promise.all([
+    translateField(translator, result.label),
+    translateField(translator, result.reason),
+    result.rewrite ? translateField(translator, result.rewrite) : Promise.resolve(null),
+  ]);
+  return { ...result, label, reason, rewrite, lang: target };
+}
+
 // ── Analysis ─────────────────────────────────────────────────────────────────
 
 const FEW_SHOT = [
@@ -308,9 +386,11 @@ function attachToInput(el) {
 
     state.debounceTimer = setTimeout(async () => {
       try {
-        const result = await analyzeText(text);
+        const [result, lang] = await Promise.all([analyzeText(text), detectLanguage(text)]);
         if (requestId !== state.requestId) return;
-        renderBadge(badge, tooltip, result);
+        const localized = await localizeResult(result, lang);
+        if (requestId !== state.requestId) return;
+        renderBadge(badge, tooltip, localized);
       } catch {
         sp(badge, 'display', 'none');
       }
