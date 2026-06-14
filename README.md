@@ -25,7 +25,7 @@ All analysis runs locally using Chrome's on-device Gemini Nano model. Your comme
 
 The [`playground/`](playground/) folder is a standalone static site for exploring **all** of Chrome's built-in AI APIs (Prompt, Summarizer, Translator, Language Detector, Writer, Rewriter, Proofreader) in one place: status, version history, links, a live "will it work for you?" check, and an interactive demo per API.
 
-**Live:** https://dzienisz.github.io/comment-vibe/ &nbsp;(deployed from `playground/` via GitHub Pages)
+**Live:** https://dzienko.dev/comment-vibe/ &nbsp;(deployed from `playground/` via GitHub Pages)
 
 Run it locally:
 
