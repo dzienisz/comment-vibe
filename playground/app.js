@@ -89,7 +89,7 @@ function renderOverview() {
   main.appendChild(el('p', { class: 'lead', html:
     `Wszystkie modele działają <strong>lokalnie</strong> (Gemini Nano), bez wysyłania danych na serwer.
      Wybierz API z menu po lewej, sprawdź czy działa u Ciebie i odpal demo na żywo.
-     Stan opisany na podstawie dokumentacji Chrome — czerwiec 2026.` }));
+     Stan opisany na podstawie dokumentacji Chrome — aktualny stabilny kanał: <strong>Chrome 149</strong> (czerwiec 2026).` }));
 
   // Środowisko
   const env = el('div', { class: 'card' });
@@ -317,10 +317,10 @@ function injectBanner(main) {
   if (sessionStorage.getItem('cv-banner-dismissed')) return;
   const banner = el('div', { class: 'banner' }, [
     el('span', { html:
-      '⚠️ <strong>Prompt API</strong> nie jest dostępne na tej stronie. Na publicznym webie ' +
-      'wymaga tokenu <a target="_blank" rel="noopener" href="https://developer.chrome.com/origintrials/">Origin Trial</a> ' +
-      'albo włączenia flagi w <code>chrome://flags</code> → „Prompt API for Gemini Nano". ' +
-      'Stabilne API (Translator, Summarizer, Language Detector) działają bez tego.' }),
+      '⚠️ <strong>Prompt API</strong> nie jest dostępne w tej przeglądarce. Od <strong>Chrome 148</strong> ' +
+      'jest stabilne także na zwykłych stronach (bez tokenu i flag) — upewnij się, że masz Chrome 148+ ' +
+      'na desktopie i kompatybilny sprzęt; model Gemini Nano pobiera się przy pierwszym użyciu. ' +
+      'Pozostałe API mogą działać niezależnie.' }),
     el('button', { class: 'banner-x', text: '✕', title: 'Ukryj',
       onclick: () => { sessionStorage.setItem('cv-banner-dismissed', '1'); banner.remove(); } }),
   ]);

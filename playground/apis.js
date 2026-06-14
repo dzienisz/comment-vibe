@@ -20,18 +20,20 @@ const APIS = [
     id: 'prompt',
     name: 'Prompt API',
     globalName: 'LanguageModel',
-    status: 'stable-ext',
+    status: 'stable',
     tagline: 'Dowolne zapytania w języku naturalnym do Gemini Nano.',
     description: `Najbardziej uniwersalne z wbudowanych API — to po prostu czat z lokalnym
       modelem Gemini Nano. Sam definiujesz prompt systemowy, przykłady (few-shot) i format
       odpowiedzi. To na nim stoi rdzeń rozszerzenia <strong>Comment Vibe</strong>.
-      <br><br>Uwaga na nazewnictwo: stara przestrzeń <code>window.ai.languageModel</code>
-      jest wycofywana na rzecz globalnego <code>LanguageModel</code>. Możliwości multimodalne
-      (obraz / dźwięk na wejściu) są na razie dostępne tylko dla uczestników Early Preview Program.`,
+      <br><br>Od Chrome 148 jest stabilne także na <strong>zwykłych stronach web</strong> (nie tylko
+      w rozszerzeniach) — bez tokenu i bez flag. Uwaga na nazewnictwo: stara przestrzeń
+      <code>window.ai.languageModel</code> jest wycofywana na rzecz globalnego <code>LanguageModel</code>.
+      Możliwości multimodalne (obraz / dźwięk na wejściu) są na razie dostępne tylko dla uczestników
+      Early Preview Program.`,
     versions: [
       { v: 'Chrome 127', label: 'Pierwsze wydanie za flagą (wczesny dostęp / origin trial)', state: 'past' },
-      { v: 'Chrome 138', label: 'Stabilne dla rozszerzeń; origin trial dla stron web', state: 'now' },
-      { v: 'Chrome ~148', label: 'Planowana stabilizacja dla otwartego web', state: 'future' },
+      { v: 'Chrome 138', label: 'Stabilne dla rozszerzeń', state: 'past' },
+      { v: 'Chrome 148', label: 'Stabilne także dla otwartego web (bez flag/tokenu)', state: 'now' },
     ],
     links: [
       { label: 'Dokumentacja: Prompt API', url: 'https://developer.chrome.com/docs/ai/prompt-api' },
@@ -203,7 +205,7 @@ console.log(best.detectedLanguage, best.confidence);`,
       (developer trial)</strong> — może nie być dostępne bez flagi lub udziału w Early
       Preview Program, dlatego w Comment Vibe go nie używam.`,
     versions: [
-      { v: 'Developer trial', label: 'Eksperymentalne — brak stabilnego wydania', state: 'trial' },
+      { v: 'Origin trial 137–148', label: 'Trial zakończony; nadal brak stabilnego wydania (developer trial / EPP)', state: 'trial' },
     ],
     links: [
       { label: 'Dokumentacja: Writer API', url: 'https://developer.chrome.com/docs/ai/writer-api' },
@@ -244,7 +246,7 @@ const text = await writer.write('A short product description for a coffee mug.')
       To naturalny kandydat, by zastąpić „ręczne" przepisywanie przez Prompt API w Comment Vibe.
       <strong>Na razie developer trial</strong>, więc czekam aż się ustabilizuje, zanim na nim oprę produkcyjną funkcję.`,
     versions: [
-      { v: 'Developer trial', label: 'Eksperymentalne — brak stabilnego wydania', state: 'trial' },
+      { v: 'Origin trial 137–148', label: 'Trial zakończony; nadal brak stabilnego wydania (developer trial / EPP)', state: 'trial' },
     ],
     links: [
       { label: 'Dokumentacja: Rewriter API', url: 'https://developer.chrome.com/docs/ai/rewriter-api' },
@@ -286,7 +288,7 @@ const text = await rewriter.rewrite(
       poprawek. Świetne jako warstwa „gramatyczna" nad analizą tonu. <strong>W trakcie origin
       trial</strong>, więc dostępność zależy od wersji Chrome i ewentualnego tokenu OT.`,
     versions: [
-      { v: 'Origin trial', label: 'W trakcie — planowane szersze udostępnienie', state: 'trial' },
+      { v: 'Origin trial 141–145', label: 'Trial zakończony; dalej w fazie testów (EPP) — brak stabilnego wydania', state: 'trial' },
     ],
     links: [
       { label: 'Dokumentacja: Proofreader API', url: 'https://developer.chrome.com/docs/ai/proofreader-api' },

@@ -33,7 +33,7 @@ Run it locally:
 cd playground && python3 -m http.server 8000   # → http://localhost:8000
 ```
 
-> Note: on the open web the **Prompt API** is still an origin trial, so it needs a trial token or a `chrome://flags` opt-in. The stable APIs (Translator, Summarizer, Language Detector) work without that on Chrome 138+.
+> Note: the **Prompt API** is stable on the open web since Chrome 148, so on Chrome 148+ it works with no token or flag. Writer, Rewriter, and Proofreader are still in trial and may not be available.
 
 ---
 
@@ -43,7 +43,7 @@ cd playground && python3 -m http.server 8000   # → http://localhost:8000
 
 ### Current status
 
-The **Prompt API** (the `LanguageModel` API that powers this extension) reached **stable for Chrome Extensions in Chrome 138**. Inside an extension it is no longer behind a flag — the previous `chrome://flags` dance was only needed during the origin-trial period (Chrome 127–137). On the open web the same API is still in origin trial and targets stable around Chrome 148, but that does not affect this extension because it runs as extension code.
+The **Prompt API** (the `LanguageModel` API that powers this extension) reached **stable for Chrome Extensions in Chrome 138**, and **stable on the open web in Chrome 148**. Inside an extension it is no longer behind a flag — the previous `chrome://flags` dance was only needed during the origin-trial period (Chrome 127–137). As of Chrome 149 (current stable) the API works for everyone on supported hardware without tokens or flags.
 
 What a user needs today:
 
@@ -51,9 +51,9 @@ What a user needs today:
 2. Hardware that meets the Gemini Nano minimums (see below)
 3. The model downloaded — Chrome fetches it automatically the first time the API is used; no flags required
 
-| Built-in AI API | Status (June 2026) | Used here |
+| Built-in AI API | Status (Chrome 149, June 2026) | Used here |
 |---|---|---|
-| Prompt API (`LanguageModel`) | ✅ Stable in extensions (Chrome 138) | ✅ Yes — core sentiment/rewrite engine |
+| Prompt API (`LanguageModel`) | ✅ Stable — extensions (Chrome 138), open web (Chrome 148) | ✅ Yes — core sentiment/rewrite engine |
 | Summarizer | ✅ Stable (Chrome 138) | ⏳ Roadmap (thread context) |
 | Translator | ✅ Stable (Chrome 138) | ✅ Yes — translates output to the comment's language |
 | Language Detector | ✅ Stable (Chrome 138) | ✅ Yes — detects the comment's language |
