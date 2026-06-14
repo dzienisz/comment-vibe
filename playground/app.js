@@ -33,6 +33,11 @@ function aiLog(msg, extra) {
 // ── Live availability ─────────────────────────────────────────────────────────
 
 async function checkApi(api) {
+  // Wpisy informacyjne (np. WebMCP) mają własny test obecności zamiast availability().
+  if (typeof api.check === 'function') {
+    try { const s = await api.check(); aiLog(`${api.name}: ${s}`); return s; }
+    catch (e) { console.warn(`[Built-in AI] ${api.name}.check() rzuciło:`, e); return 'error'; }
+  }
   const ctor = window[api.globalName];
   if (!ctor || typeof ctor.availability !== 'function') {
     aiLog(`${api.globalName}: brak tego API w przeglądarce`);
@@ -216,8 +221,17 @@ function renderApi(api) {
   links.appendChild(ul);
   main.appendChild(links);
 
-  // Demo na żywo
-  main.appendChild(buildDemo(api));
+  // Demo na żywo (wpisy informacyjne, np. WebMCP, nie mają dema)
+  if (api.demo) {
+    main.appendChild(buildDemo(api));
+  } else {
+    const note = el('div', { class: 'card' });
+    note.appendChild(el('h2', { text: 'Demo' }));
+    note.appendChild(el('p', { class: 'muted', text:
+      'To wpis informacyjny — to API nie generuje tekstu (nie ma schematu wejście → wynik), ' +
+      'więc nie ma tu interaktywnego dema. Szczegóły w dokumentacji powyżej.' }));
+    main.appendChild(note);
+  }
 }
 
 // ── Demo runner ────────────────────────────────────────────────────────────────
