@@ -106,7 +106,6 @@ The model is ~2 GB and downloads silently in the background. If the popup still 
 ## Roadmap
 
 ### Near-term
-- [ ] **Rewriter API** (🧪 developer trial) — swap the raw Prompt rewrite for Chrome's dedicated Rewriter API, purpose-built for this and likely better quality. Behind a trial today, so keep the Prompt fallback.
 - [ ] **Proofreader API** (🧪 origin trial) — layer grammar and spelling fixes on top of tone analysis
 - [ ] **Streaming** — switch to `promptStreaming()` so the badge updates as the model responds instead of waiting for the full result
 - [ ] **Keyboard shortcut** — manually trigger analysis instead of waiting for the debounce
@@ -118,6 +117,7 @@ The model is ~2 GB and downloads silently in the background. If the popup still 
 - [ ] **Platform tone calibration** — stricter system prompt on LinkedIn, more relaxed on Reddit, different norms per domain
 
 ### Longer-term
+- [ ] **Rewriter API** — *only if it reaches stable.* It ran a full origin trial (Chrome 137–148) but reverted to a flag-only developer trial instead of graduating, and it overlaps heavily with what the Prompt API already does well. Not worth a dependency today; revisit behind a capability check if it ships stable, keeping the Prompt rewrite as the default.
 - [ ] **Summarizer API** (✅ stable since Chrome 138) — summarise a long comment thread before the user replies so the suggestion accounts for the full context
 - [ ] **Proactive coaching** — suggest how to phrase something before you start typing, based on the post topic and thread mood (Summarizer + Prompt working together)
 - [ ] **Multimodal** — once the Prompt API image/audio input stabilises: analyse screenshots pasted into comments, or audio in voice-to-text boxes

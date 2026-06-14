@@ -203,7 +203,10 @@ console.log(best.detectedLanguage, best.confidence);`,
     description: `Tworzy nowy tekst zgodny z opisanym zadaniem — np. opis produktu, e-mail,
       post. Pozwala sterować tonem, formatem i długością. <strong>Wciąż eksperymentalne
       (developer trial)</strong> — może nie być dostępne bez flagi lub udziału w Early
-      Preview Program, dlatego w Comment Vibe go nie używam.`,
+      Preview Program, dlatego w Comment Vibe go nie używam.
+      <br><br>⚠️ Sygnał: pełny origin trial (Chrome 137–148) <strong>zakończył się bez awansu
+      do stable</strong> — API cofnęło się do trybu „za flagą". W praktyce pokrywa się z tym, co
+      już potrafi Prompt API, więc nie warto na nim opierać produkcyjnej funkcji.`,
     versions: [
       { v: 'Origin trial 137–148', label: 'Trial zakończony; nadal brak stabilnego wydania (developer trial / EPP)', state: 'trial' },
     ],
@@ -244,7 +247,10 @@ const text = await writer.write('A short product description for a coffee mug.')
     tagline: 'Przepisywanie i zmiana tonu istniejącego tekstu.',
     description: `Przeredagowuje istniejący tekst — zmienia ton, długość lub formę.
       To naturalny kandydat, by zastąpić „ręczne" przepisywanie przez Prompt API w Comment Vibe.
-      <strong>Na razie developer trial</strong>, więc czekam aż się ustabilizuje, zanim na nim oprę produkcyjną funkcję.`,
+      <strong>Na razie developer trial</strong>, więc czekam aż się ustabilizuje, zanim na nim oprę produkcyjną funkcję.
+      <br><br>⚠️ Sygnał: pełny origin trial (Chrome 137–148) <strong>zakończył się bez awansu
+      do stable</strong> — API wróciło do trybu „za flagą". Prompt API (już stabilne) robi
+      to samo wystarczająco dobrze, więc w Comment Vibe zostaję przy nim.`,
     versions: [
       { v: 'Origin trial 137–148', label: 'Trial zakończony; nadal brak stabilnego wydania (developer trial / EPP)', state: 'trial' },
     ],
