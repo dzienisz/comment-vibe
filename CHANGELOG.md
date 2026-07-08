@@ -5,6 +5,16 @@ All notable changes to **Comment Vibe** are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.1] - 2026-07-08
+
+### Changed
+- Store listing refresh: benefit-first manifest description ("See how your
+  comment sounds before you post…"), new detailed description, and a full set
+  of promo images (5 screenshots + small/marquee tiles) generated from HTML
+  sources in `store-assets/` via `store-assets/render.sh`.
+- The Web Store zip is now minimal: docs, `playground/`, `store-assets/`, and
+  `icons/make-icons.html` are excluded from the package. No functional changes.
+
 ## [1.1.0] - 2026-06-14
 
 ### Added

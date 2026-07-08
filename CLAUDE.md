@@ -17,4 +17,10 @@ There is no automated test suite. Manual testing requires:
 
 ## Distribution
 
-Zip for Chrome Web Store: `zip -r comment-vibe.zip . -x "*.DS_Store" -x "*.zip" -x "*.git*"`
+Zip for Chrome Web Store (package must contain only runtime files — manifest, content/popup scripts and styles, icon PNGs):
+
+```
+zip -r comment-vibe.zip . -x "*.DS_Store" -x "*.zip" -x "*.git*" -x ".claude/*" -x ".github/*" -x ".gitignore" -x "*.md" -x "store-assets/*" -x "playground/*" -x "icons/make-icons.html"
+```
+
+Store listing text and promo images live in `store-assets/` (regenerate PNGs with `store-assets/render.sh`). They must not ship inside the extension zip. Bump `version` in manifest.json before uploading a new package.

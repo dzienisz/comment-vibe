@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="shared.css">
+<style>
+.tile {
+  width: 1400px; height: 560px;
+  background: linear-gradient(120deg, #7c3aed 0%, #4f46e5 60%, #4338ca 100%);
+  display: flex; align-items: center; padding: 0 90px; gap: 70px;
+  position: relative; overflow: hidden;
+}
+.tile::before {
+  content: ''; position: absolute; width: 700px; height: 700px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,255,255,0.12), transparent 70%);
+  top: -260px; right: -160px;
+}
+.left { flex: 1; position: relative; }
+.brandrow { display: flex; align-items: center; gap: 20px; margin-bottom: 26px; }
+.name { font-size: 40px; font-weight: 800; color: #fff; }
+.head { font-size: 54px; font-weight: 800; color: #fff; line-height: 1.15; letter-spacing: -0.02em; }
+.sub  { font-size: 22px; color: rgba(255,255,255,0.85); margin-top: 18px; line-height: 1.5; max-width: 560px; }
+.pill-row { display: flex; gap: 12px; margin-top: 28px; }
+.pill {
+  background: rgba(255,255,255,0.14); border: 1px solid rgba(255,255,255,0.25);
+  color: #fff; border-radius: 999px; padding: 8px 18px; font-size: 15px; font-weight: 600;
+}
+.right { position: relative; align-self: flex-start; margin-top: 84px; }
+.mock {
+  background: #fff; border-radius: 16px; padding: 20px 22px; width: 470px;
+  box-shadow: 0 30px 70px rgba(0,0,0,0.35);
+}
+.mock .box {
+  border: 1.5px solid #e5e7eb; border-radius: 12px; background: #fcfcfd;
+  padding: 14px 16px 44px; font-size: 16px; line-height: 1.55; color: #1f2937; position: relative;
+}
+.tip { position: absolute; right: -26px; top: calc(100% - 16px); }
+.tip .cv-tooltip { width: 310px; }
+</style></head>
+<body>
+<div class="tile">
+  <div class="left">
+    <div class="brandrow">
+      <svg width="64" height="64" viewBox="0 0 128 128" style="filter: drop-shadow(0 4px 12px rgba(0,0,0,0.25));"><rect width="128" height="128" rx="30" fill="rgba(255,255,255,0.16)"/><rect x="18" y="26" width="92" height="60" rx="14" fill="#fff"/><path d="M36 82 L36 102 L58 84 Z" fill="#fff"/><circle cx="44" cy="56" r="8.5" fill="#22c55e"/><circle cx="64" cy="56" r="8.5" fill="#f59e0b"/><circle cx="84" cy="56" r="8.5" fill="#ef4444"/></svg>
+      <div class="name">Comment Vibe</div>
+    </div>
+    <div class="head">Know how you sound — before you post.</div>
+    <div class="sub">Real-time tone check for every comment box, with kinder rewrites in one click.</div>
+    <div class="pill-row">
+      <span class="pill">🔒 100% on-device AI</span>
+      <span class="pill">⚡ Gemini Nano</span>
+      <span class="pill">🌍 Any language</span>
+    </div>
+  </div>
+  <div class="right">
+    <div class="mock">
+      <div class="box">
+        This is a terrible take. You clearly have no idea…<span class="caret"></span>
+        <span class="cv-badge cv-badge--negative badge-float">😕 Negative</span>
+      </div>
+    </div>
+    <div class="tip">
+      <div class="cv-tooltip">
+        <div class="cv-tooltip-header"><span class="cv-tooltip-title">😕 Negative</span><span class="cv-tooltip-close">✕</span></div>
+        <div class="cv-tooltip-rewrite" style="border-top:none; padding-top:2px; margin-top:0;">
+          <span class="cv-tooltip-rewrite-label">Kinder rewrite</span>
+          <div class="cv-tooltip-rewrite-text">I see this differently — happy to compare notes.</div>
+          <span class="cv-tooltip-copy">📋 Copy</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</body></html>

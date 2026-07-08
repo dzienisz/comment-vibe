@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="shared.css">
+<style>
+.langs { display: flex; gap: 10px; margin-top: 18px; flex-wrap: wrap; }
+.chip {
+  background: #fff; border: 1.5px solid #ddd6fe; color: #5b21b6;
+  border-radius: 999px; padding: 6px 16px; font-size: 15px; font-weight: 600;
+}
+.chip.more { border-style: dashed; color: #8b5cf6; }
+</style></head>
+<body>
+<div class="canvas">
+  <div class="headline">Speaks <em>your</em> language.</div>
+  <div class="subline">Comment Vibe detects the language you write in — the label, explanation and rewrite come back in that same language.</div>
+
+  <div class="stage" style="gap:36px;">
+    <div class="composer" style="width:560px;">
+      <div class="composer-head">
+        <div class="avatar">KD</div>
+        <div class="composer-meta">
+          <div class="name">Dodaj komentarz</div>
+          <div class="sub">Odpowiadasz na post</div>
+        </div>
+      </div>
+      <div class="composer-box">
+        To kompletna bzdura, w ogóle się na tym nie znasz.<span class="caret"></span>
+        <span class="cv-badge cv-badge--negative badge-float">😕 Negatywny</span>
+      </div>
+      <div class="langs">
+        <span class="chip">Polski</span><span class="chip">Español</span><span class="chip">Deutsch</span>
+        <span class="chip">Français</span><span class="chip">日本語</span><span class="chip more">+ more</span>
+      </div>
+    </div>
+
+    <div class="cv-tooltip">
+      <div class="cv-tooltip-header">
+        <span class="cv-tooltip-title">😕 Negatywny</span>
+        <span class="cv-tooltip-close">✕</span>
+      </div>
+      <div class="cv-tooltip-reason">Bezpośrednia krytyka osoby — może zabrzmieć ostro dla odbiorcy.</div>
+      <div class="cv-tooltip-rewrite">
+        <span class="cv-tooltip-rewrite-label">Łagodniejsza wersja</span>
+        <div class="cv-tooltip-rewrite-text">Mam inne zdanie — z mojego doświadczenia wygląda to inaczej. Chętnie poznam Twoją perspektywę.</div>
+        <span class="cv-tooltip-copy">📋 Kopiuj</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="brand-strip">
+    <svg width="26" height="26" viewBox="0 0 128 128"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8b5cf6"/><stop offset="1" stop-color="#4f46e5"/></linearGradient></defs><rect width="128" height="128" rx="30" fill="url(#g)"/><rect x="18" y="26" width="92" height="60" rx="14" fill="#fff"/><path d="M36 82 L36 102 L58 84 Z" fill="#fff"/><circle cx="44" cy="56" r="8.5" fill="#22c55e"/><circle cx="64" cy="56" r="8.5" fill="#f59e0b"/><circle cx="84" cy="56" r="8.5" fill="#ef4444"/></svg>
+    Comment Vibe <span class="tag">· on-device Language Detector + Translator APIs</span>
+  </div>
+</div>
+</body></html>

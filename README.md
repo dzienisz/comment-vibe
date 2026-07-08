@@ -6,6 +6,8 @@ A Chrome extension that uses Chrome's built-in AI (Gemini Nano) to analyse the t
 
 **▶ [Install Comment Vibe from the Chrome Web Store](https://chromewebstore.google.com/detail/comment-vibe/kibcnjcipaofjlbbnjdjaobbkoajiejp)** · [Try the live playground](https://dzienko.dev/comment-vibe/)
 
+![Comment Vibe in action — tone badge and kinder rewrite tooltip](store-assets/shot1-hero.png)
+
 ## What it does
 
 Type a comment on LinkedIn, Twitter/X, YouTube, or any other site. A small badge appears near your text box showing the detected tone. Click it to see why — and if your comment sounds harsh or toxic, get an instant kinder rewrite suggestion you can copy in one click.
@@ -20,6 +22,10 @@ Type a comment on LinkedIn, Twitter/X, YouTube, or any other site. A small badge
 ## Privacy
 
 All analysis runs locally using Chrome's on-device Gemini Nano model. Your comments are never sent to any server.
+
+## Store assets
+
+Chrome Web Store listing text and promo images (screenshots + tiles) live in [`store-assets/`](store-assets/). The PNGs are rendered from the HTML sources in `store-assets/src/` — edit those and run `store-assets/render.sh` (headless Chrome) to regenerate. See [`store-assets/listing.md`](store-assets/listing.md) for the description text and the asset → store-slot mapping.
 
 ---
 
