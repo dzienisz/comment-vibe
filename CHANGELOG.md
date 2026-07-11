@@ -5,6 +5,20 @@ All notable changes to **Comment Vibe** are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.2] - 2026-07-11
+
+### Fixed
+- Badge placement: the tone badge no longer covers typed text. It now sits above
+  the input's top-right corner, flips below when there is no room at the top of
+  the viewport, follows scrolling inside nested containers, and repositions as
+  the input grows while typing.
+- Analysis no longer slows down over time. Few-shots are kept in `initialPrompts`
+  and each analysis runs on a fresh `clone()` of the session, preventing context
+  growth and quota overflow.
+- Analysis now streams via `promptStreaming()`: the badge renders as soon as the
+  sentiment is available, while the reason and rewrite fill the tooltip when
+  generation finishes.
+
 ## [1.1.1] - 2026-07-08
 
 ### Changed
