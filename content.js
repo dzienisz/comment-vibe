@@ -55,58 +55,88 @@ const SELECTORS = [
 
 // ── AI session ───────────────────────────────────────────────────────────────
 
-let aiSession  = null;
-let sessionBusy = false;
-let lastUsedAt  = 0;
+let reusableSession = null;
+let sessionCreation = null;
+let lastUsedAt = 0;
 // true when the few-shot examples are baked into the session via initialPrompts
 // (they then survive clone() and don't need re-sending with every prompt)
-let fewShotBaked = false;
+
+function sessionMetadata(session, fewShotBaked) {
+  return { session, fewShotBaked, cloneCapable: typeof session.clone === 'function' };
+}
+
+function supportsReducedOptionsRetry(error) {
+  return error instanceof TypeError || error?.name === 'NotSupportedError';
+}
+
+async function constructSession() {
+  if (typeof LanguageModel !== 'undefined') {
+    const avail = await LanguageModel.availability();
+    if (avail === 'unavailable') throw new Error('unavailable');
+    const initialPrompts = [{ role: 'system', content: SYSTEM_PROMPT }, ...FEW_SHOT];
+    try {
+      return sessionMetadata(await LanguageModel.create({ initialPrompts, ...LANGUAGE_OPTIONS }), true);
+    } catch (error) {
+      if (!supportsReducedOptionsRetry(error)) throw error;
+      try {
+        return sessionMetadata(await LanguageModel.create({ initialPrompts }), true);
+      } catch (reducedError) {
+        if (!supportsReducedOptionsRetry(reducedError)) throw reducedError;
+        // older builds without initialPrompts support
+        return sessionMetadata(await LanguageModel.create({ systemPrompt: SYSTEM_PROMPT }), false);
+      }
+    }
+  }
+  if (typeof window !== 'undefined' && window.ai?.languageModel) {
+    const { available } = await window.ai.languageModel.capabilities();
+    if (available === 'no') throw new Error('unavailable');
+    return sessionMetadata(await window.ai.languageModel.create({ systemPrompt: SYSTEM_PROMPT }), false);
+  }
+  throw new Error('Chrome AI not found');
+}
+
+function expireReusableSession(now = Date.now()) {
+  if (!reusableSession || now - lastUsedAt <= SESSION_TTL) return;
+  reusableSession.session.destroy?.();
+  reusableSession = null;
+  lastUsedAt = 0;
+}
 
 async function getSession() {
-  if (aiSession && Date.now() - lastUsedAt > SESSION_TTL) {
-    aiSession.destroy?.();
-    aiSession = null;
-  }
-  if (aiSession) return aiSession;
-
-  if (sessionBusy) {
-    await new Promise(resolve => {
-      const t = setInterval(() => { if (!sessionBusy) { clearInterval(t); resolve(); } }, 50);
-    });
-    return aiSession;
+  expireReusableSession();
+  if (reusableSession) {
+    lastUsedAt = Date.now();
+    return reusableSession;
   }
 
-  sessionBusy = true;
-  try {
-    if (typeof LanguageModel !== 'undefined') {
-      const avail = await LanguageModel.availability();
-      if (avail === 'unavailable') throw new Error('unavailable');
-      const initialPrompts = [{ role: 'system', content: SYSTEM_PROMPT }, ...FEW_SHOT];
-      try {
-        aiSession = await LanguageModel.create({ initialPrompts, ...LANGUAGE_OPTIONS });
-        fewShotBaked = true;
-      } catch {
-        try {
-          aiSession = await LanguageModel.create({ initialPrompts });
-          fewShotBaked = true;
-        } catch {
-          // older builds without initialPrompts support
-          aiSession = await LanguageModel.create({ systemPrompt: SYSTEM_PROMPT });
-          fewShotBaked = false;
-        }
-      }
-    } else if (window.ai?.languageModel) {
-      const { available } = await window.ai.languageModel.capabilities();
-      if (available === 'no') throw new Error('unavailable');
-      aiSession = await window.ai.languageModel.create({ systemPrompt: SYSTEM_PROMPT });
-      fewShotBaked = false;
-    } else {
-      throw new Error('Chrome AI not found');
+  if (sessionCreation) {
+    const pending = await sessionCreation;
+    if (pending.cloneCapable) {
+      lastUsedAt = Date.now();
+      return pending;
     }
-  } finally {
-    sessionBusy = false;
+    return constructSession();
   }
-  return aiSession;
+
+  const creation = constructSession();
+  sessionCreation = creation;
+  try {
+    const created = await creation;
+    if (created.cloneCapable) {
+      reusableSession = created;
+      lastUsedAt = Date.now();
+    }
+    return created;
+  } finally {
+    if (sessionCreation === creation) sessionCreation = null;
+  }
+}
+
+function resetSessionState() {
+  reusableSession?.session.destroy?.();
+  reusableSession = null;
+  sessionCreation = null;
+  lastUsedAt = 0;
 }
 
 // ── Localisation (Language Detector + Translator) ─────────────────────────────
@@ -213,15 +243,15 @@ const FEW_SHOT = [
 ];
 
 async function analyzeText(text, onEarlySentiment, signal) {
-  const base = await getSession();
-  lastUsedAt = Date.now();
+  const acquired = await getSession();
+  const base = acquired.session;
   // Prompt API sessions are stateful: prompting the shared session would append
   // every analysis to its context, slowing each one down until the quota
   // overflows. A clone starts fresh from the initial prompts and is cheap
   // (no model reload), so analyze on a throwaway clone.
-  const session = typeof base.clone === 'function' ? await base.clone() : base;
+  const session = acquired.cloneCapable ? await base.clone() : base;
   const messages = [
-    ...(fewShotBaked ? [] : FEW_SHOT),
+    ...(acquired.fewShotBaked ? [] : FEW_SHOT),
     { role: 'user',      content: `Classify the tone of this comment:\n"${text.replace(/"/g, '\\"')}"` },
     { role: 'assistant', content: '{"sentiment":', prefix: true },
   ];
@@ -231,7 +261,7 @@ async function analyzeText(text, onEarlySentiment, signal) {
       : await callPrompt(session, 'prompt', messages, signal);
     return normalize(parseResponse('{"sentiment":' + raw));
   } finally {
-    if (session !== base) session.destroy?.();
+    session.destroy?.();
   }
 }
 
@@ -670,13 +700,18 @@ if (typeof document !== 'undefined') {
 
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
+    analyzeText,
     beginInputChange,
+    constructSession,
+    expireReusableSession,
+    getSession,
     invalidateRequest,
     isCleanupEligible,
     isCurrentRequest,
     normalize,
     normalizeDetectedLanguage,
     parseResponse,
+    resetSessionState,
     streamPrompt,
   };
 }
