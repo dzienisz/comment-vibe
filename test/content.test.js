@@ -4,6 +4,9 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 
 const {
+  beginInputChange,
+  invalidateRequest,
+  isCurrentRequest,
   normalize,
   normalizeDetectedLanguage,
   parseResponse,
@@ -112,4 +115,76 @@ test('streamPrompt fires the early sentiment callback exactly once', async () =>
 
   assert.equal(raw, '"toxic","reason":"Hostile.","rewrite":"Be respectful."}');
   assert.deepEqual(sentiments, ['toxic']);
+});
+
+test('invalidateRequest clears pending work and increments the request ID once', () => {
+  let abortCalls = 0;
+  const state = {
+    debounceTimer: setTimeout(() => assert.fail('timer should have been cancelled'), 60_000),
+    abortController: { abort: () => { abortCalls++; } },
+    requestId: 7,
+  };
+
+  const requestId = invalidateRequest(state);
+
+  assert.equal(requestId, 8);
+  assert.equal(state.requestId, 8);
+  assert.equal(state.debounceTimer, null);
+  assert.equal(state.abortController, null);
+  assert.equal(abortCalls, 1);
+});
+
+test('beginInputChange leaves an unchanged input request active', () => {
+  let abortCalls = 0;
+  const timer = setTimeout(() => {}, 60_000);
+  const state = {
+    debounceTimer: timer,
+    abortController: { abort: () => { abortCalls++; } },
+    lastText: 'same comment text',
+    requestId: 3,
+  };
+
+  const requestId = beginInputChange(state, 'same comment text');
+
+  assert.equal(requestId, null);
+  assert.equal(state.requestId, 3);
+  assert.equal(state.debounceTimer, timer);
+  assert.equal(abortCalls, 0);
+  clearTimeout(timer);
+});
+
+test('an aborted stream cannot produce a current final result', async () => {
+  const controller = new AbortController();
+  const state = {
+    debounceTimer: null,
+    abortController: controller,
+    requestId: 1,
+  };
+  const requestId = state.requestId;
+  let finalRendered = false;
+  const session = {
+    async * promptStreaming(messages, options) {
+      assert.deepEqual(messages, [{ role: 'user', content: 'message' }]);
+      assert.equal(options.signal, controller.signal);
+      yield '"negative"';
+      if (options.signal.aborted) throw new DOMException('Aborted', 'AbortError');
+      yield ',"reason":"Harsh."}';
+    },
+  };
+
+  await assert.rejects(
+    streamPrompt(
+      session,
+      [{ role: 'user', content: 'message' }],
+      () => invalidateRequest(state),
+      controller.signal,
+    ).then(() => {
+      if (isCurrentRequest(state, requestId)) finalRendered = true;
+    }),
+    { name: 'AbortError' },
+  );
+
+  assert.equal(controller.signal.aborted, true);
+  assert.equal(state.requestId, 2);
+  assert.equal(finalRendered, false);
 });

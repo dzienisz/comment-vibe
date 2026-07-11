@@ -212,7 +212,7 @@ const FEW_SHOT = [
   },
 ];
 
-async function analyzeText(text, onEarlySentiment) {
+async function analyzeText(text, onEarlySentiment, signal) {
   const base = await getSession();
   lastUsedAt = Date.now();
   // Prompt API sessions are stateful: prompting the shared session would append
@@ -227,8 +227,8 @@ async function analyzeText(text, onEarlySentiment) {
   ];
   try {
     const raw = typeof session.promptStreaming === 'function'
-      ? await streamPrompt(session, messages, onEarlySentiment)
-      : await session.prompt(messages);
+      ? await streamPrompt(session, messages, onEarlySentiment, signal)
+      : await callPrompt(session, 'prompt', messages, signal);
     return normalize(parseResponse('{"sentiment":' + raw));
   } finally {
     if (session !== base) session.destroy?.();
@@ -238,10 +238,20 @@ async function analyzeText(text, onEarlySentiment) {
 // Accumulates the streamed response; fires onEarlySentiment as soon as the
 // sentiment value is readable (it's the first field thanks to the prefill),
 // so the badge can color in before the reason/rewrite finish generating.
-async function streamPrompt(session, messages, onEarlySentiment) {
+function callPrompt(session, method, messages, signal) {
+  if (!signal) return session[method](messages);
+  try {
+    return session[method](messages, { signal });
+  } catch (error) {
+    if (error instanceof TypeError && !signal.aborted) return session[method](messages);
+    throw error;
+  }
+}
+
+async function streamPrompt(session, messages, onEarlySentiment, signal) {
   let raw = '';
   let signaled = false;
-  for await (const chunk of session.promptStreaming(messages)) {
+  for await (const chunk of callPrompt(session, 'promptStreaming', messages, signal)) {
     // older builds stream the cumulative text, newer ones stream deltas
     raw = (chunk.length > raw.length && chunk.startsWith(raw)) ? chunk : raw + chunk;
     if (!signaled && onEarlySentiment) {
@@ -424,33 +434,52 @@ function getText(el) {
     : (el.innerText || el.textContent || '');
 }
 
+function invalidateRequest(state) {
+  if (state.debounceTimer !== null) clearTimeout(state.debounceTimer);
+  state.debounceTimer = null;
+  state.abortController?.abort();
+  state.abortController = null;
+  return ++state.requestId;
+}
+
+function beginInputChange(state, text) {
+  if (text === state.lastText) return null;
+  const requestId = invalidateRequest(state);
+  state.lastText = text;
+  return requestId;
+}
+
+function isCurrentRequest(state, requestId) {
+  return requestId === state.requestId;
+}
+
 function attachToInput(el) {
   if (tracked.has(el)) return;
 
   const { badge, tooltip } = createUI();
-  const state = { badge, tooltip, debounceTimer: null, lastText: '', requestId: 0 };
+  const state = { badge, tooltip, debounceTimer: null, abortController: null, lastText: '', requestId: 0 };
   tracked.set(el, state);
 
   const onInput = () => {
     const text = getText(el).trim();
+    const requestId = beginInputChange(state, text);
+    if (requestId === null) return;
     if (text.length < MIN_LENGTH) {
       sp(badge, 'display', 'none');
       hideTooltip(tooltip);
-      state.lastText = '';
       return;
     }
-    if (text === state.lastText) return;
-    state.lastText = text;
 
-    const requestId = ++state.requestId;
-    clearTimeout(state.debounceTimer);
+    const abortController = new AbortController();
+    state.abortController = abortController;
     showAnalyzing(badge);
     placeBadge(badge, el);
 
     state.debounceTimer = setTimeout(async () => {
+      state.debounceTimer = null;
       try {
         const onEarlySentiment = sentiment => {
-          if (requestId !== state.requestId) return;
+          if (!isCurrentRequest(state, requestId)) return;
           renderBadge(badge, tooltip, {
             sentiment,
             emoji:   EMOJI_FOR[sentiment],
@@ -460,15 +489,22 @@ function attachToInput(el) {
           });
           placeBadge(badge, el);
         };
-        const [result, lang] = await Promise.all([analyzeText(text, onEarlySentiment), detectLanguage(text)]);
-        if (requestId !== state.requestId) return;
+        const [result, lang] = await Promise.all([
+          analyzeText(text, onEarlySentiment, abortController.signal),
+          detectLanguage(text),
+        ]);
+        if (!isCurrentRequest(state, requestId)) return;
         const localized = await localizeResult(result, lang);
-        if (requestId !== state.requestId) return;
+        if (!isCurrentRequest(state, requestId)) return;
         renderBadge(badge, tooltip, localized);
-      } catch {
-        sp(badge, 'display', 'none');
+      } catch (error) {
+        if (error?.name !== 'AbortError' && isCurrentRequest(state, requestId)) {
+          sp(badge, 'display', 'none');
+        }
+      } finally {
+        if (state.abortController === abortController) state.abortController = null;
       }
-      placeBadge(badge, el);
+      if (isCurrentRequest(state, requestId)) placeBadge(badge, el);
     }, DEBOUNCE_MS);
   };
 
@@ -506,6 +542,7 @@ function attachToInput(el) {
   resizeObserver.observe(el);
 
   state.cleanup = () => {
+    invalidateRequest(state);
     badge.remove();
     tooltip.remove();
     resizeObserver.disconnect();
@@ -567,5 +604,13 @@ if (typeof document !== 'undefined') {
 }
 
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { parseResponse, normalize, streamPrompt, normalizeDetectedLanguage };
+  module.exports = {
+    beginInputChange,
+    invalidateRequest,
+    isCurrentRequest,
+    normalize,
+    normalizeDetectedLanguage,
+    parseResponse,
+    streamPrompt,
+  };
 }
