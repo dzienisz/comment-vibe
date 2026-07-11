@@ -296,6 +296,8 @@ function normalize(obj) {
 
 // ── UI helpers ───────────────────────────────────────────────────────────────
 
+let activeTooltip = null;
+
 // Inline !important beats any stylesheet rule
 function sp(el, prop, val) { el.style.setProperty(prop, val, 'important'); }
 function isVisible(el) { return el.style.getPropertyValue('display') !== 'none'; }
@@ -360,6 +362,15 @@ function showTooltip(tooltip, badge) {
 
 function hideTooltip(tooltip) { sp(tooltip, 'display', 'none'); }
 
+function dismissTooltip(tooltip) {
+  hideTooltip(tooltip);
+  if (activeTooltip === tooltip) activeTooltip = null;
+}
+
+function dismissActiveTooltip() {
+  if (activeTooltip) dismissTooltip(activeTooltip);
+}
+
 function escHtml(str = '') {
   return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
@@ -380,11 +391,14 @@ function createUI() {
 
   badge.addEventListener('click', e => {
     e.stopPropagation();
-    if (isVisible(tooltip)) hideTooltip(tooltip);
-    else showTooltip(tooltip, badge);
+    if (activeTooltip && activeTooltip !== tooltip) dismissActiveTooltip();
+    if (isVisible(tooltip)) {
+      dismissTooltip(tooltip);
+    } else {
+      showTooltip(tooltip, badge);
+      activeTooltip = tooltip;
+    }
   });
-
-  document.addEventListener('click', () => hideTooltip(tooltip));
 
   return { badge, tooltip };
 }
@@ -419,7 +433,7 @@ function renderBadge(badge, tooltip, result) {
 
   close.addEventListener('click', e => {
     e.stopPropagation();
-    hideTooltip(tooltip);
+    dismissTooltip(tooltip);
   });
 
   if (rewrite) {
@@ -489,7 +503,7 @@ function attachToInput(el) {
     if (requestId === null) return;
     if (text.length < MIN_LENGTH) {
       sp(badge, 'display', 'none');
-      hideTooltip(tooltip);
+      dismissTooltip(tooltip);
       return;
     }
 
@@ -566,6 +580,7 @@ function attachToInput(el) {
 
   state.cleanup = () => {
     invalidateRequest(state);
+    if (activeTooltip === tooltip) activeTooltip = null;
     badge.remove();
     tooltip.remove();
     resizeObserver.disconnect();
@@ -580,27 +595,54 @@ function attachToInput(el) {
 
 // ── Page scanning ─────────────────────────────────────────────────────────────
 
+function matchesInputSelector(el) {
+  return SELECTORS.some(selector => el.matches(selector));
+}
+
+function forEachInputCandidate(root, callback) {
+  if (matchesInputSelector(root)) callback(root);
+  for (const selector of SELECTORS) root.querySelectorAll(selector).forEach(callback);
+}
+
+function attachCandidate(el) {
+  if (el.closest('.cv-tooltip') || el.classList.contains('cv-badge')) return;
+  const r = el.getBoundingClientRect();
+  if (r.width === 0 && r.height === 0) return;
+  attachToInput(el);
+}
+
+function scanSubtree(root) {
+  forEachInputCandidate(root, attachCandidate);
+}
+
 function scanPage() {
-  for (const sel of SELECTORS) {
-    document.querySelectorAll(sel).forEach(el => {
-      if (el.closest('.cv-tooltip') || el.classList.contains('cv-badge')) return;
-      const r = el.getBoundingClientRect();
-      if (r.width === 0 && r.height === 0) return;
-      attachToInput(el);
-    });
-  }
+  for (const selector of SELECTORS) document.querySelectorAll(selector).forEach(attachCandidate);
+}
+
+function isCleanupEligible(el) {
+  return !el.isConnected;
+}
+
+function cleanupSubtree(root) {
+  forEachInputCandidate(root, el => {
+    const state = tracked.get(el);
+    if (!state || !isCleanupEligible(el)) return;
+    state.cleanup?.();
+    tracked.delete(el);
+  });
 }
 
 function watchDOM() {
+  document.addEventListener('click', dismissActiveTooltip);
   new MutationObserver(mutations => {
-    if (mutations.some(m => m.addedNodes.length > 0)) scanPage();
-    mutations.forEach(m => {
-      m.removedNodes.forEach(node => {
-        if (node.nodeType !== 1) return;
-        [node, ...(node.querySelectorAll('*') ?? [])].forEach(el => {
-          const state = tracked.get(el);
-          if (state) { state.cleanup?.(); tracked.delete(el); }
-        });
+    mutations.forEach(mutation => {
+      mutation.addedNodes.forEach(node => {
+        if (node.nodeType === 1) scanSubtree(node);
+      });
+    });
+    mutations.forEach(mutation => {
+      mutation.removedNodes.forEach(node => {
+        if (node.nodeType === 1) cleanupSubtree(node);
       });
     });
   }).observe(document.body, { childList: true, subtree: true });
@@ -630,6 +672,7 @@ if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     beginInputChange,
     invalidateRequest,
+    isCleanupEligible,
     isCurrentRequest,
     normalize,
     normalizeDetectedLanguage,

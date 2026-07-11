@@ -28,6 +28,7 @@
   textarea { height: 90px; }
   [contenteditable] { min-height: 44px; }
   h3 { margin: 8px 0; font-size: 13px; color: #666; }
+  #lifecycle-results { white-space: pre-wrap; }
 </style>
 </head>
 <body>
@@ -49,6 +50,14 @@
 <section id="malformed" style="margin-top: 60px;">
   <h3>Malformed — object fields must fall back without breaking the UI</h3>
   <textarea placeholder="Write a comment">malformed demo comment long enough to analyze</textarea>
+</section>
+
+<section id="lifecycle" style="margin-top: 60px;">
+  <h3>DOM lifecycle scenarios</h3>
+  <button id="run-lifecycle" type="button">Run lifecycle checks</button>
+  <pre id="lifecycle-results">Not run</pre>
+  <div id="move-target"></div>
+  <div id="dynamic-target"></div>
 </section>
 
 <div style="height: 800px"></div>
@@ -108,10 +117,113 @@
 </script>
 <script src="../content.js"></script>
 <script>
+  const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
+  const waitForDOM = () => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+
+  function assertLifecycle(condition, message) {
+    if (!condition) throw new Error(message);
+  }
+
+  async function runLifecycleChecks() {
+    const output = document.getElementById('lifecycle-results');
+    const button = document.getElementById('run-lifecycle');
+    const stats = { passed: 0, failed: 0, scenarios: [] };
+    window.__lifecycleStats = stats;
+    button.disabled = true;
+    output.textContent = 'Waiting for initial analyses…';
+    await wait(1800);
+    output.textContent = 'Running…';
+
+    const run = async (name, scenario) => {
+      try {
+        await scenario();
+        stats.passed++;
+        stats.scenarios.push(`PASS: ${name}`);
+      } catch (error) {
+        stats.failed++;
+        stats.scenarios.push(`FAIL: ${name} — ${error.message}`);
+      }
+      output.textContent = stats.scenarios.join('\n');
+    };
+
+    await run('moved textarea remains tracked with one badge', async () => {
+      const textarea = document.querySelector('#top textarea');
+      const badgeCount = document.querySelectorAll('.cv-badge').length;
+      const streams = window.__stubStats.stream;
+      document.getElementById('move-target').appendChild(textarea);
+      await wait(0);
+      textarea.value = 'moved textarea still analyzes a changed comment';
+      textarea.dispatchEvent(new Event('input', { bubbles: true }));
+      await wait(1800);
+      assertLifecycle(document.querySelectorAll('.cv-badge').length === badgeCount, 'badge was duplicated or removed');
+      assertLifecycle(window.__stubStats.stream === streams + 1, 'moved textarea did not analyze');
+    });
+
+    await run('removed textarea releases its badge and tooltip', async () => {
+      const badgeCount = document.querySelectorAll('.cv-badge').length;
+      const tooltipCount = document.querySelectorAll('.cv-tooltip').length;
+      const textarea = document.createElement('textarea');
+      textarea.placeholder = 'Write a comment';
+      document.getElementById('dynamic-target').appendChild(textarea);
+      await waitForDOM();
+      const trackedBadgeCount = document.querySelectorAll('.cv-badge').length;
+      const trackedTooltipCount = document.querySelectorAll('.cv-tooltip').length;
+      const rect = textarea.getBoundingClientRect();
+      if (trackedBadgeCount <= badgeCount || trackedTooltipCount <= tooltipCount) {
+        textarea.remove();
+        await waitForDOM();
+        throw new Error(`dynamic textarea was not tracked (${rect.width}x${rect.height}, badges ${badgeCount}→${trackedBadgeCount})`);
+      }
+      textarea.remove();
+      await waitForDOM();
+      assertLifecycle(document.querySelectorAll('.cv-badge').length === badgeCount, 'badge was not removed');
+      assertLifecycle(document.querySelectorAll('.cv-tooltip').length === tooltipCount, 'tooltip was not removed');
+    });
+
+    await run('irrelevant DOM additions create no duplicate UI', async () => {
+      const badgeCount = document.querySelectorAll('.cv-badge').length;
+      const tooltipCount = document.querySelectorAll('.cv-tooltip').length;
+      const container = document.createElement('div');
+      for (let i = 0; i < 250; i++) container.appendChild(document.createElement('span'));
+      document.getElementById('dynamic-target').appendChild(container);
+      await wait(0);
+      assertLifecycle(document.querySelectorAll('.cv-badge').length === badgeCount, 'irrelevant nodes created badges');
+      assertLifecycle(document.querySelectorAll('.cv-tooltip').length === tooltipCount, 'irrelevant nodes created tooltips');
+      container.remove();
+      await wait(0);
+    });
+
+    await run('repeated lifecycle keeps outside-click dismissal working', async () => {
+      const badgeCount = document.querySelectorAll('.cv-badge').length;
+      for (let i = 0; i < 4; i++) {
+        const textarea = document.createElement('textarea');
+        textarea.placeholder = 'Write a comment';
+        document.getElementById('dynamic-target').appendChild(textarea);
+        await waitForDOM();
+        const badges = document.querySelectorAll('.cv-badge');
+        const tooltips = document.querySelectorAll('.cv-tooltip');
+        assertLifecycle(badges.length > badgeCount, 'dynamic textarea was not tracked during repetition');
+        const badge = badges[badges.length - 1];
+        const tooltip = tooltips[tooltips.length - 1];
+        badge.click();
+        assertLifecycle(tooltip.style.getPropertyValue('display') === 'block', 'badge did not open tooltip');
+        document.body.click();
+        assertLifecycle(tooltip.style.getPropertyValue('display') === 'none', 'document click did not close tooltip');
+        textarea.remove();
+        await waitForDOM();
+        assertLifecycle(document.querySelectorAll('.cv-badge').length === badgeCount, 'repeated removal leaked a badge');
+      }
+    });
+
+    button.disabled = false;
+    output.textContent = `${stats.scenarios.join('\n')}\n\n${stats.passed} passed, ${stats.failed} failed`;
+  }
+
   window.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('textarea, [contenteditable]').forEach(el => {
       el.dispatchEvent(new Event('input', { bubbles: true }));
     });
+    document.getElementById('run-lifecycle').addEventListener('click', runLifecycleChecks);
   });
 </script>
 </body>

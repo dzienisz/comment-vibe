@@ -6,6 +6,7 @@ const assert = require('node:assert/strict');
 const {
   beginInputChange,
   invalidateRequest,
+  isCleanupEligible,
   isCurrentRequest,
   normalize,
   normalizeDetectedLanguage,
@@ -226,6 +227,14 @@ test('beginInputChange leaves an unchanged input request active', () => {
   assert.equal(state.debounceTimer, timer);
   assert.equal(abortCalls, 0);
   clearTimeout(timer);
+});
+
+test('cleanup eligibility rejects connected elements', () => {
+  assert.equal(isCleanupEligible({ isConnected: true }), false);
+});
+
+test('cleanup eligibility accepts disconnected elements', () => {
+  assert.equal(isCleanupEligible({ isConnected: false }), true);
 });
 
 test('an aborted stream cannot produce a current final result', async () => {
