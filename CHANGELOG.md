@@ -5,9 +5,26 @@ All notable changes to **Comment Vibe** are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.3] - 2026-07-11
+
+### Fixed
+
+- Editing, shortening, clearing, or removing a comment now cancels pending work
+  and prevents stale analysis results from reappearing.
+- Model output is normalized before rendering so malformed fields and unsafe
+  emoji values cannot inject markup or break the badge and tooltip.
+- Dynamic comment-box discovery now scans only added DOM subtrees, cleans up
+  removed editors and listeners, and keeps editors working when SPAs move them.
+- Tooltip dismissal now uses one document listener instead of leaking one
+  listener per tracked editor.
+- Modern Prompt API analyses reuse one bounded base session and destroy a fresh
+  clone per request. Legacy and no-clone builds now use a fresh, destroyed
+  session per analysis, including concurrent requests and failure paths.
+
 ## [1.1.2] - 2026-07-11
 
 ### Fixed
+
 - Badge placement: the tone badge no longer covers typed text. It now sits above
   the input's top-right corner, flips below when there is no room at the top of
   the viewport, follows scrolling inside nested containers, and repositions as
@@ -22,6 +39,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.1.1] - 2026-07-08
 
 ### Changed
+
 - Store listing refresh: benefit-first manifest description ("See how your
   comment sounds before you post…"), new detailed description, and a full set
   of promo images (5 screenshots + small/marquee tiles) generated from HTML
@@ -32,6 +50,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.1.0] - 2026-06-14
 
 ### Added
+
 - **Multilingual output.** Comments are now language-detected with the
   **Language Detector API**, and when the comment isn't in English the badge
   label, the reason, and the rewrite suggestion are translated into the
@@ -42,6 +61,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   English result is shown unchanged.
 
 ### Changed
+
 - README rewritten to reflect that the Prompt API is **stable for Chrome
   Extensions since Chrome 138**. The `chrome://flags` setup is now documented
   only as a fallback for older builds (Chrome 127–137) rather than the default
@@ -50,6 +70,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.0.0] - 2026-05-14
 
 ### Added
+
 - Initial release. On-device tone analysis (positive / neutral / negative /
   toxic) of comments via Chrome's built-in Prompt API (Gemini Nano), with a
   kinder one-click rewrite suggestion for negative and toxic comments. Works on
