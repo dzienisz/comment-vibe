@@ -137,14 +137,18 @@ async function getDetector() {
   return detector;
 }
 
+function normalizeDetectedLanguage(top) {
+  if (top && top.confidence >= MIN_DETECT_CONFIDENCE && top.detectedLanguage !== 'und') {
+    return top.detectedLanguage.split('-')[0];
+  }
+  return null;
+}
+
 async function detectLanguage(text) {
   const d = await getDetector();
   if (!d) return null;
   try {
-    const top = (await d.detect(text))?.[0];
-    if (top && top.confidence >= MIN_DETECT_CONFIDENCE && top.detectedLanguage !== 'und') {
-      return top.detectedLanguage.split('-')[0];
-    }
+    return normalizeDetectedLanguage((await d.detect(text))?.[0]);
   } catch {}
   return null;
 }
@@ -554,8 +558,14 @@ async function init() {
   watchDOM();
 }
 
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', init);
-} else {
-  init();
+if (typeof document !== 'undefined') {
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+}
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = { parseResponse, normalize, streamPrompt, normalizeDetectedLanguage };
 }
