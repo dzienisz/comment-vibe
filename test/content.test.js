@@ -130,6 +130,21 @@ test('normalize replaces empty labels and malicious emoji with canonical values'
   });
 });
 
+test('normalize rejects markup-like display strings', () => {
+  assert.deepEqual(normalize({
+    sentiment: 'toxic',
+    label: '<b>Toxic</b>',
+    reason: '<img src=x onerror=alert(1)>',
+    rewrite: '<script>alert(2)</script>',
+  }), {
+    sentiment: 'toxic',
+    emoji: '🚫',
+    label: 'Toxic',
+    reason: '',
+    rewrite: null,
+  });
+});
+
 test('normalizeDetectedLanguage returns the primary language subtag', () => {
   assert.equal(normalizeDetectedLanguage({ detectedLanguage: 'pl-PL', confidence: 0.9 }), 'pl');
 });
