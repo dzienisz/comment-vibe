@@ -71,6 +71,65 @@ test('normalize converts an empty rewrite to null', () => {
   assert.equal(normalize({ sentiment: 'negative', rewrite: '   ' }).rewrite, null);
 });
 
+test('normalize safely defaults null and array inputs', () => {
+  const fallback = {
+    sentiment: 'neutral',
+    emoji: '😐',
+    label: 'Neutral',
+    reason: '',
+    rewrite: null,
+  };
+
+  assert.deepEqual(normalize(null), fallback);
+  assert.deepEqual(normalize([]), fallback);
+});
+
+test('normalize rejects object-valued user-facing fields', () => {
+  assert.deepEqual(normalize({
+    sentiment: 'negative',
+    label: { html: '<b>Hostile</b>' },
+    reason: { text: 'Harsh.' },
+    rewrite: { text: 'Please reconsider.' },
+  }), {
+    sentiment: 'negative',
+    emoji: '😕',
+    label: 'Negative',
+    reason: '',
+    rewrite: null,
+  });
+});
+
+test('normalize trims and lowercases sentiment and localized labels', () => {
+  assert.deepEqual(normalize({
+    sentiment: '  TOXIC  ',
+    label: '  Toksyczne  ',
+    reason: 'Obraźliwy ton.',
+    rewrite: '  Proszę wyrazić to uprzejmiej.  ',
+  }), {
+    sentiment: 'toxic',
+    emoji: '🚫',
+    label: 'Toksyczne',
+    reason: 'Obraźliwy ton.',
+    rewrite: 'Proszę wyrazić to uprzejmiej.',
+  });
+});
+
+test('normalize replaces empty labels and malicious emoji with canonical values', () => {
+  assert.deepEqual(normalize({
+    sentiment: 'positive',
+    emoji: '<img src=x onerror=alert(1)>',
+    label: '   ',
+    reason: 'Friendly.',
+    rewrite: 'Must not survive.',
+  }), {
+    sentiment: 'positive',
+    emoji: '😊',
+    label: 'Positive',
+    reason: 'Friendly.',
+    rewrite: null,
+  });
+});
+
 test('normalizeDetectedLanguage returns the primary language subtag', () => {
   assert.equal(normalizeDetectedLanguage({ detectedLanguage: 'pl-PL', confidence: 0.9 }), 'pl');
 });

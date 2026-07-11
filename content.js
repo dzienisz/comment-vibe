@@ -275,15 +275,20 @@ function parseResponse(raw) {
 }
 
 function normalize(obj) {
-  const sentiment  = VALID_SENTIMENTS.has(obj.sentiment) ? obj.sentiment : 'neutral';
-  const reason     = obj.reason ?? obj.tone ?? obj.analysis ?? obj.description ?? obj.explanation ?? '';
-  const rewriteRaw = obj.rewrite ?? obj.suggestion ?? obj.alternative ?? obj.improved_version ?? null;
-  const rewrite    = typeof rewriteRaw === 'string' && rewriteRaw.trim() ? rewriteRaw.trim() : null;
+  const source       = obj && typeof obj === 'object' && !Array.isArray(obj) ? obj : {};
+  const rawSentiment = typeof source.sentiment === 'string' ? source.sentiment.trim().toLowerCase() : '';
+  const sentiment    = VALID_SENTIMENTS.has(rawSentiment) ? rawSentiment : 'neutral';
+  const label        = typeof source.label === 'string' && source.label.trim()
+    ? source.label.trim()
+    : LABEL_FOR[sentiment];
+  const reason       = source.reason ?? source.tone ?? source.analysis ?? source.description ?? source.explanation ?? '';
+  const rewriteRaw   = source.rewrite ?? source.suggestion ?? source.alternative ?? source.improved_version ?? null;
+  const rewrite      = typeof rewriteRaw === 'string' && rewriteRaw.trim() ? rewriteRaw.trim() : null;
   return {
     sentiment,
-    emoji:   obj.emoji || EMOJI_FOR[sentiment],
-    label:   obj.label || LABEL_FOR[sentiment],
-    reason:  typeof reason === 'string' ? reason : '',
+    emoji: EMOJI_FOR[sentiment],
+    label,
+    reason: typeof reason === 'string' ? reason : '',
     rewrite: (sentiment === 'negative' || sentiment === 'toxic') ? rewrite : null,
   };
 }
@@ -386,39 +391,56 @@ function createUI() {
 function renderBadge(badge, tooltip, result) {
   const { sentiment, emoji, label, reason, rewrite } = result;
 
+  const badgeEmoji = document.createElement('span');
+  badgeEmoji.textContent = emoji;
+  const badgeLabel = document.createElement('span');
+  badgeLabel.textContent = label;
   badge.className = `cv-badge ${SENTIMENT_CLASS[sentiment] ?? SENTIMENT_CLASS.neutral}`;
-  badge.innerHTML = `<span>${emoji}</span><span>${escHtml(label)}</span>`;
+  badge.replaceChildren(badgeEmoji, badgeLabel);
   showBadge(badge, sentiment);
 
-  let html = `
-    <div class="cv-tooltip-header">
-      <span class="cv-tooltip-title">${emoji} ${escHtml(label)}</span>
-      <span class="cv-tooltip-close" role="button" aria-label="Close">✕</span>
-    </div>
-    <div class="cv-tooltip-reason">${escHtml(reason)}</div>`;
+  const header = document.createElement('div');
+  header.className = 'cv-tooltip-header';
+  const title = document.createElement('span');
+  title.className = 'cv-tooltip-title';
+  title.textContent = emoji + ' ' + label;
+  const close = document.createElement('span');
+  close.className = 'cv-tooltip-close';
+  close.setAttribute('role', 'button');
+  close.setAttribute('aria-label', 'Close');
+  close.textContent = '✕';
+  header.append(title, close);
 
-  if (rewrite) {
-    html += `
-    <div class="cv-tooltip-rewrite">
-      <span class="cv-tooltip-rewrite-label">Try instead:</span>
-      <div class="cv-tooltip-rewrite-text">${escHtml(rewrite)}</div>
-      <button class="cv-tooltip-copy">📋 Copy suggestion</button>
-    </div>`;
-  }
-  tooltip.innerHTML = html;
+  const reasonEl = document.createElement('div');
+  reasonEl.className = 'cv-tooltip-reason';
+  reasonEl.textContent = reason;
+  tooltip.replaceChildren(header, reasonEl);
 
-  tooltip.querySelector('.cv-tooltip-close')?.addEventListener('click', e => {
+  close.addEventListener('click', e => {
     e.stopPropagation();
     hideTooltip(tooltip);
   });
 
-  const copyBtn = tooltip.querySelector('.cv-tooltip-copy');
-  if (copyBtn && rewrite) {
+  if (rewrite) {
+    const rewriteContainer = document.createElement('div');
+    rewriteContainer.className = 'cv-tooltip-rewrite';
+    const rewriteLabel = document.createElement('span');
+    rewriteLabel.className = 'cv-tooltip-rewrite-label';
+    rewriteLabel.textContent = 'Try instead:';
+    const rewriteText = document.createElement('div');
+    rewriteText.className = 'cv-tooltip-rewrite-text';
+    rewriteText.textContent = rewrite;
+    const copyBtn = document.createElement('button');
+    copyBtn.className = 'cv-tooltip-copy';
+    copyBtn.textContent = '📋 Copy suggestion';
+    rewriteContainer.append(rewriteLabel, rewriteText, copyBtn);
+    tooltip.appendChild(rewriteContainer);
+
     copyBtn.addEventListener('click', e => {
       e.stopPropagation();
       navigator.clipboard.writeText(rewrite).then(() => {
         copyBtn.textContent = '✓ Copied!';
-        setTimeout(() => { copyBtn.innerHTML = '📋 Copy suggestion'; }, 2000);
+        setTimeout(() => { copyBtn.textContent = '📋 Copy suggestion'; }, 2000);
       }).catch(() => {});
     });
   }

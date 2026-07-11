@@ -32,17 +32,23 @@
 </head>
 <body>
 <section id="top">
-  <textarea placeholder="Write a comment (top edge — badge should flip BELOW)"></textarea>
+  <h3>Positive — canonical emoji and standard tooltip</h3>
+  <textarea placeholder="Write a comment">positive demo comment long enough to analyze</textarea>
 </section>
 
 <section id="middle" style="margin-top: 160px;">
-  <h3>Mid-page textarea — badge should sit ABOVE the top-right corner</h3>
-  <textarea placeholder="Write a comment here"></textarea>
+  <h3>Negative — localized label, rewrite, and copy button</h3>
+  <textarea placeholder="Write a comment">negative demo comment long enough to analyze</textarea>
 </section>
 
 <section id="grow" style="margin-top: 60px;">
-  <h3>Growing contenteditable — badge should follow as it grows</h3>
-  <div contenteditable="true" role="textbox" aria-label="comment"></div>
+  <h3>Malicious — canonical emoji; HTML-like label and reason must remain text</h3>
+  <div contenteditable="true" role="textbox" aria-label="comment">malicious demo comment long enough to analyze</div>
+</section>
+
+<section id="malformed" style="margin-top: 60px;">
+  <h3>Malformed — object fields must fall back without breaking the UI</h3>
+  <textarea placeholder="Write a comment">malformed demo comment long enough to analyze</textarea>
 </section>
 
 <div style="height: 800px"></div>
@@ -52,23 +58,36 @@
   // Mimics the modern surface: initialPrompts, clone() and promptStreaming()
   // (delta chunks with a delay, so the early-sentiment render is observable).
   // window.__stubStats counts calls for manual/scripted inspection.
-  const RESPONSE_TAIL =
-    '"positive","emoji":"😊","label":"Positive","reason":"Friendly and appreciative tone.","rewrite":null}';
-  const CHUNK_SIZE = 12, CHUNK_DELAY_MS = 150;
+  const RESPONSES = {
+    positive: '"positive","emoji":"😊","label":"Positive","reason":"Friendly and appreciative tone.","rewrite":null}',
+    negative: '"negative","emoji":"😕","label":"Negatywne","reason":"Ton jest nieprzyjazny.","rewrite":"Proszę wyrazić tę opinię uprzejmiej."}',
+    malicious: '"positive","emoji":"<img src=x onerror=alert(1)>","label":"<b>Positive</b>","reason":"<img src=x onerror=alert(2)>","rewrite":"<script>alert(3)<\\/script>"}',
+    malformed: '"toxic","emoji":{"html":"<img src=x>"},"label":{"html":"<b>Toxic</b>"},"reason":{"text":"Hostile."},"rewrite":{"text":"Be kind."}}',
+  };
+  const CHUNK_SIZE = 12, CHUNK_DELAY_MS = 50;
+
+  function responseFor(messages) {
+    const prompt = JSON.stringify(messages);
+    if (prompt.includes('malicious demo')) return RESPONSES.malicious;
+    if (prompt.includes('malformed demo')) return RESPONSES.malformed;
+    if (prompt.includes('negative demo')) return RESPONSES.negative;
+    return RESPONSES.positive;
+  }
 
   window.__stubStats = { create: 0, clone: 0, prompt: 0, stream: 0 };
 
   function makeSession() {
     return {
-      prompt: async () => {
+      prompt: async messages => {
         window.__stubStats.prompt++;
-        return RESPONSE_TAIL;
+        return responseFor(messages);
       },
-      promptStreaming: () => (async function* () {
+      promptStreaming: messages => (async function* () {
         window.__stubStats.stream++;
-        for (let i = 0; i < RESPONSE_TAIL.length; i += CHUNK_SIZE) {
+        const response = responseFor(messages);
+        for (let i = 0; i < response.length; i += CHUNK_SIZE) {
           await new Promise(r => setTimeout(r, CHUNK_DELAY_MS));
-          yield RESPONSE_TAIL.slice(i, i + CHUNK_SIZE);
+          yield response.slice(i, i + CHUNK_SIZE);
         }
       })(),
       clone: async () => {
@@ -88,5 +107,12 @@
   };
 </script>
 <script src="../content.js"></script>
+<script>
+  window.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('textarea, [contenteditable]').forEach(el => {
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+  });
+</script>
 </body>
 </html>
