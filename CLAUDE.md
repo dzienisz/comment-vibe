@@ -10,7 +10,9 @@
 
 ## Testing
 
-There is no automated test suite. Manual testing requires:
+There is no automated test suite. Badge/tooltip placement can be checked without
+Gemini Nano via `test/harness.html` (stubs the Prompt API; open directly or serve
+the repo root). Full manual testing requires:
 - Chrome 127+ (desktop only — no mobile support)
 - Gemini Nano enabled via `chrome://flags/#optimization-guide-on-device-model` and `chrome://flags/#prompt-api-for-gemini-nano`
 - Model downloaded: confirm at `chrome://components` → "Optimization Guide On Device Model"
@@ -20,7 +22,7 @@ There is no automated test suite. Manual testing requires:
 Zip for Chrome Web Store (package must contain only runtime files — manifest, content/popup scripts and styles, icon PNGs):
 
 ```
-zip -r comment-vibe.zip . -x "*.DS_Store" -x "*.zip" -x "*.git*" -x ".claude/*" -x ".github/*" -x ".gitignore" -x "*.md" -x "store-assets/*" -x "playground/*" -x "icons/make-icons.html"
+zip -r comment-vibe.zip . -x "*.DS_Store" -x "*.zip" -x "*.git*" -x ".claude/*" -x ".github/*" -x ".gitignore" -x "*.md" -x "store-assets/*" -x "playground/*" -x "test/*" -x "icons/make-icons.html"
 ```
 
 Store listing text and promo images live in `store-assets/` (regenerate PNGs with `store-assets/render.sh`). They must not ship inside the extension zip. Bump `version` in manifest.json before uploading a new package.

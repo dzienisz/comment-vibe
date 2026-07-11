@@ -6,6 +6,12 @@
       "runtimeExecutable": "python3",
       "runtimeArgs": ["-m", "http.server", "8123", "--directory", "playground"],
       "port": 8123
+    },
+    {
+      "name": "harness",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-m", "http.server", "8742"],
+      "port": 8742
     }
   ]
 }

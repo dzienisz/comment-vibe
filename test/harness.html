@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<!--
+  Manual test harness for badge/tooltip placement.
+
+  Stubs the Chrome Prompt API (window.LanguageModel) with a canned response,
+  so content.js runs on any Chrome — no Gemini Nano, no flags, no extension
+  install needed. Only the UI (placement, flip, tooltip, hide-on-blur) is
+  exercised; the real model output is NOT tested here.
+
+  Usage: open this file directly (file://) or serve the repo root, e.g.
+    python3 -m http.server 8123
+    → http://localhost:8123/test/harness.html
+
+  Never ships in the extension zip (see CLAUDE.md).
+-->
+<html>
+<head>
+<meta charset="utf-8">
+<title>Comment Vibe — badge placement harness</title>
+<link rel="stylesheet" href="../content.css">
+<style>
+  body { font-family: sans-serif; margin: 0; padding: 0; background: #fafafa; }
+  section { padding: 16px 24px; }
+  textarea, [contenteditable] {
+    width: 480px; border: 1px solid #bbb; border-radius: 8px;
+    padding: 10px; font-size: 14px; background: #fff; display: block;
+  }
+  textarea { height: 90px; }
+  [contenteditable] { min-height: 44px; }
+  h3 { margin: 8px 0; font-size: 13px; color: #666; }
+</style>
+</head>
+<body>
+<section id="top">
+  <textarea placeholder="Write a comment (top edge — badge should flip BELOW)"></textarea>
+</section>
+
+<section id="middle" style="margin-top: 160px;">
+  <h3>Mid-page textarea — badge should sit ABOVE the top-right corner</h3>
+  <textarea placeholder="Write a comment here"></textarea>
+</section>
+
+<section id="grow" style="margin-top: 60px;">
+  <h3>Growing contenteditable — badge should follow as it grows</h3>
+  <div contenteditable="true" role="textbox" aria-label="comment"></div>
+</section>
+
+<div style="height: 800px"></div>
+
+<script>
+  // Stub of Chrome's built-in Prompt API so content.js runs on any Chrome.
+  window.LanguageModel = {
+    availability: async () => 'available',
+    create: async () => ({
+      prompt: async () =>
+        '"positive","emoji":"😊","label":"Positive","reason":"Friendly and appreciative tone.","rewrite":null}',
+      destroy() {},
+    }),
+  };
+</script>
+<script src="../content.js"></script>
+</body>
+</html>
