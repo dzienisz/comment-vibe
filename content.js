@@ -274,21 +274,17 @@ function parseResponse(raw) {
   return { sentiment: 'neutral' };
 }
 
-function isPlainText(value) {
-  return typeof value === 'string' && !/[<>]/.test(value);
-}
-
 function normalize(obj) {
   const source       = obj && typeof obj === 'object' && !Array.isArray(obj) ? obj : {};
   const rawSentiment = typeof source.sentiment === 'string' ? source.sentiment.trim().toLowerCase() : '';
   const sentiment    = VALID_SENTIMENTS.has(rawSentiment) ? rawSentiment : 'neutral';
-  const label        = isPlainText(source.label) && source.label.trim()
+  const label        = typeof source.label === 'string' && source.label.trim()
     ? source.label.trim()
     : LABEL_FOR[sentiment];
   const reasonRaw    = source.reason ?? source.tone ?? source.analysis ?? source.description ?? source.explanation ?? '';
-  const reason       = isPlainText(reasonRaw) ? reasonRaw : '';
+  const reason       = typeof reasonRaw === 'string' ? reasonRaw : '';
   const rewriteRaw   = source.rewrite ?? source.suggestion ?? source.alternative ?? source.improved_version ?? null;
-  const rewrite      = isPlainText(rewriteRaw) && rewriteRaw.trim() ? rewriteRaw.trim() : null;
+  const rewrite      = typeof rewriteRaw === 'string' && rewriteRaw.trim() ? rewriteRaw.trim() : null;
   return {
     sentiment,
     emoji: EMOJI_FOR[sentiment],

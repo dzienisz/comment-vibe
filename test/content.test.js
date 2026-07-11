@@ -130,18 +130,19 @@ test('normalize replaces empty labels and malicious emoji with canonical values'
   });
 });
 
-test('normalize rejects markup-like display strings', () => {
+test('normalize preserves markup-like strings as literal display text', () => {
   assert.deepEqual(normalize({
     sentiment: 'toxic',
+    emoji: '<img src=x onerror=alert(1)>',
     label: '<b>Toxic</b>',
-    reason: '<img src=x onerror=alert(1)>',
-    rewrite: '<script>alert(2)</script>',
+    reason: 'Use x < 10 and keep <3 as text.',
+    rewrite: 'Prefer <option A> over <option B>.',
   }), {
     sentiment: 'toxic',
     emoji: '🚫',
-    label: 'Toxic',
-    reason: '',
-    rewrite: null,
+    label: '<b>Toxic</b>',
+    reason: 'Use x < 10 and keep <3 as text.',
+    rewrite: 'Prefer <option A> over <option B>.',
   });
 });
 
