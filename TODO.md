@@ -16,8 +16,11 @@ Language Detector + Translator APIs. See `CHANGELOG.md` for what shipped.
   Tests turn "I hope it still parses" into something runnable.
 
 ## Then — shippable UX (no new Chrome API needed)
-- [ ] Streaming via `promptStreaming()` so the badge fills in as the model
-      responds instead of after a full pause.
+- [x] Streaming via `promptStreaming()` — badge colors in as soon as the
+      sentiment field arrives; reason/rewrite fill the tooltip when done.
+- [x] Session-growth fix: few-shots moved to `initialPrompts`, each analysis
+      runs on a throwaway `clone()` so the shared session's context no longer
+      grows (and slows down) with every analysis.
 - [ ] Keyboard shortcut to trigger analysis on demand (bypass the 900 ms debounce).
 - [ ] Better "AI unavailable" / empty state — currently the badge silently never
       appears; a one-time hint would help adoption.

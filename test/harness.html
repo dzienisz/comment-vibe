@@ -49,13 +49,42 @@
 
 <script>
   // Stub of Chrome's built-in Prompt API so content.js runs on any Chrome.
+  // Mimics the modern surface: initialPrompts, clone() and promptStreaming()
+  // (delta chunks with a delay, so the early-sentiment render is observable).
+  // window.__stubStats counts calls for manual/scripted inspection.
+  const RESPONSE_TAIL =
+    '"positive","emoji":"😊","label":"Positive","reason":"Friendly and appreciative tone.","rewrite":null}';
+  const CHUNK_SIZE = 12, CHUNK_DELAY_MS = 150;
+
+  window.__stubStats = { create: 0, clone: 0, prompt: 0, stream: 0 };
+
+  function makeSession() {
+    return {
+      prompt: async () => {
+        window.__stubStats.prompt++;
+        return RESPONSE_TAIL;
+      },
+      promptStreaming: () => (async function* () {
+        window.__stubStats.stream++;
+        for (let i = 0; i < RESPONSE_TAIL.length; i += CHUNK_SIZE) {
+          await new Promise(r => setTimeout(r, CHUNK_DELAY_MS));
+          yield RESPONSE_TAIL.slice(i, i + CHUNK_SIZE);
+        }
+      })(),
+      clone: async () => {
+        window.__stubStats.clone++;
+        return makeSession();
+      },
+      destroy() {},
+    };
+  }
+
   window.LanguageModel = {
     availability: async () => 'available',
-    create: async () => ({
-      prompt: async () =>
-        '"positive","emoji":"😊","label":"Positive","reason":"Friendly and appreciative tone.","rewrite":null}',
-      destroy() {},
-    }),
+    create: async () => {
+      window.__stubStats.create++;
+      return makeSession();
+    },
   };
 </script>
 <script src="../content.js"></script>

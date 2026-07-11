@@ -58,6 +58,9 @@ const SELECTORS = [
 let aiSession  = null;
 let sessionBusy = false;
 let lastUsedAt  = 0;
+// true when the few-shot examples are baked into the session via initialPrompts
+// (they then survive clone() and don't need re-sending with every prompt)
+let fewShotBaked = false;
 
 async function getSession() {
   if (aiSession && Date.now() - lastUsedAt > SESSION_TTL) {
@@ -78,15 +81,25 @@ async function getSession() {
     if (typeof LanguageModel !== 'undefined') {
       const avail = await LanguageModel.availability();
       if (avail === 'unavailable') throw new Error('unavailable');
+      const initialPrompts = [{ role: 'system', content: SYSTEM_PROMPT }, ...FEW_SHOT];
       try {
-        aiSession = await LanguageModel.create({ systemPrompt: SYSTEM_PROMPT, ...LANGUAGE_OPTIONS });
+        aiSession = await LanguageModel.create({ initialPrompts, ...LANGUAGE_OPTIONS });
+        fewShotBaked = true;
       } catch {
-        aiSession = await LanguageModel.create({ systemPrompt: SYSTEM_PROMPT });
+        try {
+          aiSession = await LanguageModel.create({ initialPrompts });
+          fewShotBaked = true;
+        } catch {
+          // older builds without initialPrompts support
+          aiSession = await LanguageModel.create({ systemPrompt: SYSTEM_PROMPT });
+          fewShotBaked = false;
+        }
       }
     } else if (window.ai?.languageModel) {
       const { available } = await window.ai.languageModel.capabilities();
       if (available === 'no') throw new Error('unavailable');
       aiSession = await window.ai.languageModel.create({ systemPrompt: SYSTEM_PROMPT });
+      fewShotBaked = false;
     } else {
       throw new Error('Chrome AI not found');
     }
@@ -195,15 +208,44 @@ const FEW_SHOT = [
   },
 ];
 
-async function analyzeText(text) {
-  const session = await getSession();
+async function analyzeText(text, onEarlySentiment) {
+  const base = await getSession();
   lastUsedAt = Date.now();
-  const raw = await session.prompt([
-    ...FEW_SHOT,
+  // Prompt API sessions are stateful: prompting the shared session would append
+  // every analysis to its context, slowing each one down until the quota
+  // overflows. A clone starts fresh from the initial prompts and is cheap
+  // (no model reload), so analyze on a throwaway clone.
+  const session = typeof base.clone === 'function' ? await base.clone() : base;
+  const messages = [
+    ...(fewShotBaked ? [] : FEW_SHOT),
     { role: 'user',      content: `Classify the tone of this comment:\n"${text.replace(/"/g, '\\"')}"` },
     { role: 'assistant', content: '{"sentiment":', prefix: true },
-  ]);
-  return normalize(parseResponse('{"sentiment":' + raw));
+  ];
+  try {
+    const raw = typeof session.promptStreaming === 'function'
+      ? await streamPrompt(session, messages, onEarlySentiment)
+      : await session.prompt(messages);
+    return normalize(parseResponse('{"sentiment":' + raw));
+  } finally {
+    if (session !== base) session.destroy?.();
+  }
+}
+
+// Accumulates the streamed response; fires onEarlySentiment as soon as the
+// sentiment value is readable (it's the first field thanks to the prefill),
+// so the badge can color in before the reason/rewrite finish generating.
+async function streamPrompt(session, messages, onEarlySentiment) {
+  let raw = '';
+  let signaled = false;
+  for await (const chunk of session.promptStreaming(messages)) {
+    // older builds stream the cumulative text, newer ones stream deltas
+    raw = (chunk.length > raw.length && chunk.startsWith(raw)) ? chunk : raw + chunk;
+    if (!signaled && onEarlySentiment) {
+      const m = raw.match(/"(positive|neutral|negative|toxic)"/);
+      if (m) { signaled = true; onEarlySentiment(m[1]); }
+    }
+  }
+  return raw;
 }
 
 function parseResponse(raw) {
@@ -403,7 +445,18 @@ function attachToInput(el) {
 
     state.debounceTimer = setTimeout(async () => {
       try {
-        const [result, lang] = await Promise.all([analyzeText(text), detectLanguage(text)]);
+        const onEarlySentiment = sentiment => {
+          if (requestId !== state.requestId) return;
+          renderBadge(badge, tooltip, {
+            sentiment,
+            emoji:   EMOJI_FOR[sentiment],
+            label:   LABEL_FOR[sentiment],
+            reason:  '…',
+            rewrite: null,
+          });
+          placeBadge(badge, el);
+        };
+        const [result, lang] = await Promise.all([analyzeText(text, onEarlySentiment), detectLanguage(text)]);
         if (requestId !== state.requestId) return;
         const localized = await localizeResult(result, lang);
         if (requestId !== state.requestId) return;
