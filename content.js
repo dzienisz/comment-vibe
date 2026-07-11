@@ -238,10 +238,27 @@ function normalize(obj) {
 function sp(el, prop, val) { el.style.setProperty(prop, val, 'important'); }
 function isVisible(el) { return el.style.getPropertyValue('display') !== 'none'; }
 
+// Outside the input so it never covers the text being typed: above the
+// top-right corner, falling back to below, and only overlapping the input
+// (old behavior) when the input fills the whole viewport.
 function placeBadge(badge, input) {
-  const r = input.getBoundingClientRect();
-  sp(badge, 'top',  `${Math.max(0, r.bottom - 28)}px`);
-  sp(badge, 'left', `${Math.max(0, r.right - (badge.offsetWidth || 110) - 8)}px`);
+  const r   = input.getBoundingClientRect();
+  const bw  = badge.offsetWidth  || 110;
+  const bh  = badge.offsetHeight || 26;
+  const gap = 6;
+
+  let top = r.top - bh - gap;
+  if (top < 8) top = r.bottom + gap;
+  if (top + bh > window.innerHeight - 8) {
+    top = Math.min(r.bottom, window.innerHeight - 8) - bh - gap;
+  }
+
+  let left = r.right - bw;
+  if (left + bw > window.innerWidth - 8) left = window.innerWidth - bw - 8;
+  if (left < 8) left = 8;
+
+  sp(badge, 'top',  `${top}px`);
+  sp(badge, 'left', `${left}px`);
 }
 
 function placeTooltip(tooltip, badge) {
@@ -422,17 +439,24 @@ function attachToInput(el) {
   el.addEventListener('keyup',  onInput);
   el.addEventListener('focus',  onFocus);
   el.addEventListener('blur',   onBlur);
-  window.addEventListener('scroll', reposition, { passive: true });
+  // capture: true — scroll events don't bubble, so this is the only way to
+  // follow scrolling inside nested containers (modals, feeds)
+  window.addEventListener('scroll', reposition, { passive: true, capture: true });
   window.addEventListener('resize', reposition, { passive: true });
+
+  // follow the input when it grows while typing multi-line text
+  const resizeObserver = new ResizeObserver(reposition);
+  resizeObserver.observe(el);
 
   state.cleanup = () => {
     badge.remove();
     tooltip.remove();
+    resizeObserver.disconnect();
     el.removeEventListener('input',  onInput);
     el.removeEventListener('keyup',  onInput);
     el.removeEventListener('focus',  onFocus);
     el.removeEventListener('blur',   onBlur);
-    window.removeEventListener('scroll', reposition);
+    window.removeEventListener('scroll', reposition, { capture: true });
     window.removeEventListener('resize', reposition);
   };
 }
