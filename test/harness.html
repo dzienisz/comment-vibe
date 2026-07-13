@@ -139,7 +139,19 @@
 <script src="../content.js"></script>
 <script>
   const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
-  const waitForDOM = () => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  // double-rAF when frames are being produced, setTimeout fallback when the
+  // tab is hidden/backgrounded and rAF would never fire (MutationObserver
+  // callbacks are microtasks, so 200 ms is more than enough either way)
+  const waitForDOM = () => new Promise(resolve => {
+    requestAnimationFrame(() => requestAnimationFrame(resolve));
+    setTimeout(resolve, 200);
+  });
+  // poll instead of fixed waits: background tabs throttle timers, so elapsed
+  // wall-clock time says nothing about how far the stubbed streams have got
+  const settle = async (predicate, timeout = 15000) => {
+    const start = Date.now();
+    while (!predicate() && Date.now() - start < timeout) await wait(100);
+  };
 
   function assertLifecycle(condition, message) {
     if (!condition) throw new Error(message);
@@ -152,7 +164,8 @@
     window.__lifecycleStats = stats;
     button.disabled = true;
     output.textContent = 'Waiting for initial analyses…';
-    await wait(1800);
+    await settle(() => window.__stubStats.destroy >= 4);
+    await wait(200);
     output.textContent = 'Running…';
 
     const run = async (name, scenario) => {
@@ -174,7 +187,10 @@
         input.value = `${window.__stubMode} lifecycle analysis ${index} changed and long enough`;
         input.dispatchEvent(new Event('input', { bubbles: true }));
       });
-      await wait(1800);
+      await settle(() => {
+        const s = window.__stubStats;
+        return (s.stream + s.prompt) - (before.stream + before.prompt) >= 2 && s.destroy - before.destroy >= 2;
+      });
       const delta = Object.fromEntries(Object.keys(before).map(key => [key, window.__stubStats[key] - before[key]]));
       if (window.__stubMode === 'modern') {
         assertLifecycle(delta.create === 0, `modern base recreated ${delta.create} times`);
@@ -193,7 +209,7 @@
       await wait(0);
       textarea.value = 'moved textarea still analyzes a changed comment';
       textarea.dispatchEvent(new Event('input', { bubbles: true }));
-      await wait(1800);
+      await settle(() => window.__stubStats[window.__stubMode === 'modern' ? 'stream' : 'prompt'] > analyses);
       assertLifecycle(document.querySelectorAll('.cv-badge').length === badgeCount, 'badge was duplicated or removed');
       const completed = window.__stubStats[window.__stubMode === 'modern' ? 'stream' : 'prompt'];
       assertLifecycle(completed === analyses + 1, 'moved textarea did not analyze');
