@@ -8,6 +8,7 @@ const {
   beginInputChange,
   constructSession,
   expireReusableSession,
+  getModelStatus,
   getSession,
   invalidateRequest,
   isCleanupEligible,
@@ -395,6 +396,45 @@ test('constructSession uses legacy namespace when standard API is absent', async
   assert.equal(metadata.cloneCapable, false);
   assert.equal(capabilities, 1);
   assert.equal(typeof optionsSeen.systemPrompt, 'string');
+});
+
+test('getModelStatus reports available without triggering create', async () => {
+  let creates = 0;
+  global.LanguageModel = {
+    availability: async () => 'available',
+    create: async () => { creates++; },
+  };
+
+  assert.equal(await getModelStatus(), 'available');
+  assert.equal(creates, 0);
+});
+
+test('getModelStatus reports downloading for a not-yet-ready standard model', async () => {
+  global.LanguageModel = { availability: async () => 'downloadable' };
+  assert.equal(await getModelStatus(), 'downloading');
+
+  global.LanguageModel = { availability: async () => 'downloading' };
+  assert.equal(await getModelStatus(), 'downloading');
+});
+
+test('getModelStatus reports unavailable when the standard model cannot run here', async () => {
+  global.LanguageModel = { availability: async () => 'unavailable' };
+  assert.equal(await getModelStatus(), 'unavailable');
+});
+
+test('getModelStatus maps the legacy capabilities namespace', async () => {
+  global.window = { ai: { languageModel: { capabilities: async () => ({ available: 'readily' }) } } };
+  assert.equal(await getModelStatus(), 'available');
+
+  global.window = { ai: { languageModel: { capabilities: async () => ({ available: 'after-download' }) } } };
+  assert.equal(await getModelStatus(), 'downloading');
+
+  global.window = { ai: { languageModel: { capabilities: async () => ({ available: 'no' }) } } };
+  assert.equal(await getModelStatus(), 'unavailable');
+});
+
+test('getModelStatus reports unavailable when neither API namespace exists', async () => {
+  assert.equal(await getModelStatus(), 'unavailable');
 });
 
 test('concurrent reusable session callers share one creation promise', async () => {

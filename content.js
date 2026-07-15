@@ -5,6 +5,8 @@
 const MIN_LENGTH  = 15;
 const DEBOUNCE_MS = 900;
 const SESSION_TTL = 600_000;
+const ANALYSIS_TIMEOUT_MS = 30_000;
+const MODEL_DOWNLOAD_TIMEOUT_MS = 300_000;
 
 const SENTIMENT_CLASS = {
   positive: 'cv-badge--positive',
@@ -67,6 +69,23 @@ function sessionMetadata(session, fewShotBaked) {
 
 function supportsReducedOptionsRetry(error) {
   return error instanceof TypeError || error?.name === 'NotSupportedError';
+}
+
+// Cheap, non-triggering check: availability()/capabilities() never starts a
+// download by themselves, so this can be polled before deciding whether to
+// show "Analyzing…" or an honest "model is still downloading" state.
+async function getModelStatus() {
+  if (typeof LanguageModel !== 'undefined') {
+    const avail = await LanguageModel.availability();
+    if (avail === 'unavailable') return 'unavailable';
+    return avail === 'available' ? 'available' : 'downloading';
+  }
+  if (typeof window !== 'undefined' && window.ai?.languageModel) {
+    const { available } = await window.ai.languageModel.capabilities();
+    if (available === 'no') return 'unavailable';
+    return available === 'readily' ? 'available' : 'downloading';
+  }
+  return 'unavailable';
 }
 
 async function constructSession() {
@@ -385,6 +404,15 @@ function showAnalyzing(badge) {
   sp(badge, 'border',     'none');
 }
 
+function showModelDownloading(badge) {
+  badge.className = 'cv-badge cv-badge--analyzing';
+  badge.innerHTML = '<span class="cv-spinner"></span><span>Preparing AI model…</span>';
+  sp(badge, 'display',    'inline-flex');
+  sp(badge, 'background', '#e5e7eb');
+  sp(badge, 'color',      '#374151');
+  sp(badge, 'border',     'none');
+}
+
 function showTooltip(tooltip, badge) {
   sp(tooltip, 'display', 'block');
   placeTooltip(tooltip, badge);
@@ -544,6 +572,24 @@ function attachToInput(el) {
 
     state.debounceTimer = setTimeout(async () => {
       state.debounceTimer = null;
+      const modelStatus = await getModelStatus();
+      if (!isCurrentRequest(state, requestId)) return;
+      if (modelStatus === 'unavailable') {
+        sp(badge, 'display', 'none');
+        return;
+      }
+      // A stalled model call (e.g. a slow safety-classification pass) must not
+      // leave the badge reading "Analyzing…" forever with no further input to
+      // cancel it. A model that's still downloading legitimately needs much
+      // longer, so it gets its own honest badge state and a longer bound.
+      if (modelStatus !== 'available') {
+        showModelDownloading(badge);
+        placeBadge(badge, el);
+      }
+      const giveUpTimer = setTimeout(() => {
+        abortController.abort();
+        if (isCurrentRequest(state, requestId)) sp(badge, 'display', 'none');
+      }, modelStatus === 'available' ? ANALYSIS_TIMEOUT_MS : MODEL_DOWNLOAD_TIMEOUT_MS);
       try {
         const onEarlySentiment = sentiment => {
           if (!isCurrentRequest(state, requestId)) return;
@@ -569,6 +615,7 @@ function attachToInput(el) {
           sp(badge, 'display', 'none');
         }
       } finally {
+        clearTimeout(giveUpTimer);
         if (state.abortController === abortController) state.abortController = null;
       }
       if (isCurrentRequest(state, requestId)) placeBadge(badge, el);
@@ -704,6 +751,7 @@ if (typeof module !== 'undefined' && module.exports) {
     beginInputChange,
     constructSession,
     expireReusableSession,
+    getModelStatus,
     getSession,
     invalidateRequest,
     isCleanupEligible,

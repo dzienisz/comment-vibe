@@ -5,6 +5,18 @@ All notable changes to **Comment Vibe** are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.4] - 2026-07-15
+
+### Fixed
+
+- Analysis no longer hangs indefinitely if a model call stalls: a bounded
+  give-up timer now clears the badge (30s once the model is ready, 5 minutes
+  while it's still downloading, since a real first-run download can
+  legitimately take that long).
+- The badge now shows an honest "Preparing AI model…" state while the
+  on-device model is still downloading, instead of a misleading "Analyzing…"
+  spinner that looked stuck.
+
 ## [1.1.3] - 2026-07-11
 
 ### Fixed
