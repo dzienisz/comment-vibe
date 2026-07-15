@@ -5,6 +5,18 @@ All notable changes to **Comment Vibe** are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.2] - 2026-07-16
+
+### Changed
+
+- Release engineering only — no changes to the shipped extension (the packaged
+  Chrome and Firefox zips are byte-for-byte equivalent to 1.2.1). Packaging is
+  now scripted and reproducible: `scripts/package.sh` builds and verifies both
+  store zips, `scripts/bump-version.sh` keeps the two manifest versions in sync,
+  and a GitHub Actions workflow publishes a release with both zips on every
+  `vX.Y.Z` tag. Completed planning scaffolding was removed and the roadmap notes
+  refreshed.
+
 ## [1.2.1] - 2026-07-15
 
 ### Changed
