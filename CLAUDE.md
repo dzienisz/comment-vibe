@@ -42,7 +42,7 @@ Zip for Firefox (addons.mozilla.org) — same runtime files plus `background.js`
 
 ```
 tmp=$(mktemp -d) && mkdir "$tmp/icons" \
-  && cp content.js content.css popup.html popup.css popup.js background.js "$tmp/" \
+  && cp content.js content.css popup.html popup.css popup.js background.js LICENSE "$tmp/" \
   && cp icons/icon16.png icons/icon48.png icons/icon128.png "$tmp/icons/" \
   && cp manifest.firefox.json "$tmp/manifest.json" \
   && (cd "$tmp" && zip -r - .) > comment-vibe-firefox.zip && rm -rf "$tmp"

@@ -5,6 +5,17 @@ All notable changes to **Comment Vibe** are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.1] - 2026-07-15
+
+### Changed
+
+- Removed the `data_collection_permissions` manifest key from the Firefox
+  package. It requires Firefox 140+, but the add-on's `strict_min_version` is
+  134, so AMO flagged it as unsupported for the declared range. The "no data
+  collection" declaration is made through the addons.mozilla.org listing
+  instead, which applies to every supported Firefox version.
+- Added an MIT `LICENSE` file, matching the project's open-source description.
+
 ## [1.2.0] - 2026-07-15
 
 ### Added
