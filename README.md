@@ -4,7 +4,7 @@ A browser extension that uses on-device AI (Chrome's Gemini Nano, or Firefox's A
 
 ![Chrome](https://img.shields.io/badge/Chrome-127%2B-blue) ![Firefox](https://img.shields.io/badge/Firefox-134%2B-orange) ![Manifest V3](https://img.shields.io/badge/Manifest-V3-green) ![On-device AI](https://img.shields.io/badge/AI-On--device-purple)
 
-**▶ [Install Comment Vibe from the Chrome Web Store](https://chromewebstore.google.com/detail/comment-vibe/kibcnjcipaofjlbbnjdjaobbkoajiejp)** · [Try the live playground](https://dzienko.dev/comment-vibe/)
+**▶ [Install Comment Vibe from the Chrome Web Store](https://chromewebstore.google.com/detail/comment-vibe/kibcnjcipaofjlbbnjdjaobbkoajiejp)** · [Firefox setup](#firefox-support) · [Try the live playground](https://dzienko.dev/comment-vibe/)
 
 ![Comment Vibe in action — tone badge and kinder rewrite tooltip](store-assets/shot1-hero.png)
 

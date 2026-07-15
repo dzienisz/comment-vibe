@@ -32,22 +32,31 @@ Full manual testing on Firefox requires:
 
 ## Distribution
 
-Zip for Chrome Web Store (package must contain only runtime files — manifest, content/popup scripts and styles, icon PNGs; the Firefox manifest and `background.js` stay out):
+Packaging is scripted — do not hand-roll zip commands (they drift). These are
+packaging scripts, not a build step: they only zip raw source files, so the
+"no build tooling" constraint still holds.
 
-```
-zip -r comment-vibe.zip . -x "*.DS_Store" -x "*.zip" -x "*.git*" -x ".claude/*" -x ".github/*" -x ".gitignore" -x "*.md" -x "store-assets/*" -x "playground/*" -x "test/*" -x "plans/*" -x "icons/make-icons.html" -x "manifest.firefox.json" -x "background.js"
-```
+- `scripts/package.sh` — builds **both** store zips from the current tree and
+  verifies each contains the right files: `comment-vibe-<version>.zip` for the
+  Chrome Web Store (Firefox manifest and `background.js` excluded) and
+  `comment-vibe-firefox-<version>.zip` for addons.mozilla.org (`background.js`
+  included, `manifest.firefox.json` staged in as `manifest.json`). Refuses to
+  build if the two manifest versions disagree.
+- `scripts/bump-version.sh X.Y.Z` — bumps `version` in **both** manifests together.
 
-Zip for Firefox (addons.mozilla.org) — same runtime files plus `background.js`, with `manifest.firefox.json` renamed to `manifest.json` (zip can't rename, so stage in a temp dir):
+### Cutting a release
 
-```
-tmp=$(mktemp -d) && mkdir "$tmp/icons" \
-  && cp content.js content.css popup.html popup.css popup.js background.js LICENSE "$tmp/" \
-  && cp icons/icon16.png icons/icon48.png icons/icon128.png "$tmp/icons/" \
-  && cp manifest.firefox.json "$tmp/manifest.json" \
-  && (cd "$tmp" && zip -r - .) > comment-vibe-firefox.zip && rm -rf "$tmp"
-```
+1. `scripts/bump-version.sh X.Y.Z`
+2. Add a `## [X.Y.Z]` section to `CHANGELOG.md`.
+3. Commit, then push a matching tag: `git tag -a vX.Y.Z -m "vX.Y.Z" && git push origin main --follow-tags`.
+4. `.github/workflows/release.yml` fires on the `vX.Y.Z` tag, runs
+   `scripts/package.sh`, extracts the changelog section for that version, and
+   publishes a GitHub Release with both zips attached. (Manual fallback: run
+   `scripts/package.sh` locally and upload the zips.)
+5. Upload each zip to its store dashboard (Chrome Web Store / AMO).
 
-Bump `version` in **both** `manifest.json` and `manifest.firefox.json` before packaging.
-
-Store listing text and promo images live in `store-assets/` (regenerate PNGs with `store-assets/render.sh`). They must not ship inside the extension zip. Bump `version` in manifest.json before uploading a new package.
+Store listing text and promo images live in `store-assets/` — Chrome copy in
+`store-assets/listing.md`, Firefox (AMO) copy in `store-assets/firefox/listing.md`.
+Regenerate PNGs with `store-assets/render.sh` and `store-assets/firefox/render-firefox.sh`.
+Store assets must never ship inside the extension zip (they aren't — see the
+exclusions in `scripts/package.sh`).

@@ -1,0 +1,59 @@
+name: Release
+
+# Buduje paczki Chrome + Firefox i publikuje release, gdy zostanie wypchnięty
+# tag w formacie vX.Y.Z. Bez kroku budowania — skrypt tylko pakuje surowe pliki.
+
+on:
+  push:
+    tags: ['v*.*.*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build packages
+        run: bash scripts/package.sh
+
+      - name: Verify tag matches manifest version
+        run: |
+          v="${GITHUB_REF_NAME#v}"
+          if [ ! -f "comment-vibe-$v.zip" ]; then
+            echo "Tag $GITHUB_REF_NAME does not match the manifest version." >&2
+            echo "Bump both manifests (scripts/bump-version.sh) before tagging." >&2
+            exit 1
+          fi
+
+      - name: Extract changelog notes
+        run: |
+          v="${GITHUB_REF_NAME#v}"
+          awk -v ver="$v" '
+            $0 ~ "^## \\[" ver "\\]" { flag=1; next }
+            /^## \[/ && flag { exit }
+            flag { print }
+          ' CHANGELOG.md > release-notes.md
+          if [ ! -s release-notes.md ]; then
+            echo "See CHANGELOG.md for details." > release-notes.md
+          fi
+
+      - name: Create or update GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          v="${GITHUB_REF_NAME#v}"
+          chrome="comment-vibe-$v.zip"
+          firefox="comment-vibe-firefox-$v.zip"
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release edit "$GITHUB_REF_NAME" --notes-file release-notes.md
+            gh release upload "$GITHUB_REF_NAME" "$chrome" "$firefox" --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" \
+              --title "$GITHUB_REF_NAME" \
+              --notes-file release-notes.md \
+              "$chrome" "$firefox"
+          fi
