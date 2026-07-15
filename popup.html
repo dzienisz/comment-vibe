@@ -19,10 +19,10 @@
 
     <div id="status" class="status status--checking">
       <span class="status-dot"></span>
-      <span id="status-text">Checking Chrome AI…</span>
+      <span id="status-text">Checking on-device AI…</span>
     </div>
 
-    <div class="info">
+    <div id="info" class="info">
       Comment Vibe uses <strong>Chrome's built-in AI</strong> (Gemini Nano) to analyse
       the tone of your comments in real time — completely on-device, no data sent anywhere.
     </div>
@@ -37,6 +37,18 @@
         <li>Relaunch Chrome</li>
         <li>Visit <code>chrome://components</code> and update <em>Optimization Guide On Device Model</em></li>
       </ol>
+    </div>
+
+    <div id="setup-firefox" class="setup">
+      <strong>🦊 Enable Firefox on-device AI</strong>
+      <p>Comment Vibe can classify tone with Firefox's local AI runtime
+        (Firefox 134+). A small model (~65&nbsp;MB) is downloaded once;
+        everything stays on your device.</p>
+      <button id="ff-enable" class="setup-button" type="button">Enable on-device AI</button>
+      <p id="ff-progress" hidden></p>
+      <p>On non-Nightly builds you may also need to set
+        <code>browser.ml.enable</code> and <code>extensions.ml.enabled</code>
+        to <em>true</em> in <code>about:config</code>.</p>
     </div>
 
     <div class="legend">

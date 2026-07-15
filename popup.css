@@ -68,6 +68,20 @@ body {
   font-size: 11px;
 }
 .setup.visible { display: block; }
+.setup-button {
+  display: block;
+  margin: 8px 0;
+  padding: 6px 14px;
+  border: none;
+  border-radius: 8px;
+  background: #b45309;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.setup-button:hover:not(:disabled) { background: #92400e; }
+.setup-button:disabled { opacity: 0.6; cursor: default; }
 
 /* ── Sentiment legend ── */
 .legend { display: flex; flex-wrap: wrap; gap: 6px; }

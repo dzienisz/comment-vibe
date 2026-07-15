@@ -54,7 +54,7 @@
 
 <section id="lifecycle" style="margin-top: 60px;">
   <h3>DOM and AI session lifecycle scenarios</h3>
-  <p><a href="?api=modern">Modern clone mode</a> · <a href="?api=legacy">Legacy no-clone mode</a></p>
+  <p><a href="?api=modern">Modern clone mode</a> · <a href="?api=legacy">Legacy no-clone mode</a> · <a href="?api=firefox">Firefox background mode</a></p>
   <button id="run-lifecycle" type="button">Run lifecycle checks</button>
   <pre id="lifecycle-results">Not run</pre>
   <div id="move-target"></div>
@@ -85,7 +85,10 @@
   }
 
   window.__stubStats = { create: 0, clone: 0, prompt: 0, stream: 0, destroy: 0 };
-  window.__stubMode = new URLSearchParams(location.search).get('api') === 'legacy' ? 'legacy' : 'modern';
+  {
+    const api = new URLSearchParams(location.search).get('api');
+    window.__stubMode = api === 'legacy' || api === 'firefox' ? api : 'modern';
+  }
 
   function makeModernSession() {
     return {
@@ -115,12 +118,48 @@
     };
   }
 
+  // Stub of the Firefox background service (browser.runtime messaging): the
+  // Chrome globals stay undefined, so content.js takes the Firefox path and
+  // delegates analysis via cv-analyze messages. Counted as `prompt` calls.
+  const FIREFOX_RESULTS = {
+    positive:  { ok: true, result: { sentiment: 'positive', reason: 'The on-device classifier read this as friendly and positive (93% confidence).', rewrite: null } },
+    negative:  { ok: true, result: { sentiment: 'negative', reason: 'The on-device classifier read this as harsh or critical (72% confidence).', rewrite: null } },
+    malicious: { ok: true, result: { sentiment: 'positive', emoji: '<img src=x onerror=alert(1)>', label: '<b>Positive</b>', reason: '<img src=x onerror=alert(2)>', rewrite: null } },
+    malformed: { ok: true, result: { sentiment: 'toxic', emoji: { html: '<img src=x>' }, label: { html: '<b>Toxic</b>' }, reason: { text: 'Hostile.' } } },
+  };
+
+  function firefoxResultFor(text) {
+    if (text.includes('malicious demo')) return FIREFOX_RESULTS.malicious;
+    if (text.includes('malformed demo')) return FIREFOX_RESULTS.malformed;
+    if (text.includes('negative demo')) return FIREFOX_RESULTS.negative;
+    return FIREFOX_RESULTS.positive;
+  }
+
   if (window.__stubMode === 'modern') {
     window.LanguageModel = {
       availability: async () => 'available',
       create: async () => {
         window.__stubStats.create++;
         return makeModernSession();
+      },
+    };
+  } else if (window.__stubMode === 'firefox') {
+    // mask the real Chrome AI globals (present on Chrome 138+), or content.js
+    // would prefer the Chrome path over the stubbed Firefox one
+    window.LanguageModel = undefined;
+    window.ai = undefined;
+    window.browser = {
+      runtime: {
+        sendMessage: async message => {
+          if (message?.type === 'cv-status') return { available: true };
+          if (message?.type === 'cv-analyze') {
+            window.__stubStats.prompt++;
+            await new Promise(r => setTimeout(r, CHUNK_DELAY_MS));
+            return firefoxResultFor(message.text);
+          }
+          return undefined;
+        },
+        onMessage: { addListener() {} },
       },
     };
   } else {
@@ -164,7 +203,11 @@
     window.__lifecycleStats = stats;
     button.disabled = true;
     output.textContent = 'Waiting for initial analyses…';
-    await settle(() => window.__stubStats.destroy >= 4);
+    // firefox mode has no sessions to destroy — completed sendMessage calls
+    // are counted as `prompt`
+    await settle(() => window.__stubMode === 'firefox'
+      ? window.__stubStats.prompt >= 4
+      : window.__stubStats.destroy >= 4);
     await wait(200);
     output.textContent = 'Running…';
 
@@ -189,12 +232,17 @@
       });
       await settle(() => {
         const s = window.__stubStats;
+        if (window.__stubMode === 'firefox') return s.prompt - before.prompt >= 2;
         return (s.stream + s.prompt) - (before.stream + before.prompt) >= 2 && s.destroy - before.destroy >= 2;
       });
       const delta = Object.fromEntries(Object.keys(before).map(key => [key, window.__stubStats[key] - before[key]]));
       if (window.__stubMode === 'modern') {
         assertLifecycle(delta.create === 0, `modern base recreated ${delta.create} times`);
         assertLifecycle(delta.clone === 2 && delta.stream === 2 && delta.destroy === 2, `modern counters ${JSON.stringify(delta)}`);
+      } else if (window.__stubMode === 'firefox') {
+        assertLifecycle(delta.prompt === 2, `firefox sent ${delta.prompt} analyze messages`);
+        assertLifecycle(delta.create === 0 && delta.clone === 0 && delta.stream === 0 && delta.destroy === 0,
+          `firefox touched local sessions ${JSON.stringify(delta)}`);
       } else {
         assertLifecycle(delta.create === 2 && delta.prompt === 2 && delta.destroy === 2, `legacy counters ${JSON.stringify(delta)}`);
         assertLifecycle(delta.clone === 0 && delta.stream === 0, `legacy session was clone-capable ${JSON.stringify(delta)}`);
@@ -276,9 +324,13 @@
   }
 
   window.addEventListener('DOMContentLoaded', () => {
-    document.querySelectorAll('textarea, [contenteditable]').forEach(el => {
+    const kick = () => document.querySelectorAll('textarea, [contenteditable]').forEach(el => {
       el.dispatchEvent(new Event('input', { bubbles: true }));
     });
+    kick();
+    // firefox init is gated on an async cv-status round-trip, so the inputs
+    // may not be tracked yet on the first kick (duplicates are debounced away)
+    if (window.__stubMode === 'firefox') setTimeout(kick, 100);
     document.getElementById('run-lifecycle').addEventListener('click', runLifecycleChecks);
     if (new URLSearchParams(location.search).has('autorun')) runLifecycleChecks();
   });

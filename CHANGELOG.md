@@ -5,6 +5,27 @@ All notable changes to **Comment Vibe** are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-07-15
+
+### Added
+
+- **Firefox support** via the WebExtensions AI API (`browser.trial.ml`,
+  Firefox 134+). Firefox has no Prompt API, so a new `background.js` runs a
+  zero-shot classifier (`Xenova/distilbert-base-uncased-mnli`, Transformers.js)
+  over the same four tone categories, and the content script delegates to it
+  over runtime messaging when the Chrome AI globals are missing. Differences
+  from the Chrome path: no streaming (the badge fills in when classification
+  finishes), no generated rewrite suggestions, and no output translation.
+- Popup onboarding for Firefox: an "Enable on-device AI" button requests the
+  optional `trialML` permission, warms the model with download progress, and
+  wakes content scripts in already-open tabs (`cv-ml-ready`).
+- `manifest.firefox.json` — the Firefox package manifest (gecko id, event-page
+  background script, `trialML` optional permission). The Chrome manifest and
+  package are unchanged; `background.js` and the Firefox manifest are excluded
+  from the Chrome zip.
+- Test coverage: `test/background.test.js`, Firefox-path cases in
+  `test/content.test.js`, and a `?api=firefox` mode in `test/harness.html`.
+
 ## [1.1.4] - 2026-07-15
 
 ### Fixed

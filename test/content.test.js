@@ -5,6 +5,7 @@ const assert = require('node:assert/strict');
 
 const {
   analyzeText,
+  analyzeViaBackground,
   beginInputChange,
   constructSession,
   expireReusableSession,
@@ -13,6 +14,7 @@ const {
   invalidateRequest,
   isCleanupEligible,
   isCurrentRequest,
+  isFirefoxMLContext,
   normalize,
   normalizeDetectedLanguage,
   parseResponse,
@@ -39,6 +41,7 @@ test.afterEach(() => {
   resetSessionState();
   delete global.LanguageModel;
   delete global.window;
+  delete global.browser;
 });
 
 test('parseResponse parses valid JSON', () => {
@@ -636,4 +639,49 @@ test('TTL expiry destroys a reusable base once and creates a replacement', async
   assert.equal(bases.length, 2);
   assert.equal(bases[0].destroys, 1);
   assert.equal(bases[1].destroys, 0);
+});
+
+test('analyzeText delegates to the Firefox background service', async () => {
+  const calls = [];
+  global.browser = {
+    runtime: {
+      sendMessage: async message => {
+        calls.push(message);
+        return { ok: true, result: { sentiment: 'toxic', reason: 'Insulting.', rewrite: null } };
+      },
+    },
+  };
+
+  assert.equal(isFirefoxMLContext(), true);
+  const result = await analyzeText('you are all idiots');
+
+  assert.deepEqual(calls, [{ type: 'cv-analyze', text: 'you are all idiots' }]);
+  assert.equal(result.sentiment, 'toxic');
+  assert.equal(result.emoji, '🚫');
+  assert.equal(result.label, 'Toxic');
+  assert.equal(result.reason, 'Insulting.');
+});
+
+test('analyzeViaBackground surfaces background errors', async () => {
+  global.browser = {
+    runtime: { sendMessage: async () => ({ ok: false, error: 'Firefox on-device AI is not enabled' }) },
+  };
+  await assert.rejects(analyzeViaBackground('long enough text'), /not enabled/);
+
+  global.browser = { runtime: { sendMessage: async () => undefined } };
+  await assert.rejects(analyzeViaBackground('long enough text'), /analysis failed/);
+});
+
+test('Chrome Prompt API wins over the Firefox path when both exist', async () => {
+  global.browser = {
+    runtime: { sendMessage: async () => { throw new Error('background must not be called'); } },
+  };
+  global.LanguageModel = modernApi(async () => ({
+    clone: async () => sessionFor(['{"sentiment":"positive"}'.slice('{"sentiment":'.length)]),
+    destroy() {},
+  }));
+
+  assert.equal(isFirefoxMLContext(), false);
+  const result = await analyzeText('lovely and helpful writeup');
+  assert.equal(result.sentiment, 'positive');
 });

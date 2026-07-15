@@ -85,6 +85,11 @@ async function getModelStatus() {
     if (available === 'no') return 'unavailable';
     return available === 'readily' ? 'available' : 'downloading';
   }
+  // Firefox delegates analysis to the background service, which only wakes the
+  // content script's input tracking once its model is ready (see initFirefox).
+  // So from here the model is effectively available; the background owns the
+  // real download/readiness lifecycle.
+  if (isFirefoxMLContext()) return 'available';
   return 'unavailable';
 }
 
@@ -156,6 +161,27 @@ function resetSessionState() {
   reusableSession = null;
   sessionCreation = null;
   lastUsedAt = 0;
+}
+
+// ── Firefox path (WebExtensions AI API) ──────────────────────────────────────
+//
+// Firefox has no Prompt API. Its WebExtensions AI API (browser.trial.ml,
+// Firefox 134+) only works in extension pages, so when the Chrome globals are
+// missing and we are running as a Firefox content script, analysis is
+// delegated to background.js over runtime messaging. That path classifies
+// tone with a zero-shot model — no streaming and no rewrite suggestions.
+
+function isFirefoxMLContext() {
+  return typeof LanguageModel === 'undefined'
+    && !(typeof window !== 'undefined' && window.ai?.languageModel)
+    && typeof browser !== 'undefined'
+    && !!browser.runtime?.sendMessage;
+}
+
+async function analyzeViaBackground(text) {
+  const response = await browser.runtime.sendMessage({ type: 'cv-analyze', text });
+  if (!response?.ok) throw new Error(response?.error || 'analysis failed');
+  return normalize(response.result);
 }
 
 // ── Localisation (Language Detector + Translator) ─────────────────────────────
@@ -262,6 +288,7 @@ const FEW_SHOT = [
 ];
 
 async function analyzeText(text, onEarlySentiment, signal) {
+  if (isFirefoxMLContext()) return analyzeViaBackground(text);
   const acquired = await getSession();
   const base = acquired.session;
   // Prompt API sessions are stateful: prompting the shared session would append
@@ -728,13 +755,36 @@ function watchDOM() {
 // ── Init ──────────────────────────────────────────────────────────────────────
 
 async function init() {
-  const hasAI = typeof LanguageModel !== 'undefined' || !!window.ai?.languageModel;
-  if (!hasAI) {
-    console.warn('[CommentVibe] Chrome built-in AI not available. Enable the Prompt API in chrome://flags');
+  const hasChromeAI = typeof LanguageModel !== 'undefined' || !!window.ai?.languageModel;
+  if (hasChromeAI) {
+    scanPage();
+    watchDOM();
     return;
   }
-  scanPage();
-  watchDOM();
+  if (isFirefoxMLContext()) {
+    initFirefox();
+    return;
+  }
+  console.warn('[CommentVibe] Chrome built-in AI not available. Enable the Prompt API in chrome://flags');
+}
+
+// trialML is an optional permission, so the background may report the AI as
+// unavailable until the user enables it from the popup. Stay dormant and wait
+// for the background's cv-ml-ready broadcast instead of giving up.
+function initFirefox() {
+  let started = false;
+  const start = () => {
+    if (started) return;
+    started = true;
+    scanPage();
+    watchDOM();
+  };
+  browser.runtime.onMessage.addListener(message => {
+    if (message?.type === 'cv-ml-ready') start();
+  });
+  browser.runtime.sendMessage({ type: 'cv-status' })
+    .then(status => { if (status?.available) start(); })
+    .catch(() => {});
 }
 
 if (typeof document !== 'undefined') {
@@ -748,6 +798,7 @@ if (typeof document !== 'undefined') {
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     analyzeText,
+    analyzeViaBackground,
     beginInputChange,
     constructSession,
     expireReusableSession,
@@ -756,6 +807,7 @@ if (typeof module !== 'undefined' && module.exports) {
     invalidateRequest,
     isCleanupEligible,
     isCurrentRequest,
+    isFirefoxMLContext,
     normalize,
     normalizeDetectedLanguage,
     parseResponse,

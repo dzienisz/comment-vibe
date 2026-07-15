@@ -1,8 +1,8 @@
 # Comment Vibe
 
-A Chrome extension that uses Chrome's built-in AI (Gemini Nano) to analyse the tone of your comments in real time — before you hit post.
+A browser extension that uses on-device AI (Chrome's Gemini Nano, or Firefox's AI runtime) to analyse the tone of your comments in real time — before you hit post.
 
-![Chrome](https://img.shields.io/badge/Chrome-127%2B-blue) ![Manifest V3](https://img.shields.io/badge/Manifest-V3-green) ![On-device AI](https://img.shields.io/badge/AI-On--device-purple)
+![Chrome](https://img.shields.io/badge/Chrome-127%2B-blue) ![Firefox](https://img.shields.io/badge/Firefox-134%2B-orange) ![Manifest V3](https://img.shields.io/badge/Manifest-V3-green) ![On-device AI](https://img.shields.io/badge/AI-On--device-purple)
 
 **▶ [Install Comment Vibe from the Chrome Web Store](https://chromewebstore.google.com/detail/comment-vibe/kibcnjcipaofjlbbnjdjaobbkoajiejp)** · [Try the live playground](https://dzienko.dev/comment-vibe/)
 
@@ -21,11 +21,45 @@ Type a comment on LinkedIn, Twitter/X, YouTube, or any other site. A small badge
 
 ## Privacy
 
-All analysis runs locally using Chrome's on-device Gemini Nano model. Your comments are never sent to any server.
+All analysis runs locally — Chrome's on-device Gemini Nano model, or Firefox's on-device AI runtime. Your comments are never sent to any server.
+
+## Firefox support
+
+Firefox has no Prompt API. Instead, Comment Vibe uses the experimental
+[WebExtensions AI API](https://firefox-source-docs.mozilla.org/toolkit/components/ml/extensions.html)
+(`browser.trial.ml`, Firefox 134+), which exposes on-device Transformers.js
+pipelines to extensions. Since that API offers classification pipelines rather
+than a conversational model, the Firefox build runs a **zero-shot tone
+classifier** (`Xenova/distilbert-base-uncased-mnli`, ~65 MB, downloaded once)
+in the extension's background script — content scripts delegate to it via
+runtime messaging because the API is not available to content scripts.
+
+What differs from the Chrome experience:
+
+| Feature | Chrome (Gemini Nano) | Firefox (`browser.trial.ml`) |
+|---|---|---|
+| Tone badge (positive/neutral/negative/toxic) | ✅ | ✅ |
+| "Why" explanation | ✅ model-written sentence | ✅ classifier label + confidence |
+| Kinder rewrite suggestion | ✅ | ❌ (no generation pipeline used) |
+| Streaming (badge colors in early) | ✅ | ❌ (result arrives at once) |
+| Output translated to the comment's language | ✅ | ❌ |
+
+Setup on Firefox:
+
+1. Firefox 134+ — on non-Nightly builds set `browser.ml.enable` and
+   `extensions.ml.enabled` to `true` in `about:config`
+2. Install the extension, open the popup, and click **Enable on-device AI**
+   (grants the optional `trialML` permission and downloads the model once)
+
+> ⚠️ `browser.trial.ml` is explicitly experimental — Mozilla may change it
+> between major Firefox versions. The extension feature-detects it and fails
+> quietly (no badge) when it's unavailable.
 
 ## Store assets
 
 Chrome Web Store listing text and promo images (screenshots + tiles) live in [`store-assets/`](store-assets/). The PNGs are rendered from the HTML sources in `store-assets/src/` — edit those and run `store-assets/render.sh` (headless Chrome) to regenerate. See [`store-assets/listing.md`](store-assets/listing.md) for the description text and the asset → store-slot mapping.
+
+Firefox (addons.mozilla.org) assets live in [`store-assets/firefox/`](store-assets/firefox/): Firefox-accurate listing text in [`store-assets/firefox/listing.md`](store-assets/firefox/listing.md) and four screenshots rendered from `store-assets/firefox/src/` via `store-assets/firefox/render-firefox.sh`. The copy and images deliberately drop the rewrite/multilingual claims, which the Firefox build does not have.
 
 ---
 
