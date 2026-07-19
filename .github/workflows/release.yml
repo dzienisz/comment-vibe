@@ -13,6 +13,11 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-latest
+    env:
+      # Kontekst `secrets` nie jest dozwolony w `if` na poziomie kroku,
+      # więc dostępność sekretów przekazujemy przez env.
+      HAS_CHROME_SECRETS: ${{ secrets.REFRESH_TOKEN != '' }}
+      HAS_AMO_SECRETS: ${{ secrets.AMO_JWT_SECRET != '' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -74,7 +79,7 @@ jobs:
       #   AMO_JWT_ISSUER, AMO_JWT_SECRET
 
       - name: Publish to Chrome Web Store
-        if: ${{ secrets.REFRESH_TOKEN != '' }}
+        if: ${{ env.HAS_CHROME_SECRETS == 'true' }}
         env:
           EXTENSION_ID: ${{ secrets.CHROME_EXTENSION_ID }}
           CLIENT_ID: ${{ secrets.CLIENT_ID }}
@@ -85,7 +90,7 @@ jobs:
           npx --yes chrome-webstore-upload-cli@3 --source "comment-vibe-$v.zip"
 
       - name: Publish to Firefox Add-ons (AMO)
-        if: ${{ secrets.AMO_JWT_SECRET != '' }}
+        if: ${{ env.HAS_AMO_SECRETS == 'true' }}
         env:
           WEB_EXT_API_KEY: ${{ secrets.AMO_JWT_ISSUER }}
           WEB_EXT_API_SECRET: ${{ secrets.AMO_JWT_SECRET }}
