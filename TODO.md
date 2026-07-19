@@ -56,8 +56,9 @@ file is only the forward look. Current release: **v1.2.3** (Chrome + Firefox).
       https://addons.mozilla.org/firefox/addon/comment-vibe-on-device-check/
 - [x] **Store submissions are automated** since v1.2.4: the release workflow
       uploads to the Chrome Web Store and AMO on every `vX.Y.Z` tag (secrets in
-      repo settings). v1.2.4 — carrying the 1.2.3 Firefox event-page fix — was
-      submitted to both stores on 2026-07-19; awaiting review.
+      repo settings). v1.2.4 — carrying the 1.2.3 Firefox event-page fix —
+      was approved and is live on AMO (2026-07-19, same day); Chrome Web Store
+      review still pending.
 - [ ] Decide whether to keep `minimum_chrome_version: 127`. Keeping it preserves
       the legacy `window.ai` path (a CLAUDE.md hard constraint); the store copy
       already frames 138 as the flag-free line, so this is currently intentional,
