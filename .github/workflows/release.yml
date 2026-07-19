@@ -87,10 +87,20 @@ jobs:
           REFRESH_TOKEN: ${{ secrets.REFRESH_TOKEN }}
         run: |
           v="${GITHUB_REF_NAME#v}"
-          npx --yes chrome-webstore-upload-cli@3 --source "comment-vibe-$v.zip"
+          out=$(npx --yes chrome-webstore-upload-cli@3 --source "comment-vibe-$v.zip" 2>&1) && status=0 || status=$?
+          echo "$out"
+          # CWS nie przyjmuje nowej wersji, dopóki poprzednia czeka na
+          # recenzję — to stan sklepu, nie błąd release'u.
+          if [ "$status" -ne 0 ] && echo "$out" | grep -q "ITEM_NOT_UPDATABLE"; then
+            echo "::warning::Chrome Web Store still has the previous version in review — $v was not uploaded. Re-run this job after the review completes, or ship it with the next release."
+            exit 0
+          fi
+          exit "$status"
 
       - name: Publish to Firefox Add-ons (AMO)
-        if: ${{ env.HAS_AMO_SECRETS == 'true' }}
+        # !cancelled(): submit to AMO even if the Chrome step failed —
+        # the two stores' submissions are independent.
+        if: ${{ !cancelled() && env.HAS_AMO_SECRETS == 'true' }}
         env:
           WEB_EXT_API_KEY: ${{ secrets.AMO_JWT_ISSUER }}
           WEB_EXT_API_SECRET: ${{ secrets.AMO_JWT_SECRET }}
