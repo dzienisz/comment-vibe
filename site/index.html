@@ -395,7 +395,8 @@
         <tr><td>“Why” explanation</td><td class="yes">✓ model-written</td><td class="yes">✓ classifier + confidence</td></tr>
         <tr><td>Kinder rewrite suggestion</td><td class="yes">✓</td><td class="no">—</td></tr>
         <tr><td>Streaming (badge colors in early)</td><td class="yes">✓</td><td class="no">—</td></tr>
-        <tr><td>Output in your comment's language</td><td class="yes">✓</td><td class="no">—</td></tr>
+        <tr><td>Understands non-English comments</td><td class="yes">✓</td><td class="yes">✓ ~100 languages</td></tr>
+        <tr><td>Output in your comment's language</td><td class="yes">✓</td><td class="no">— (English)</td></tr>
         <tr><td>Runs 100% on-device</td><td class="yes">✓</td><td class="yes">✓</td></tr>
       </table>
     </div>
@@ -415,11 +416,11 @@
       </details>
       <details>
         <summary>What do I need on Firefox?</summary>
-        <p>Firefox 134+ on desktop. On non-Nightly builds, set <code>browser.ml.enable</code> and <code>extensions.ml.enabled</code> to <code>true</code> in <code>about:config</code>, then click “Enable on-device AI” in the extension popup — a small classifier model (~65&nbsp;MB) downloads once.</p>
+        <p>Firefox 134+ on desktop. Click “Enable on-device AI” in the extension popup — a multilingual classifier model (~340&nbsp;MB) downloads once. On Firefox 134–139 you may also need to set <code>browser.ml.enable</code> and <code>extensions.ml.enabled</code> to <code>true</code> in <code>about:config</code>; from Firefox 140 they're on by default.</p>
       </details>
       <details>
         <summary>Why is the Firefox version simpler than the Chrome one?</summary>
-        <p>Firefox's WebExtensions AI API (<code>browser.trial.ml</code>) exposes on-device classification pipelines rather than a generative model, so the Firefox build classifies tone but doesn't generate rewrites. When Firefox ships a generative on-device API, the rest follows.</p>
+        <p>It's not a lesser effort — it's a different engine. Chrome ships <strong>Gemini Nano</strong>, a small generative LLM that extensions can prompt, so it can <em>write</em> things: explanations, kinder rewrites, translations. Firefox's WebExtensions AI API (<code>browser.trial.ml</code>) instead exposes on-device <strong>classification</strong> models — they can judge tone (in ~100 languages) but can't write text. Same badge, different brains. When Firefox's generative backend matures for extensions, the rewrites follow.</p>
       </details>
       <details>
         <summary>Is it free?</summary>

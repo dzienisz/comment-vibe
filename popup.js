@@ -50,7 +50,11 @@ function progressPercent(data) {
 async function initFirefoxPopup(els) {
   document.getElementById('info').innerHTML =
     "Comment Vibe uses <strong>Firefox's on-device AI runtime</strong> to classify " +
-    'the tone of your comments in real time — completely on-device, no data sent anywhere.';
+    'the tone of your comments in real time — completely on-device, no data sent anywhere. ' +
+    "Unlike Chrome's generative Gemini Nano, Firefox's AI API is a <em>classifier</em>: " +
+    'it judges tone in ~100 languages but cannot write rewrite suggestions — those are ' +
+    'Chrome-only for now. ' +
+    '<a href="https://dzienko.dev/comment-vibe/#browsers" target="_blank" rel="noopener">Full comparison ↗</a>';
 
   const granted = await browser.permissions
     .contains({ permissions: ['trialML'] })
