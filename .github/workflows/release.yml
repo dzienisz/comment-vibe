@@ -20,7 +20,7 @@ jobs:
       HAS_AMO_SECRETS: ${{ secrets.AMO_JWT_SECRET != '' }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Build packages
         run: bash scripts/package.sh
