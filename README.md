@@ -29,10 +29,11 @@ Firefox has no Prompt API. Instead, Comment Vibe uses the experimental
 [WebExtensions AI API](https://firefox-source-docs.mozilla.org/toolkit/components/ml/extensions.html)
 (`browser.trial.ml`, Firefox 134+), which exposes on-device Transformers.js
 pipelines to extensions. Since that API offers classification pipelines rather
-than a conversational model, the Firefox build runs a **zero-shot tone
-classifier** (`Xenova/distilbert-base-uncased-mnli`, ~65 MB, downloaded once)
-in the extension's background script — content scripts delegate to it via
-runtime messaging because the API is not available to content scripts.
+than a conversational model, the Firefox build runs a **multilingual zero-shot
+tone classifier** (`Xenova/mDeBERTa-v3-base-xnli-multilingual-nli-2mil7`,
+~340 MB q8, downloaded once, ~100 languages) in the extension's background
+script — content scripts delegate to it via runtime messaging because the API
+is not available to content scripts.
 
 What differs from the Chrome experience:
 

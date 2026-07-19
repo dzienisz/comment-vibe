@@ -122,8 +122,8 @@
   // Chrome globals stay undefined, so content.js takes the Firefox path and
   // delegates analysis via cv-analyze messages. Counted as `prompt` calls.
   const FIREFOX_RESULTS = {
-    positive:  { ok: true, result: { sentiment: 'positive', reason: 'The on-device classifier read this as friendly and positive (93% confidence).', rewrite: null } },
-    negative:  { ok: true, result: { sentiment: 'negative', reason: 'The on-device classifier read this as harsh or critical (72% confidence).', rewrite: null } },
+    positive:  { ok: true, result: { sentiment: 'positive', reason: 'The on-device classifier read this as friendly and appreciative (93% confidence).', rewrite: null } },
+    negative:  { ok: true, result: { sentiment: 'negative', reason: 'The on-device classifier read this as critical or dismissive (72% confidence).', rewrite: null } },
     malicious: { ok: true, result: { sentiment: 'positive', emoji: '<img src=x onerror=alert(1)>', label: '<b>Positive</b>', reason: '<img src=x onerror=alert(2)>', rewrite: null } },
     malformed: { ok: true, result: { sentiment: 'toxic', emoji: { html: '<img src=x>' }, label: { html: '<b>Toxic</b>' }, reason: { text: 'Hostile.' } } },
   };

@@ -12,7 +12,7 @@ const {
   warmup,
 } = require('../background.js');
 
-const LABELS = ['friendly and positive', 'neutral and factual', 'harsh or critical', 'toxic or insulting'];
+const LABELS = ['friendly and appreciative', 'a neutral factual statement', 'critical or dismissive', 'insulting or hateful'];
 
 function stubBrowser({ runOutput, granted = true } = {}) {
   const calls = { create: 0, run: 0, args: null, options: null, notified: [] };
@@ -45,14 +45,14 @@ test.afterEach(() => {
 });
 
 test('mapZeroShot maps the top label to a sentiment with confidence', () => {
-  const result = mapZeroShot({ labels: ['toxic or insulting', 'neutral and factual'], scores: [0.91, 0.05] });
+  const result = mapZeroShot({ labels: ['insulting or hateful', 'a neutral factual statement'], scores: [0.91, 0.05] });
   assert.equal(result.sentiment, 'toxic');
-  assert.match(result.reason, /toxic or insulting \(91% confidence\)/);
+  assert.match(result.reason, /insulting or hateful \(91% confidence\)/);
   assert.equal(result.rewrite, null);
 });
 
 test('mapZeroShot accepts array-wrapped output and missing scores', () => {
-  const result = mapZeroShot([{ labels: ['friendly and positive'] }]);
+  const result = mapZeroShot([{ labels: ['friendly and appreciative'] }]);
   assert.equal(result.sentiment, 'positive');
   assert.doesNotMatch(result.reason, /confidence/);
 });
@@ -74,7 +74,7 @@ test('mlAvailable is false without browser.trial.ml or permission', async () => 
 
 test('analyze runs the zero-shot pipeline with the four tone labels', async () => {
   const calls = stubBrowser({
-    runOutput: { labels: ['harsh or critical', 'toxic or insulting'], scores: [0.72, 0.2] },
+    runOutput: { labels: ['critical or dismissive', 'insulting or hateful'], scores: [0.72, 0.2] },
   });
 
   const result = await analyze('this is bad and you should feel bad');
@@ -83,7 +83,7 @@ test('analyze runs the zero-shot pipeline with the four tone labels', async () =
   assert.equal(calls.create, 1);
   assert.equal(calls.run, 1);
   assert.deepEqual(calls.args, ['this is bad and you should feel bad', LABELS]);
-  assert.equal(calls.options.hypothesis_template, 'The tone of this comment is {}.');
+  assert.equal(calls.options.hypothesis_template, 'This comment is {}.');
 });
 
 test('analyze reuses one engine across sequential runs', async () => {
@@ -127,7 +127,7 @@ test('an "Engine already created" rejection is treated as an existing engine', a
 });
 
 test('handleMessage answers cv-status, cv-analyze, and cv-warmup', async () => {
-  const calls = stubBrowser({ runOutput: { labels: ['neutral and factual'], scores: [0.8] } });
+  const calls = stubBrowser({ runOutput: { labels: ['a neutral factual statement'], scores: [0.8] } });
 
   assert.deepEqual(await handleMessage({ type: 'cv-status' }), { available: true });
 

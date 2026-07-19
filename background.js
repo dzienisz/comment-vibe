@@ -12,18 +12,27 @@
 const ENGINE_OPTIONS = {
   taskName: 'zero-shot-classification',
   modelHub: 'huggingface',
-  // Xenova is one of the two organisations Firefox allows model downloads from
-  modelId: 'Xenova/distilbert-base-uncased-mnli',
+  // Xenova is one of the two organisations Firefox allows model downloads from.
+  // Multilingual NLI (mDeBERTa-v3, ~100 languages): unlike the English-only
+  // distilbert-mnli it shipped with, it classifies non-English comments
+  // correctly (measured on an EN+PL sample set: 11/16 vs 7/16, with Polish
+  // positives no longer collapsing to "negative"). Trade-off: ~340 MB download
+  // (q8) instead of ~65 MB, and roughly 3x slower inference — still well under
+  // a second per comment.
+  modelId: 'Xenova/mDeBERTa-v3-base-xnli-multilingual-nli-2mil7',
+  dtype: 'q8',
 };
 
+// Label phrasing tuned together with the model swap — descriptive adjective
+// phrases scored best with this NLI head across EN and PL samples.
 const CANDIDATES = [
-  { label: 'friendly and positive', sentiment: 'positive' },
-  { label: 'neutral and factual',   sentiment: 'neutral'  },
-  { label: 'harsh or critical',     sentiment: 'negative' },
-  { label: 'toxic or insulting',    sentiment: 'toxic'    },
+  { label: 'friendly and appreciative',    sentiment: 'positive' },
+  { label: 'a neutral factual statement',  sentiment: 'neutral'  },
+  { label: 'critical or dismissive',       sentiment: 'negative' },
+  { label: 'insulting or hateful',         sentiment: 'toxic'    },
 ];
 
-const RUN_OPTIONS = { hypothesis_template: 'The tone of this comment is {}.' };
+const RUN_OPTIONS = { hypothesis_template: 'This comment is {}.' };
 
 let enginePromise = null;
 let runQueue = Promise.resolve();
@@ -149,6 +158,12 @@ function resetEngineState() {
 if (typeof browser !== 'undefined') {
   browser.runtime.onMessage.addListener(handleMessage);
   wireProgress();
+  // Pre-download the model right after install/update (when permitted), so a
+  // model swap in an update doesn't stall the first in-page analysis behind
+  // a full download. Cached models make this a no-op.
+  browser.runtime.onInstalled?.addListener(() => {
+    mlAvailable().then(available => { if (available) ensureEngine().catch(() => {}); });
+  });
 }
 
 if (typeof module !== 'undefined' && module.exports) {

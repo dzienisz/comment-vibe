@@ -5,6 +5,24 @@ All notable changes to **Comment Vibe** are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.5] - 2026-07-19
+
+### Changed
+
+- **Firefox: tone analysis now works in ~100 languages, not just English.**
+  The zero-shot classifier was swapped from the English-only
+  `Xenova/distilbert-base-uncased-mnli` to the multilingual
+  `Xenova/mDeBERTa-v3-base-xnli-multilingual-nli-2mil7` (q8), and the
+  candidate labels/hypothesis were re-tuned for the new model. On a mixed
+  English+Polish sample set accuracy improved from 7/16 to 11/16, and
+  non-English positive comments no longer collapse to "negative". Trade-off:
+  the one-time model download grows from ~65 MB to ~340 MB and inference is
+  slightly slower (still well under a second). Verified live on Firefox 152
+  with Polish input.
+- Firefox: the background now pre-downloads the model right after an
+  install/update (when the `trialML` permission is already granted), so a
+  model swap doesn't stall the first in-page analysis behind a full download.
+
 ## [1.2.4] - 2026-07-19
 
 ### Changed

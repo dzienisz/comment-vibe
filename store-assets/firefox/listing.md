@@ -42,7 +42,7 @@ FOUR CLEAR TONE LABELS
 🚫 Toxic — contains aggressive or harmful language
 
 100% PRIVATE, BY DESIGN
-All analysis happens locally with an on-device model (about 65 MB, downloaded once from Mozilla/Xenova's model hub). Your comments are never sent to any server. No account, no tracking, no analytics — and it keeps working offline once the model is downloaded.
+All analysis happens locally with an on-device multilingual model (about 340 MB, downloaded once from Mozilla/Xenova's model hub — works in English, Polish, and ~100 other languages). Your comments are never sent to any server. No account, no tracking, no analytics — and it keeps working offline once the model is downloaded.
 
 ONE-TIME SETUP
 Because on-device AI in Firefox is still experimental, you turn it on yourself:
