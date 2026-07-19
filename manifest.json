@@ -3,7 +3,7 @@
   "name": "Comment Vibe",
   "short_name": "Comment Vibe",
   "description": "See how your comment sounds before you post. On-device AI tone check with kinder rewrites. 100% private — nothing leaves Chrome.",
-  "version": "1.2.3",
+  "version": "1.2.4",
   "minimum_chrome_version": "127",
   "icons": {
     "16": "icons/icon16.png",

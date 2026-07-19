@@ -5,6 +5,16 @@ All notable changes to **Comment Vibe** are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.4] - 2026-07-19
+
+### Changed
+
+- Release engineering only — the shipped extension is identical to 1.2.3.
+  The release workflow now also submits the packaged zips to the Chrome Web
+  Store and addons.mozilla.org for review automatically on every `vX.Y.Z`
+  tag (skipped when the store API secrets are absent). This version is the
+  first store submission carrying the 1.2.3 Firefox event-page fix.
+
 ## [1.2.3] - 2026-07-19
 
 ### Fixed
