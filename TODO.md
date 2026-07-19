@@ -65,6 +65,14 @@ file is only the forward look. Current release: **v1.2.3** (Chrome + Firefox).
 
 ## Park until the APIs go stable (don't build against trials)
 
+- [ ] **Firefox: opt-in generative "enhanced mode" via wllama** (issue #1,
+      requested by @niutech as Phi-3 Mini). Firefox 142 enabled the wllama
+      (llama.cpp/GGUF) backend for extensions (bug 1976704) — the realistic way
+      to run a small instruct LLM for rewrites/reasons on Firefox. Must stay
+      opt-in: multi-GB download and CPU inference are too heavy to be the
+      default for a while-you-type badge; the zero-shot classifier remains the
+      instant path. Wait for the backend to prove stable in `browser.trial.ml`
+      before building.
 - [ ] **Rewriter API** (developer trial) — replace the raw Prompt rewrite once stable.
 - [ ] **Proofreader API** (origin trial) — grammar/spelling layer.
 - [ ] **Multimodal Prompt input** — analyse pasted screenshots.
