@@ -57,3 +57,42 @@ jobs:
               --notes-file release-notes.md \
               "$chrome" "$firefox"
           fi
+
+      # ── Store publishing ─────────────────────────────────────────────────
+      # Wysyła nowe wersje do sklepów, jeśli sekrety są skonfigurowane;
+      # bez sekretów kroki są pomijane i release działa jak dotychczas.
+      # "Publish" = wysłanie do recenzji sklepu — publikacja u użytkowników
+      # następuje dopiero po jej zakończeniu.
+      #
+      # Chrome Web Store — 4 sekrety repo:
+      #   CHROME_EXTENSION_ID   — ID z adresu w panelu Web Store
+      #   CHROME_CLIENT_ID, CHROME_CLIENT_SECRET, CHROME_REFRESH_TOKEN —
+      #   jednorazowa konfiguracja OAuth:
+      #   https://github.com/fregante/chrome-webstore-upload/blob/main/How%20to%20generate%20Google%20API%20keys.md
+      #
+      # AMO — 2 sekrety repo (z https://addons.mozilla.org/developers/addon/api/key/):
+      #   AMO_JWT_ISSUER, AMO_JWT_SECRET
+
+      - name: Publish to Chrome Web Store
+        if: ${{ secrets.CHROME_REFRESH_TOKEN != '' }}
+        env:
+          EXTENSION_ID: ${{ secrets.CHROME_EXTENSION_ID }}
+          CLIENT_ID: ${{ secrets.CHROME_CLIENT_ID }}
+          CLIENT_SECRET: ${{ secrets.CHROME_CLIENT_SECRET }}
+          REFRESH_TOKEN: ${{ secrets.CHROME_REFRESH_TOKEN }}
+        run: |
+          v="${GITHUB_REF_NAME#v}"
+          npx --yes chrome-webstore-upload-cli@3 --source "comment-vibe-$v.zip"
+
+      - name: Publish to Firefox Add-ons (AMO)
+        if: ${{ secrets.AMO_JWT_SECRET != '' }}
+        env:
+          WEB_EXT_API_KEY: ${{ secrets.AMO_JWT_ISSUER }}
+          WEB_EXT_API_SECRET: ${{ secrets.AMO_JWT_SECRET }}
+        run: |
+          v="${GITHUB_REF_NAME#v}"
+          unzip -q "comment-vibe-firefox-$v.zip" -d amo-src
+          # --approval-timeout 0: zgłoszenie do recenzji wystarcza, nie
+          # czekamy na jej wynik (listed może czekać godzinami/dniami).
+          npx --yes web-ext@8 sign --channel listed \
+            --source-dir amo-src --approval-timeout 0

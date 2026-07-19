@@ -53,7 +53,12 @@ packaging scripts, not a build step: they only zip raw source files, so the
    `scripts/package.sh`, extracts the changelog section for that version, and
    publishes a GitHub Release with both zips attached. (Manual fallback: run
    `scripts/package.sh` locally and upload the zips.)
-5. Upload each zip to its store dashboard (Chrome Web Store / AMO).
+5. The same workflow then submits each zip to its store for review, **if** the
+   repo secrets are configured (Chrome: `CHROME_EXTENSION_ID`,
+   `CHROME_CLIENT_ID`, `CHROME_CLIENT_SECRET`, `CHROME_REFRESH_TOKEN`; AMO:
+   `AMO_JWT_ISSUER`, `AMO_JWT_SECRET` — setup links are in the workflow
+   comments). Without secrets those steps are skipped — upload the zips to the
+   store dashboards manually. Store review still decides when users get it.
 
 Store listing text and promo images live in `store-assets/` — Chrome copy in
 `store-assets/listing.md`, Firefox (AMO) copy in `store-assets/firefox/listing.md`.
