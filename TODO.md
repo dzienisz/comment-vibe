@@ -54,10 +54,10 @@ file is only the forward look. Current release: **v1.2.3** (Chrome + Firefox).
       and keep it with the listing copy.
 - [x] **Firefox AMO listing** — approved and linked from `README.md`:
       https://addons.mozilla.org/firefox/addon/comment-vibe-on-device-check/
-- [ ] **Upload the 1.2.3 zips to both stores.** AMO is serving 1.2.0, which has
-      the event-page suspension bug fixed in 1.2.3 (analysis broke permanently
-      ~30s after enabling); this upload is the real fix for Firefox users, not
-      just a catch-up.
+- [x] **Store submissions are automated** since v1.2.4: the release workflow
+      uploads to the Chrome Web Store and AMO on every `vX.Y.Z` tag (secrets in
+      repo settings). v1.2.4 — carrying the 1.2.3 Firefox event-page fix — was
+      submitted to both stores on 2026-07-19; awaiting review.
 - [ ] Decide whether to keep `minimum_chrome_version: 127`. Keeping it preserves
       the legacy `window.ai` path (a CLAUDE.md hard constraint); the store copy
       already frames 138 as the flag-free line, so this is currently intentional,
