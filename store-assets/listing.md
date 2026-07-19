@@ -1,5 +1,17 @@
 # Chrome Web Store listing — Comment Vibe
 
+## Store title (ASO)
+
+The store shows the manifest `name`, so a title change ships with the next
+upload (any version bump — Chrome update reviews are usually fast). Keep the
+brand, append the searchable keywords people actually type:
+
+> **Comment Vibe — AI Comment Tone Checker**
+
+Why: "Comment Vibe" alone carries zero search keywords; "tone checker",
+"comment" and "AI" are the discovery phrases. Do not fully rename — the
+listing URL, reviews and existing links stay tied to the current identity.
+
 ## Summary (max 132 chars — this is the `description` field in manifest.json)
 
 Option A (current, 128 chars):

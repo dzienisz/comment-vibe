@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Comment Vibe — AI comment tone checker for Chrome &amp; Firefox (100% on-device)</title>
+<meta name="description" content="Free browser extension that reads the tone of your comment as you type — positive, neutral, negative or toxic — and suggests a kinder rewrite. Runs entirely on-device with Chrome's Gemini Nano or Firefox's AI runtime. No cloud, no account, no tracking.">
+<link rel="canonical" href="https://dzienko.dev/comment-vibe/">
+<meta property="og:title" content="Comment Vibe — know how you sound before you post">
+<meta property="og:description" content="On-device AI tone check for every comment box. Private by design: nothing ever leaves your browser.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://dzienko.dev/comment-vibe/">
+<meta property="og:image" content="https://dzienko.dev/comment-vibe/og-image.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="icon128.png" type="image/png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700;9..144,900&family=Albert+Sans:wght@400;500;600;700&family=Fragment+Mono&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper:      #FAF6EF;
+    --paper-deep: #F3ECDF;
+    --ink:        #191512;
+    --ink-soft:   #6B615A;
+    --line:       #E3D9C9;
+    --pos:    #1E7A46; --pos-bg:  #DDF3E4; --pos-line: #A9DDBC;
+    --neu:    #9A6A0B; --neu-bg:  #FBEFCF; --neu-line: #EED9A0;
+    --neg:    #C2402F; --neg-bg:  #FBE2DC; --neg-line: #F2BBAD;
+    --tox:    #6D28D9; --tox-bg:  #EFE6FB; --tox-line: #D4BEF5;
+    --serif: 'Fraunces', Georgia, serif;
+    --sans:  'Albert Sans', 'Segoe UI', sans-serif;
+    --mono:  'Fragment Mono', ui-monospace, monospace;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: var(--sans);
+    background: var(--paper);
+    color: var(--ink);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+  /* paper grain */
+  body::before {
+    content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 999;
+    opacity: 0.5; mix-blend-mode: multiply;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 0.55 0 0 0 0 0.52 0 0 0 0 0.47 0 0 0 0.05 0'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+  ::selection { background: var(--tox-bg); color: var(--tox); }
+
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 28px; }
+
+  /* ── Nav ── */
+  nav {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 26px 0 22px; gap: 18px;
+  }
+  .brand { display: flex; align-items: center; gap: 11px; font-weight: 700; font-size: 17px; text-decoration: none; color: var(--ink); }
+  .brand svg { display: block; }
+  .nav-links { display: flex; gap: 26px; align-items: center; font-size: 14.5px; font-weight: 500; }
+  .nav-links a { color: var(--ink-soft); text-decoration: none; transition: color .15s; }
+  .nav-links a:hover { color: var(--ink); }
+  .nav-links a.gh { color: var(--ink); border: 1.5px solid var(--ink); border-radius: 999px; padding: 6px 15px; }
+  .nav-links a.gh:hover { background: var(--ink); color: var(--paper); }
+  @media (max-width: 640px) { .nav-links a:not(.gh) { display: none; } }
+
+  /* ── Hero ── */
+  .hero { padding: 64px 0 30px; text-align: center; position: relative; }
+  .eyebrow {
+    font-family: var(--mono); font-size: 12.5px; letter-spacing: 0.08em;
+    color: var(--ink-soft); text-transform: uppercase;
+    display: inline-flex; align-items: center; gap: 9px;
+    border: 1px solid var(--line); border-radius: 999px; padding: 7px 16px;
+    background: rgba(255,255,255,0.5);
+  }
+  .eyebrow .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--pos); box-shadow: 0 0 0 3px var(--pos-bg); }
+  h1 {
+    font-family: var(--serif); font-weight: 900; font-optical-sizing: auto;
+    font-size: clamp(42px, 7.5vw, 84px); line-height: 1.04; letter-spacing: -0.015em;
+    margin: 30px auto 0; max-width: 16ch;
+  }
+  h1 .tone-word { position: relative; white-space: nowrap; }
+  h1 .tone-word em { font-style: italic; font-weight: 700; }
+  h1 .tone-word svg { position: absolute; left: -2%; bottom: -0.13em; width: 104%; height: 0.24em; }
+  .hero-sub {
+    margin: 26px auto 0; max-width: 56ch; font-size: 18.5px; color: var(--ink-soft);
+  }
+  .hero-sub strong { color: var(--ink); font-weight: 600; }
+
+  .cta-row { margin-top: 34px; display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 10px;
+    font-weight: 600; font-size: 15.5px; text-decoration: none;
+    border-radius: 999px; padding: 14px 26px; transition: transform .15s, box-shadow .15s;
+  }
+  .btn:hover { transform: translateY(-2px); }
+  .btn-ink { background: var(--ink); color: var(--paper); box-shadow: 0 10px 26px rgba(25,21,18,0.25); }
+  .btn-ink:hover { box-shadow: 0 14px 32px rgba(25,21,18,0.32); }
+  .btn-line { border: 1.5px solid var(--ink); color: var(--ink); background: transparent; }
+  .btn-line:hover { background: rgba(25,21,18,0.05); }
+  .cta-note { margin-top: 14px; font-family: var(--mono); font-size: 12px; color: var(--ink-soft); }
+
+  /* staggered reveal */
+  .hero > * { opacity: 0; transform: translateY(14px); animation: rise .7s cubic-bezier(.2,.7,.2,1) forwards; }
+  .hero > *:nth-child(1) { animation-delay: .05s; }
+  .hero > *:nth-child(2) { animation-delay: .15s; }
+  .hero > *:nth-child(3) { animation-delay: .28s; }
+  .hero > *:nth-child(4) { animation-delay: .40s; }
+  .hero > *:nth-child(5) { animation-delay: .50s; }
+  @keyframes rise { to { opacity: 1; transform: none; } }
+
+  /* ── Demo ── */
+  .demo-zone { padding: 44px 0 20px; position: relative; }
+  .demo-frame {
+    max-width: 660px; margin: 0 auto; position: relative;
+    opacity: 0; transform: translateY(18px); animation: rise .7s .6s cubic-bezier(.2,.7,.2,1) forwards;
+  }
+  .demo-card {
+    background: #fff; border: 1px solid var(--line); border-radius: 20px;
+    box-shadow: 0 24px 60px rgba(80,62,40,0.13), 0 3px 10px rgba(80,62,40,0.06);
+    padding: 22px 24px 20px; text-align: left; position: relative;
+  }
+  .demo-head { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+  .avatar {
+    width: 40px; height: 40px; border-radius: 50%; flex: none;
+    background: linear-gradient(135deg, var(--tox-bg), var(--tox-line));
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; color: var(--tox); font-size: 15px;
+  }
+  .demo-meta b { font-size: 14.5px; display: block; }
+  .demo-meta span { font-size: 12px; color: var(--ink-soft); }
+  .demo-box {
+    position: relative; border: 1.5px solid var(--line); border-radius: 14px; background: #FDFCFA;
+  }
+  .demo-box textarea {
+    width: 100%; min-height: 108px; resize: vertical; border: 0; outline: 0; background: transparent;
+    font: 16px/1.55 var(--sans); color: var(--ink); padding: 14px 16px 44px; border-radius: 14px; display: block;
+  }
+  .demo-box:focus-within { border-color: var(--tox-line); box-shadow: 0 0 0 3px var(--tox-bg); }
+  .cv-badge {
+    position: absolute; right: 12px; bottom: 10px;
+    display: none; align-items: center; gap: 6px;
+    padding: 4px 13px; border-radius: 999px; font-size: 13px; font-weight: 600;
+    border: 1px solid transparent; box-shadow: 0 2px 8px rgba(0,0,0,0.14);
+    animation: pop .28s cubic-bezier(.3,1.6,.4,1);
+  }
+  @keyframes pop { from { transform: scale(.7); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  .cv-badge.show { display: inline-flex; }
+  .cv-badge--analyzing { background: #ECE7DE; color: var(--ink-soft); }
+  .cv-badge--positive  { background: var(--pos-bg); color: var(--pos); border-color: var(--pos-line); }
+  .cv-badge--neutral   { background: var(--neu-bg); color: var(--neu); border-color: var(--neu-line); }
+  .cv-badge--negative  { background: var(--neg-bg); color: var(--neg); border-color: var(--neg-line); }
+  .cv-badge--toxic     { background: var(--tox-bg); color: var(--tox); border-color: var(--tox-line); }
+  .spin {
+    width: 11px; height: 11px; border-radius: 50%; border: 2px solid rgba(0,0,0,0.15);
+    border-top-color: var(--ink-soft); animation: spin .7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .demo-samples { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+  .chip {
+    font-size: 12.5px; font-weight: 500; color: var(--ink-soft);
+    border: 1px dashed var(--line); background: transparent; border-radius: 999px;
+    padding: 6px 13px; cursor: pointer; font-family: var(--sans); transition: all .15s;
+  }
+  .chip:hover { border-style: solid; color: var(--ink); background: #fff; }
+
+  .demo-result {
+    margin-top: 14px; border-radius: 14px; background: var(--ink); color: #F5F1EA;
+    padding: 15px 17px; font-size: 13.5px; display: none; animation: rise .3s ease;
+  }
+  .demo-result.show { display: block; }
+  .demo-result .r-title { font-weight: 700; font-size: 14.5px; display: flex; justify-content: space-between; }
+  .demo-result .r-reason { color: #CFC7BB; margin-top: 3px; }
+  .demo-result .r-rewrite {
+    margin-top: 11px; padding: 11px 12px; background: rgba(255,255,255,0.08);
+    border-left: 3px solid var(--tox-line); border-radius: 8px; line-height: 1.55;
+  }
+  .demo-result .r-label {
+    font-family: var(--mono); font-size: 10px; letter-spacing: .1em; text-transform: uppercase;
+    color: #A79D90; display: block; margin-bottom: 4px;
+  }
+  .demo-note {
+    text-align: center; margin-top: 16px; font-family: var(--mono); font-size: 11.5px; color: var(--ink-soft);
+  }
+
+  /* ── Ticker ── */
+  .ticker-zone { padding: 40px 0 8px; overflow: hidden; }
+  .ticker { display: flex; gap: 14px; width: max-content; animation: slide 42s linear infinite; }
+  .ticker:hover { animation-play-state: paused; }
+  @keyframes slide { to { transform: translateX(-50%); } }
+  .t-item {
+    display: flex; align-items: center; gap: 10px; white-space: nowrap;
+    border: 1px solid var(--line); background: rgba(255,255,255,0.6);
+    border-radius: 999px; padding: 8px 16px; font-size: 13.5px; color: var(--ink-soft);
+  }
+  .t-item .mini { font-size: 12px; font-weight: 700; padding: 2px 10px; border-radius: 999px; border: 1px solid transparent; }
+  .mini.p { background: var(--pos-bg); color: var(--pos); border-color: var(--pos-line); }
+  .mini.n { background: var(--neu-bg); color: var(--neu); border-color: var(--neu-line); }
+  .mini.g { background: var(--neg-bg); color: var(--neg); border-color: var(--neg-line); }
+  .mini.t { background: var(--tox-bg); color: var(--tox); border-color: var(--tox-line); }
+
+  /* ── Sections ── */
+  section { padding: 74px 0 10px; }
+  .sec-eyebrow { font-family: var(--mono); font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-soft); }
+  h2 {
+    font-family: var(--serif); font-weight: 700; font-size: clamp(30px, 4.4vw, 44px);
+    line-height: 1.12; letter-spacing: -0.01em; margin-top: 10px; max-width: 22ch;
+  }
+  .sec-sub { color: var(--ink-soft); max-width: 62ch; margin-top: 14px; font-size: 16.5px; }
+
+  .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; margin-top: 40px; }
+  @media (max-width: 800px) { .steps { grid-template-columns: 1fr; } }
+  .step {
+    background: #fff; border: 1px solid var(--line); border-radius: 18px; padding: 26px 24px;
+    position: relative; transition: transform .2s, box-shadow .2s;
+  }
+  .step:hover { transform: translateY(-4px); box-shadow: 0 16px 36px rgba(80,62,40,0.1); }
+  .step .num {
+    font-family: var(--serif); font-style: italic; font-weight: 600; font-size: 30px;
+    color: var(--tox); display: block;
+  }
+  .step b { display: block; font-size: 17px; margin-top: 8px; }
+  .step p { font-size: 14.5px; color: var(--ink-soft); margin-top: 6px; }
+
+  .tones { display: grid; grid-template-columns: repeat(2, 1fr); gap: 22px; margin-top: 40px; }
+  @media (max-width: 700px) { .tones { grid-template-columns: 1fr; } }
+  .tone-card { border-radius: 18px; padding: 24px 26px; border: 1px solid; }
+  .tone-card blockquote { font-family: var(--serif); font-size: 17.5px; line-height: 1.45; font-weight: 400; }
+  .tone-card .tone-row { display: flex; justify-content: space-between; align-items: center; margin-top: 16px; font-size: 13px; }
+  .tc-pos { background: var(--pos-bg); border-color: var(--pos-line); color: var(--pos); }
+  .tc-neu { background: var(--neu-bg); border-color: var(--neu-line); color: var(--neu); }
+  .tc-neg { background: var(--neg-bg); border-color: var(--neg-line); color: var(--neg); }
+  .tc-tox { background: var(--tox-bg); border-color: var(--tox-line); color: var(--tox); }
+  .tone-card .tone-tag { font-weight: 700; }
+
+  /* privacy */
+  .privacy {
+    margin-top: 40px; background: var(--ink); color: var(--paper); border-radius: 26px;
+    padding: clamp(34px, 6vw, 64px); text-align: center; position: relative; overflow: hidden;
+  }
+  .privacy::after {
+    content: ''; position: absolute; width: 560px; height: 560px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(139,92,246,0.25), transparent 65%);
+    top: -230px; right: -140px;
+  }
+  .privacy h2 { max-width: none; color: var(--paper); }
+  .privacy h2 em { font-style: italic; color: #C9B4F2; }
+  .privacy p { color: #B7AC9E; max-width: 58ch; margin: 16px auto 0; }
+  .privacy .pills { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 26px; position: relative; z-index: 1; }
+  .privacy .pill {
+    font-family: var(--mono); font-size: 12.5px; border: 1px solid rgba(255,255,255,0.25);
+    border-radius: 999px; padding: 8px 17px; color: #E8E1D6;
+  }
+
+  /* compare table */
+  .compare { margin-top: 40px; background: #fff; border: 1px solid var(--line); border-radius: 18px; overflow-x: auto; }
+  .compare table { width: 100%; min-width: 560px; border-collapse: collapse; font-size: 14.5px; }
+  .compare th, .compare td { padding: 14px 20px; text-align: left; border-bottom: 1px solid var(--line); }
+  .compare th { font-family: var(--mono); font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--ink-soft); background: var(--paper-deep); }
+  .compare tr:last-child td { border-bottom: 0; }
+  .compare td:not(:first-child) { text-align: center; }
+  .yes { color: var(--pos); font-weight: 700; }
+  .no  { color: var(--ink-soft); }
+
+  /* faq */
+  .faq { margin-top: 36px; display: grid; gap: 12px; max-width: 760px; }
+  details {
+    background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 18px 22px;
+  }
+  summary { cursor: pointer; font-weight: 600; font-size: 15.5px; list-style: none; display: flex; justify-content: space-between; align-items: center; }
+  summary::-webkit-details-marker { display: none; }
+  summary::after { content: '+'; font-family: var(--serif); font-size: 22px; color: var(--ink-soft); transition: transform .2s; }
+  details[open] summary::after { transform: rotate(45deg); }
+  details p { margin-top: 10px; font-size: 14.5px; color: var(--ink-soft); }
+  details code { font-family: var(--mono); font-size: 12.5px; background: var(--paper-deep); padding: 1px 6px; border-radius: 5px; }
+
+  /* final cta */
+  .final { text-align: center; padding: 90px 0 30px; }
+  .final h2 { max-width: none; font-size: clamp(34px, 5.5vw, 56px); }
+  .final .cta-row { margin-top: 30px; }
+
+  footer {
+    margin-top: 70px; border-top: 1px solid var(--line); padding: 30px 0 44px;
+    display: flex; justify-content: space-between; gap: 18px; flex-wrap: wrap;
+    font-size: 13.5px; color: var(--ink-soft);
+  }
+  footer a { color: var(--ink); text-decoration: none; font-weight: 500; }
+  footer a:hover { text-decoration: underline; }
+  footer .cols { display: flex; gap: 24px; flex-wrap: wrap; }
+
+  /* scroll reveal */
+  .reveal { opacity: 0; transform: translateY(22px); transition: opacity .6s ease, transform .6s cubic-bezier(.2,.7,.2,1); }
+  .reveal.in { opacity: 1; transform: none; }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+    .hero > *, .demo-frame, .reveal { opacity: 1 !important; transform: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <nav>
+    <a class="brand" href="#">
+      <svg width="30" height="30" viewBox="0 0 128 128"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8b5cf6"/><stop offset="1" stop-color="#4f46e5"/></linearGradient></defs><rect width="128" height="128" rx="30" fill="url(#g)"/><rect x="18" y="26" width="92" height="60" rx="14" fill="#fff"/><path d="M36 82 L36 102 L58 84 Z" fill="#fff"/><circle cx="44" cy="56" r="8.5" fill="#22c55e"/><circle cx="64" cy="56" r="8.5" fill="#f59e0b"/><circle cx="84" cy="56" r="8.5" fill="#ef4444"/></svg>
+      Comment Vibe
+    </a>
+    <div class="nav-links">
+      <a href="#how">How it works</a>
+      <a href="#privacy">Privacy</a>
+      <a href="playground/">API playground</a>
+      <a class="gh" href="https://github.com/dzienisz/comment-vibe">GitHub</a>
+    </div>
+  </nav>
+
+  <header class="hero">
+    <span class="eyebrow"><span class="dot"></span> free extension · 100% on-device AI · MIT</span>
+    <h1>Know how you <span class="tone-word"><em>sound</em><svg viewBox="0 0 120 12" preserveAspectRatio="none"><path d="M3 9 Q 30 3 60 7 T 117 5" fill="none" stroke="#6D28D9" stroke-width="4" stroke-linecap="round" opacity="0.55"/></svg></span> — before you post.</h1>
+    <p class="hero-sub">Comment Vibe reads the tone of your comment <strong>as you type</strong> — on LinkedIn, X, YouTube, Reddit, anywhere — and flags it right next to the box. Harsh or toxic? You get a <strong>kinder rewrite</strong> in one click.</p>
+    <div class="cta-row">
+      <a class="btn btn-ink" href="https://chromewebstore.google.com/detail/comment-vibe/kibcnjcipaofjlbbnjdjaobbkoajiejp">Add to Chrome</a>
+      <a class="btn btn-line" href="https://addons.mozilla.org/firefox/addon/comment-vibe-on-device-check/">Get it for Firefox</a>
+    </div>
+    <p class="cta-note">no account · no cloud · your comments never leave the browser</p>
+  </header>
+
+  <div class="demo-zone">
+    <div class="demo-frame">
+      <div class="demo-card">
+        <div class="demo-head">
+          <div class="avatar">You</div>
+          <div class="demo-meta"><b>Add a comment</b><span>Try it — type like you're about to reply to a bad take</span></div>
+        </div>
+        <div class="demo-box">
+          <textarea id="demo-input" aria-label="Try the tone checker" placeholder="Type a comment here…"></textarea>
+          <span id="demo-badge" class="cv-badge"></span>
+        </div>
+        <div class="demo-samples" id="demo-samples">
+          <button class="chip">Great write-up, thanks for sharing!</button>
+          <button class="chip">This is a terrible idea and it will never work.</button>
+          <button class="chip">Only an idiot would post something like this.</button>
+        </div>
+        <div class="demo-result" id="demo-result"></div>
+      </div>
+      <p class="demo-note">↑ simulated preview — the installed extension runs real on-device AI (Gemini Nano / Firefox AI runtime)</p>
+    </div>
+  </div>
+
+  <div class="ticker-zone" aria-hidden="true">
+    <div class="ticker" id="ticker"></div>
+  </div>
+
+  <section id="how">
+    <span class="sec-eyebrow">How it works</span>
+    <h2>A tiny tone mirror for every comment box.</h2>
+    <div class="steps reveal">
+      <div class="step"><span class="num">01</span><b>Type anywhere</b><p>Works on any site with a comment field — social networks, forums, docs, review forms. No setup per site.</p></div>
+      <div class="step"><span class="num">02</span><b>See your tone live</b><p>A small badge appears while you type: 😊 positive, 😐 neutral, 😕 negative or 🚫 toxic — with a one-line why.</p></div>
+      <div class="step"><span class="num">03</span><b>Post the better version</b><p>Sounds harsher than you meant? Click the badge and copy a kinder rewrite that keeps your point.</p></div>
+    </div>
+  </section>
+
+  <section id="tones">
+    <span class="sec-eyebrow">Four labels, zero guesswork</span>
+    <h2>The same comment, read the way readers will read it.</h2>
+    <div class="tones reveal">
+      <div class="tone-card tc-pos"><blockquote>“Great write-up, thanks for sharing! The section on caching finally made it click for me.”</blockquote><div class="tone-row"><span>Constructive and friendly</span><span class="tone-tag">😊 Positive</span></div></div>
+      <div class="tone-card tc-neu"><blockquote>“The update ships on Tuesday. Release notes are linked in the docs.”</blockquote><div class="tone-row"><span>Balanced and factual</span><span class="tone-tag">😐 Neutral</span></div></div>
+      <div class="tone-card tc-neg"><blockquote>“This is a terrible idea and it will never work in practice.”</blockquote><div class="tone-row"><span>May come across as harsh</span><span class="tone-tag">😕 Negative</span></div></div>
+      <div class="tone-card tc-tox"><blockquote>“Only an idiot would post something like this. Delete your account.”</blockquote><div class="tone-row"><span>Aggressive or harmful</span><span class="tone-tag">🚫 Toxic</span></div></div>
+    </div>
+  </section>
+
+  <section id="privacy">
+    <div class="privacy reveal">
+      <span class="sec-eyebrow" style="color:#A79D90;">Privacy</span>
+      <h2>Your drafts are <em>nobody's</em> business.<br>Not even ours.</h2>
+      <p>Every analysis runs locally — Chrome's built-in Gemini Nano model, or Firefox's on-device AI runtime. There is no server, no account, no analytics, and it keeps working offline once the model is downloaded. The code is open source (MIT).</p>
+      <div class="pills">
+        <span class="pill">no cloud</span><span class="pill">no account</span><span class="pill">no tracking</span><span class="pill">works offline</span><span class="pill">open source</span>
+      </div>
+    </div>
+  </section>
+
+  <section id="browsers">
+    <span class="sec-eyebrow">Chrome &amp; Firefox</span>
+    <h2>Two browsers, two on-device AI stacks, one extension.</h2>
+    <p class="sec-sub">Chrome uses the Prompt API (Gemini Nano) — a generative model, so you get rewrites, streaming and translation. Firefox's brand-new WebExtensions AI API exposes on-device classifiers, so the Firefox build focuses on the tone badge. Comment Vibe is one of the first extensions shipping on both.</p>
+    <div class="compare reveal">
+      <table>
+        <tr><th>Feature</th><th>Chrome 138+</th><th>Firefox 134+</th></tr>
+        <tr><td>Tone badge (positive / neutral / negative / toxic)</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+        <tr><td>“Why” explanation</td><td class="yes">✓ model-written</td><td class="yes">✓ classifier + confidence</td></tr>
+        <tr><td>Kinder rewrite suggestion</td><td class="yes">✓</td><td class="no">—</td></tr>
+        <tr><td>Streaming (badge colors in early)</td><td class="yes">✓</td><td class="no">—</td></tr>
+        <tr><td>Output in your comment's language</td><td class="yes">✓</td><td class="no">—</td></tr>
+        <tr><td>Runs 100% on-device</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+      </table>
+    </div>
+  </section>
+
+  <section id="faq">
+    <span class="sec-eyebrow">FAQ</span>
+    <h2>Questions people actually ask.</h2>
+    <div class="faq reveal">
+      <details>
+        <summary>Is my comment text sent anywhere?</summary>
+        <p>No. Analysis happens inside your browser using its built-in on-device model. There is no backend, no telemetry, and the extension keeps working offline once the model is downloaded. You can audit the code — it ships as raw, unminified JavaScript.</p>
+      </details>
+      <details>
+        <summary>What do I need on Chrome?</summary>
+        <p>Chrome 138+ on desktop and hardware eligible for Gemini Nano. Chrome downloads the model automatically the first time it's used — no flags needed on current versions.</p>
+      </details>
+      <details>
+        <summary>What do I need on Firefox?</summary>
+        <p>Firefox 134+ on desktop. On non-Nightly builds, set <code>browser.ml.enable</code> and <code>extensions.ml.enabled</code> to <code>true</code> in <code>about:config</code>, then click “Enable on-device AI” in the extension popup — a small classifier model (~65&nbsp;MB) downloads once.</p>
+      </details>
+      <details>
+        <summary>Why is the Firefox version simpler than the Chrome one?</summary>
+        <p>Firefox's WebExtensions AI API (<code>browser.trial.ml</code>) exposes on-device classification pipelines rather than a generative model, so the Firefox build classifies tone but doesn't generate rewrites. When Firefox ships a generative on-device API, the rest follows.</p>
+      </details>
+      <details>
+        <summary>Is it free?</summary>
+        <p>Yes — free and open source under the MIT license. No paid tier, because there's no server to pay for.</p>
+      </details>
+    </div>
+  </section>
+
+  <div class="final">
+    <span class="sec-eyebrow">Two clicks from now</span>
+    <h2>Post the version of you<br>that you meant.</h2>
+    <div class="cta-row">
+      <a class="btn btn-ink" href="https://chromewebstore.google.com/detail/comment-vibe/kibcnjcipaofjlbbnjdjaobbkoajiejp">Add to Chrome — free</a>
+      <a class="btn btn-line" href="https://addons.mozilla.org/firefox/addon/comment-vibe-on-device-check/">Get it for Firefox</a>
+    </div>
+  </div>
+
+  <footer>
+    <div>© <span id="y"></span> Kamil Dzieniszewski · MIT License</div>
+    <div class="cols">
+      <a href="https://github.com/dzienisz/comment-vibe">GitHub</a>
+      <a href="playground/">Built-in AI playground</a>
+      <a href="https://chromewebstore.google.com/detail/comment-vibe/kibcnjcipaofjlbbnjdjaobbkoajiejp">Chrome Web Store</a>
+      <a href="https://addons.mozilla.org/firefox/addon/comment-vibe-on-device-check/">Firefox Add-ons</a>
+    </div>
+  </footer>
+</div>
+
+<script>
+'use strict';
+document.getElementById('y').textContent = new Date().getFullYear();
+
+/* ── Simulated tone demo (keyword heuristic — honest stand-in for the real AI) ── */
+const TONES = {
+  positive: { emoji: '😊', label: 'Positive', cls: 'cv-badge--positive',
+    reason: 'Reads as appreciative and constructive.', rewrite: null },
+  neutral:  { emoji: '😐', label: 'Neutral', cls: 'cv-badge--neutral',
+    reason: 'Balanced and factual — no strong tone detected.', rewrite: null },
+  negative: { emoji: '😕', label: 'Negative', cls: 'cv-badge--negative',
+    reason: 'Dismissive phrasing may come across as harsh.',
+    rewrite: "I see real problems with this approach — here is where it broke down for me, and what I would try instead." },
+  toxic:    { emoji: '🚫', label: 'Toxic', cls: 'cv-badge--toxic',
+    reason: 'Contains insults or aggressive language.',
+    rewrite: "I strongly disagree with this take — here is my perspective." },
+};
+const TOXIC_RE = /\b(idiot|stupid|moron|dumb|hate you|shut up|garbage human|delete your account|pathetic|loser)\b/i;
+const NEG_RE   = /\b(terrible|awful|worst|horrible|useless|garbage|trash|never work|waste of|bad idea|disagree completely|ridiculous)\b/i;
+const POS_RE   = /\b(great|thanks|thank you|love|awesome|amazing|helpful|insightful|brilliant|well done|nice|appreciate)\b/i;
+
+function classify(text) {
+  if (TOXIC_RE.test(text)) return 'toxic';
+  if (NEG_RE.test(text))   return 'negative';
+  if (POS_RE.test(text))   return 'positive';
+  return 'neutral';
+}
+
+const input  = document.getElementById('demo-input');
+const badge  = document.getElementById('demo-badge');
+const result = document.getElementById('demo-result');
+let timer = null;
+
+function render(toneKey) {
+  const t = TONES[toneKey];
+  badge.className = 'cv-badge show ' + t.cls;
+  badge.textContent = t.emoji + ' ' + t.label;
+  let html = '<div class="r-title"><span>' + t.emoji + ' ' + t.label + '</span></div>'
+           + '<div class="r-reason">' + t.reason + '</div>';
+  if (t.rewrite) {
+    html += '<div class="r-rewrite"><span class="r-label">Try instead</span>' + t.rewrite + '</div>';
+  }
+  result.innerHTML = html;
+  result.classList.add('show');
+}
+
+function onType() {
+  const text = input.value.trim();
+  clearTimeout(timer);
+  if (text.length < 12) {
+    badge.className = 'cv-badge';
+    result.classList.remove('show');
+    return;
+  }
+  badge.className = 'cv-badge show cv-badge--analyzing';
+  badge.innerHTML = '<span class="spin"></span> Analyzing…';
+  timer = setTimeout(() => render(classify(text)), 550);
+}
+input.addEventListener('input', onType);
+
+document.getElementById('demo-samples').addEventListener('click', e => {
+  if (e.target.classList.contains('chip')) {
+    input.value = e.target.textContent;
+    input.focus();
+    onType();
+  }
+});
+
+/* ── Ticker ── */
+const TICKS = [
+  ["Great point, hadn't considered that angle", 'p', '😊 Positive'],
+  ['The meeting moved to 3pm, link below', 'n', '😐 Neutral'],
+  ["This is the laziest take I've read all week", 'g', '😕 Negative'],
+  ['Nobody asked for your opinion, clown', 't', '🚫 Toxic'],
+  ['Congrats on the launch — well deserved!', 'p', '😊 Positive'],
+  ['Docs say v2 drops the legacy flag', 'n', '😐 Neutral'],
+  ['Did you even read the article??', 'g', '😕 Negative'],
+  ['Huge thanks, this fixed my exact bug', 'p', '😊 Positive'],
+];
+const ticker = document.getElementById('ticker');
+const items = TICKS.concat(TICKS).map(([q, c, tag]) =>
+  '<span class="t-item">“' + q + '” <span class="mini ' + c + '">' + tag + '</span></span>').join('');
+ticker.innerHTML = items;
+
+/* ── Scroll reveal ── */
+const io = new IntersectionObserver(entries => {
+  entries.forEach(en => { if (en.isIntersecting) { en.target.classList.add('in'); io.unobserve(en.target); } });
+}, { threshold: 0, rootMargin: '0px 0px -8% 0px' });
+document.querySelectorAll('.reveal').forEach(el => {
+  // elements already on screen (deep links, restored scroll) show immediately
+  const r = el.getBoundingClientRect();
+  if (r.top < innerHeight && r.bottom > 0) el.classList.add('in');
+  else io.observe(el);
+});
+</script>
+</body>
+</html>

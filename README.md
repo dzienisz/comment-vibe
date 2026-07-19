@@ -4,7 +4,7 @@ A browser extension that uses on-device AI (Chrome's Gemini Nano, or Firefox's A
 
 ![Chrome](https://img.shields.io/badge/Chrome-127%2B-blue) ![Firefox](https://img.shields.io/badge/Firefox-134%2B-orange) ![Manifest V3](https://img.shields.io/badge/Manifest-V3-green) ![On-device AI](https://img.shields.io/badge/AI-On--device-purple)
 
-**▶ [Install from the Chrome Web Store](https://chromewebstore.google.com/detail/comment-vibe/kibcnjcipaofjlbbnjdjaobbkoajiejp)** · **[Install from Firefox Add-ons](https://addons.mozilla.org/firefox/addon/comment-vibe-on-device-check/)** · [Try the live playground](https://dzienko.dev/comment-vibe/)
+**▶ [Install from the Chrome Web Store](https://chromewebstore.google.com/detail/comment-vibe/kibcnjcipaofjlbbnjdjaobbkoajiejp)** · **[Install from Firefox Add-ons](https://addons.mozilla.org/firefox/addon/comment-vibe-on-device-check/)** · [Website](https://dzienko.dev/comment-vibe/) · [API playground](https://dzienko.dev/comment-vibe/playground/)
 
 ![Comment Vibe in action — tone badge and kinder rewrite tooltip](store-assets/shot1-hero.png)
 
@@ -68,7 +68,7 @@ Firefox (addons.mozilla.org) assets live in [`store-assets/firefox/`](store-asse
 
 The [`playground/`](playground/) folder is a standalone static site for exploring **all** of Chrome's built-in AI APIs (Prompt, Summarizer, Translator, Language Detector, Writer, Rewriter, Proofreader) in one place: status, version history, links, a live "will it work for you?" check, and an interactive demo per API.
 
-**Live:** https://dzienko.dev/comment-vibe/ &nbsp;(deployed from `playground/` via GitHub Pages)
+**Live:** https://dzienko.dev/comment-vibe/playground/ &nbsp;(deployed from `playground/` via GitHub Pages; the site root serves the product landing page from `site/`)
 
 Run it locally:
 

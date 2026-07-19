@@ -1,12 +1,15 @@
-name: Deploy playground to GitHub Pages
+name: Deploy site to GitHub Pages
 
-# Publikuje statyczny folder playground/ jako stronę GitHub Pages.
-# Strona ląduje w katalogu głównym witryny: https://<user>.github.io/comment-vibe/
+# Publikuje stronę produktu (site/) w katalogu głównym witryny oraz
+# playground jako podstronę:
+#   https://dzienko.dev/comment-vibe/            ← site/ (landing)
+#   https://dzienko.dev/comment-vibe/playground/ ← playground/
 
 on:
   push:
     branches: [main]
     paths:
+      - 'site/**'
       - 'playground/**'
       - '.github/workflows/pages.yml'
   workflow_dispatch:
@@ -31,13 +34,22 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Stage site (landing at root, playground as subpage)
+        run: |
+          mkdir -p _site/playground
+          cp -r site/. _site/
+          cp -r playground/. _site/playground/
+          # assets referenced by the landing page (favicon + social card)
+          cp icons/icon128.png _site/icon128.png
+          cp store-assets/shot1-hero.png _site/og-image.png
+
       - name: Configure Pages
         uses: actions/configure-pages@v5
 
-      - name: Upload playground as artifact
+      - name: Upload staged site as artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: playground
+          path: _site
 
       - name: Deploy to GitHub Pages
         id: deployment

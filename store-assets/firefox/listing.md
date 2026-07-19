@@ -9,7 +9,14 @@ Chrome listing's rewrite/multilingual claims here.
 
 ## Name
 
-Comment Vibe — on-device comment tone check
+Live listing (approved 2026-07-19):
+https://addons.mozilla.org/firefox/addon/comment-vibe-on-device-check/
+
+Current display name: **Comment Vibe: on-device check**. AMO allows editing the
+display name from the developer hub ("Edit Product Page") without uploading a
+new version, so the keyword-carrying title below can be applied any time:
+
+> **Comment Vibe — AI Comment Tone Checker**
 
 ## Summary (AMO "Summary", max 250 chars)
 
