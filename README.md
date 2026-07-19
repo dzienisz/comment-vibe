@@ -4,7 +4,7 @@ A browser extension that uses on-device AI (Chrome's Gemini Nano, or Firefox's A
 
 ![Chrome](https://img.shields.io/badge/Chrome-127%2B-blue) ![Firefox](https://img.shields.io/badge/Firefox-134%2B-orange) ![Manifest V3](https://img.shields.io/badge/Manifest-V3-green) ![On-device AI](https://img.shields.io/badge/AI-On--device-purple)
 
-**▶ [Install Comment Vibe from the Chrome Web Store](https://chromewebstore.google.com/detail/comment-vibe/kibcnjcipaofjlbbnjdjaobbkoajiejp)** · [Firefox setup](#firefox-support) · [Try the live playground](https://dzienko.dev/comment-vibe/)
+**▶ [Install from the Chrome Web Store](https://chromewebstore.google.com/detail/comment-vibe/kibcnjcipaofjlbbnjdjaobbkoajiejp)** · **[Install from Firefox Add-ons](https://addons.mozilla.org/firefox/addon/comment-vibe-on-device-check/)** · [Try the live playground](https://dzienko.dev/comment-vibe/)
 
 ![Comment Vibe in action — tone badge and kinder rewrite tooltip](store-assets/shot1-hero.png)
 
@@ -48,7 +48,8 @@ Setup on Firefox:
 
 1. Firefox 134+ — on non-Nightly builds set `browser.ml.enable` and
    `extensions.ml.enabled` to `true` in `about:config`
-2. Install the extension, open the popup, and click **Enable on-device AI**
+2. [Install Comment Vibe from Firefox Add-ons](https://addons.mozilla.org/firefox/addon/comment-vibe-on-device-check/),
+   open the popup, and click **Enable on-device AI**
    (grants the optional `trialML` permission and downloads the model once)
 
 > ⚠️ `browser.trial.ml` is explicitly experimental — Mozilla may change it

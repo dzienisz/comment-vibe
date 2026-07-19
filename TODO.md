@@ -33,8 +33,12 @@ file is only the forward look. Current release: **v1.2.1** (Chrome + Firefox).
 - [ ] **`<all_urls>` justification** for both stores — it's the most common
       review flag. Draft a short rationale (passive support on any comment box)
       and keep it with the listing copy.
-- [ ] **Firefox AMO listing** — once approved, add the install badge/link to
-      `README.md` (mirrors the existing Chrome Web Store badge).
+- [x] **Firefox AMO listing** — approved and linked from `README.md`:
+      https://addons.mozilla.org/firefox/addon/comment-vibe-on-device-check/
+- [ ] **AMO is serving 1.2.0** (the pre-fix zip with the two manifest warnings)
+      while the repo is at 1.2.2. Harmless for users, but the next real feature
+      release should be uploaded from the current `scripts/package.sh` output so
+      the store catches up. Don't upload a version-bump-only update just for this.
 - [ ] Decide whether to keep `minimum_chrome_version: 127`. Keeping it preserves
       the legacy `window.ai` path (a CLAUDE.md hard constraint); the store copy
       already frames 138 as the flag-free line, so this is currently intentional,
