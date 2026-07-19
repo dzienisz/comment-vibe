@@ -138,7 +138,7 @@
     font: 16px/1.55 var(--sans); color: var(--ink); padding: 14px 16px 44px; border-radius: 14px; display: block;
   }
   .demo-box:focus-within { border-color: var(--tox-line); box-shadow: 0 0 0 3px var(--tox-bg); }
-  .cv-badge {
+  .demo-badge {
     position: absolute; right: 12px; bottom: 10px;
     display: none; align-items: center; gap: 6px;
     padding: 4px 13px; border-radius: 999px; font-size: 13px; font-weight: 600;
@@ -146,12 +146,12 @@
     animation: pop .28s cubic-bezier(.3,1.6,.4,1);
   }
   @keyframes pop { from { transform: scale(.7); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-  .cv-badge.show { display: inline-flex; }
-  .cv-badge--analyzing { background: #ECE7DE; color: var(--ink-soft); }
-  .cv-badge--positive  { background: var(--pos-bg); color: var(--pos); border-color: var(--pos-line); }
-  .cv-badge--neutral   { background: var(--neu-bg); color: var(--neu); border-color: var(--neu-line); }
-  .cv-badge--negative  { background: var(--neg-bg); color: var(--neg); border-color: var(--neg-line); }
-  .cv-badge--toxic     { background: var(--tox-bg); color: var(--tox); border-color: var(--tox-line); }
+  .demo-badge.show { display: inline-flex; }
+  .demo-badge--analyzing { background: #ECE7DE; color: var(--ink-soft); }
+  .demo-badge--positive  { background: var(--pos-bg); color: var(--pos); border-color: var(--pos-line); }
+  .demo-badge--neutral   { background: var(--neu-bg); color: var(--neu); border-color: var(--neu-line); }
+  .demo-badge--negative  { background: var(--neg-bg); color: var(--neg); border-color: var(--neg-line); }
+  .demo-badge--toxic     { background: var(--tox-bg); color: var(--tox); border-color: var(--tox-line); }
   .spin {
     width: 11px; height: 11px; border-radius: 50%; border: 2px solid rgba(0,0,0,0.15);
     border-top-color: var(--ink-soft); animation: spin .7s linear infinite;
@@ -334,8 +334,8 @@
           <div class="demo-meta"><b>Add a comment</b><span>Try it — type like you're about to reply to a bad take</span></div>
         </div>
         <div class="demo-box">
-          <textarea id="demo-input" aria-label="Try the tone checker" placeholder="Type a comment here…"></textarea>
-          <span id="demo-badge" class="cv-badge"></span>
+          <textarea id="demo-input" aria-label="Try the tone checker" placeholder="Type something here…"></textarea>
+          <span id="demo-badge" class="demo-badge"></span>
         </div>
         <div class="demo-samples" id="demo-samples">
           <button class="chip">Great write-up, thanks for sharing!</button>
@@ -454,14 +454,14 @@ document.getElementById('y').textContent = new Date().getFullYear();
 
 /* ── Simulated tone demo (keyword heuristic — honest stand-in for the real AI) ── */
 const TONES = {
-  positive: { emoji: '😊', label: 'Positive', cls: 'cv-badge--positive',
+  positive: { emoji: '😊', label: 'Positive', cls: 'demo-badge--positive',
     reason: 'Reads as appreciative and constructive.', rewrite: null },
-  neutral:  { emoji: '😐', label: 'Neutral', cls: 'cv-badge--neutral',
+  neutral:  { emoji: '😐', label: 'Neutral', cls: 'demo-badge--neutral',
     reason: 'Balanced and factual — no strong tone detected.', rewrite: null },
-  negative: { emoji: '😕', label: 'Negative', cls: 'cv-badge--negative',
+  negative: { emoji: '😕', label: 'Negative', cls: 'demo-badge--negative',
     reason: 'Dismissive phrasing may come across as harsh.',
     rewrite: "I see real problems with this approach — here is where it broke down for me, and what I would try instead." },
-  toxic:    { emoji: '🚫', label: 'Toxic', cls: 'cv-badge--toxic',
+  toxic:    { emoji: '🚫', label: 'Toxic', cls: 'demo-badge--toxic',
     reason: 'Contains insults or aggressive language.',
     rewrite: "I strongly disagree with this take — here is my perspective." },
 };
@@ -483,7 +483,7 @@ let timer = null;
 
 function render(toneKey) {
   const t = TONES[toneKey];
-  badge.className = 'cv-badge show ' + t.cls;
+  badge.className = 'demo-badge show ' + t.cls;
   badge.textContent = t.emoji + ' ' + t.label;
   let html = '<div class="r-title"><span>' + t.emoji + ' ' + t.label + '</span></div>'
            + '<div class="r-reason">' + t.reason + '</div>';
@@ -498,11 +498,11 @@ function onType() {
   const text = input.value.trim();
   clearTimeout(timer);
   if (text.length < 12) {
-    badge.className = 'cv-badge';
+    badge.className = 'demo-badge';
     result.classList.remove('show');
     return;
   }
-  badge.className = 'cv-badge show cv-badge--analyzing';
+  badge.className = 'demo-badge show demo-badge--analyzing';
   badge.innerHTML = '<span class="spin"></span> Analyzing…';
   timer = setTimeout(() => render(classify(text)), 550);
 }
