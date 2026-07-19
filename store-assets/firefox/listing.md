@@ -20,15 +20,15 @@ new version, so the keyword-carrying title below can be applied any time:
 
 ## Summary (AMO "Summary", max 250 chars)
 
-> See how your comment sounds before you post. Comment Vibe uses Firefox's on-device AI to flag the tone of what you're typing — positive, neutral, negative or toxic — right next to the box. 100% private: nothing ever leaves your browser.
+> See how your comment sounds before you post. Comment Vibe uses Firefox's on-device AI to flag the tone of what you're typing — positive, neutral, negative or toxic, in ~100 languages — right next to the box. 100% private: nothing leaves your browser.
 
-(233 chars)
+(250 chars — AMO limit is 250, so any edit must trade characters)
 
 ## Description (AMO "About this extension" — plain text, blank lines between paragraphs)
 
 Ever hit Post and instantly regretted the tone? Comment Vibe reads your comment as you type and shows you how it sounds — before the internet does.
 
-It runs entirely on your device using Firefox's built-in AI runtime (the experimental WebExtensions AI API, Firefox 134+). No servers, no account, no data collection.
+It runs entirely on your device using Firefox's built-in AI runtime (the experimental WebExtensions AI API, Firefox 134+), and understands comments in ~100 languages. No servers, no account, no data collection.
 
 HOW IT WORKS
 1. Type a comment on LinkedIn, X (Twitter), YouTube, Reddit — any site with a text box.
