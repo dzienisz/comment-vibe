@@ -5,6 +5,20 @@ All notable changes to **Comment Vibe** are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.3] - 2026-07-19
+
+### Fixed
+
+- **Firefox: analysis no longer breaks permanently after the background event
+  page is suspended.** Firefox keeps the `browser.trial.ml` engine in the
+  parent process, where it outlives the MV3 background event page. After the
+  event page idled out (~30s) and was rewoken by the next analysis request,
+  its fresh `createEngine` call rejected with "Engine already created", every
+  subsequent analysis failed, and the badge showed "Analyzing…" then vanished
+  until Firefox was restarted. That rejection is now treated as an existing,
+  ready engine (`runEngine` transparently revives one closed for inactivity).
+  Verified end-to-end on Firefox 152 with the real on-device model.
+
 ## [1.2.2] - 2026-07-16
 
 ### Changed

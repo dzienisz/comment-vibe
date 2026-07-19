@@ -107,6 +107,25 @@ test('a failed engine creation is retried on the next analysis', async () => {
   assert.equal(calls.run, 1);
 });
 
+// Firefox's parent-side engine outlives the MV3 background event page: after
+// the event page is suspended and rewoken, createEngine rejects with
+// "Engine already created" even though the engine is ready to run.
+test('an "Engine already created" rejection is treated as an existing engine', async () => {
+  const calls = stubBrowser({ runOutput: { labels: LABELS, scores: [0.9, 0.05, 0.03, 0.02] } });
+  global.browser.trial.ml.createEngine = async () => {
+    calls.create++;
+    throw new Error('Engine already created');
+  };
+
+  const first = await analyze('typed after the event page restarted');
+  const second = await analyze('and again');
+
+  assert.equal(first.sentiment, 'positive');
+  assert.equal(second.sentiment, 'positive');
+  assert.equal(calls.create, 1);
+  assert.equal(calls.run, 2);
+});
+
 test('handleMessage answers cv-status, cv-analyze, and cv-warmup', async () => {
   const calls = stubBrowser({ runOutput: { labels: ['neutral and factual'], scores: [0.8] } });
 

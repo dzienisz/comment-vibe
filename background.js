@@ -58,6 +58,11 @@ function ensureEngine() {
   if (!enginePromise) {
     wireProgress();
     enginePromise = browser.trial.ml.createEngine(ENGINE_OPTIONS).catch(error => {
+      // Firefox keeps the engine in the parent process, where it outlives this
+      // MV3 event page. After a background restart createEngine rejects with
+      // "Engine already created" — the engine is fine, so treat it as ready
+      // (runEngine transparently revives it if it was closed for inactivity).
+      if (/already created/i.test(error?.message || '')) return;
       enginePromise = null; // e.g. interrupted download — let the next call retry
       throw error;
     });

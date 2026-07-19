@@ -1,7 +1,7 @@
 # TODO / Roadmap
 
 Working notes for what's next. Shipped history lives in `CHANGELOG.md`; this
-file is only the forward look. Current release: **v1.2.1** (Chrome + Firefox).
+file is only the forward look. Current release: **v1.2.3** (Chrome + Firefox).
 
 ## State of play
 
@@ -54,10 +54,10 @@ file is only the forward look. Current release: **v1.2.1** (Chrome + Firefox).
       and keep it with the listing copy.
 - [x] **Firefox AMO listing** — approved and linked from `README.md`:
       https://addons.mozilla.org/firefox/addon/comment-vibe-on-device-check/
-- [ ] **AMO is serving 1.2.0** (the pre-fix zip with the two manifest warnings)
-      while the repo is at 1.2.2. Harmless for users, but the next real feature
-      release should be uploaded from the current `scripts/package.sh` output so
-      the store catches up. Don't upload a version-bump-only update just for this.
+- [ ] **Upload the 1.2.3 zips to both stores.** AMO is serving 1.2.0, which has
+      the event-page suspension bug fixed in 1.2.3 (analysis broke permanently
+      ~30s after enabling); this upload is the real fix for Firefox users, not
+      just a catch-up.
 - [ ] Decide whether to keep `minimum_chrome_version: 127`. Keeping it preserves
       the legacy `window.ai` path (a CLAUDE.md hard constraint); the store copy
       already frames 138 as the flag-free line, so this is currently intentional,
