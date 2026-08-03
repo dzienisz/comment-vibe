@@ -7,6 +7,7 @@ const DEBOUNCE_MS = 900;
 const SESSION_TTL = 600_000;
 const ANALYSIS_TIMEOUT_MS = 30_000;
 const MODEL_DOWNLOAD_TIMEOUT_MS = 300_000;
+const RESULT_CACHE_TTL = 300_000; // 5 minutes
 
 const SENTIMENT_CLASS = {
   positive: 'cv-badge--positive',
@@ -38,6 +39,18 @@ const LANGUAGE_OPTIONS = {
   expectedOutputs: [{ type: 'text', languages: ['en'] }],
 };
 
+const RESPONSE_SCHEMA = {
+  type: 'object',
+  properties: {
+    sentiment: { type: 'string', enum: ['positive', 'neutral', 'negative', 'toxic'] },
+    emoji:       { type: 'string' },
+    label:       { type: 'string' },
+    reason:      { type: 'string' },
+    rewrite:     { type: ['string', 'null'] },
+  },
+  required: ['sentiment'],
+};
+
 const SELECTORS = [
   '.ql-editor[contenteditable="true"]',
   '[data-testid="tweetTextarea_0"]',
@@ -63,8 +76,8 @@ let lastUsedAt = 0;
 // true when the few-shot examples are baked into the session via initialPrompts
 // (they then survive clone() and don't need re-sending with every prompt)
 
-function sessionMetadata(session, fewShotBaked) {
-  return { session, fewShotBaked, cloneCapable: typeof session.clone === 'function' };
+function sessionMetadata(session, fewShotBaked, responseConstraint) {
+  return { session, fewShotBaked, responseConstraint, cloneCapable: typeof session.clone === 'function' };
 }
 
 function supportsReducedOptionsRetry(error) {
@@ -98,23 +111,36 @@ async function constructSession() {
     const avail = await LanguageModel.availability();
     if (avail === 'unavailable') throw new Error('unavailable');
     const initialPrompts = [{ role: 'system', content: SYSTEM_PROMPT }, ...FEW_SHOT];
-    try {
-      return sessionMetadata(await LanguageModel.create({ initialPrompts, ...LANGUAGE_OPTIONS }), true);
-    } catch (error) {
-      if (!supportsReducedOptionsRetry(error)) throw error;
+    // Prefer a structured-output constraint for reliable JSON, but fall back
+    // through the same option reductions as before so older Chrome builds keep
+    // working. Each step is retried only for TypeError / NotSupportedError,
+    // which indicate an unsupported option rather than a real model failure.
+    const combos = [
+      { initialPrompts, ...LANGUAGE_OPTIONS, responseConstraint: RESPONSE_SCHEMA },
+      { initialPrompts, responseConstraint: RESPONSE_SCHEMA },
+      { initialPrompts, ...LANGUAGE_OPTIONS },
+      { initialPrompts },
+      { systemPrompt: SYSTEM_PROMPT },
+    ];
+    let lastError;
+    for (const options of combos) {
       try {
-        return sessionMetadata(await LanguageModel.create({ initialPrompts }), true);
-      } catch (reducedError) {
-        if (!supportsReducedOptionsRetry(reducedError)) throw reducedError;
-        // older builds without initialPrompts support
-        return sessionMetadata(await LanguageModel.create({ systemPrompt: SYSTEM_PROMPT }), false);
+        return sessionMetadata(
+          await LanguageModel.create(options),
+          !!options.initialPrompts,
+          !!options.responseConstraint,
+        );
+      } catch (error) {
+        if (!supportsReducedOptionsRetry(error)) throw error;
+        lastError = error;
       }
     }
+    throw lastError;
   }
   if (typeof window !== 'undefined' && window.ai?.languageModel) {
     const { available } = await window.ai.languageModel.capabilities();
     if (available === 'no') throw new Error('unavailable');
-    return sessionMetadata(await window.ai.languageModel.create({ systemPrompt: SYSTEM_PROMPT }), false);
+    return sessionMetadata(await window.ai.languageModel.create({ systemPrompt: SYSTEM_PROMPT }), false, false);
   }
   throw new Error('Chrome AI not found');
 }
@@ -161,6 +187,38 @@ function resetSessionState() {
   reusableSession = null;
   sessionCreation = null;
   lastUsedAt = 0;
+}
+
+// ── Result cache ──────────────────────────────────────────────────────────────
+//
+// Built-in AI inference is not instant; avoid re-running the model for identical
+// input. Cache is keyed by trimmed text and invalidated on TTL expiry and on
+// explicit refresh (see the tooltip's ↻ button). Storing results in memory only
+// keeps the extension dependency-free and avoids leaking data to storage.
+
+const resultCache = new Map();
+
+function cacheKey(text) { return text.trim(); }
+
+function cleanResultCache(now = Date.now()) {
+  for (const [key, entry] of resultCache.entries()) {
+    if (now > entry.expiresAt) resultCache.delete(key);
+  }
+}
+
+function getCachedResult(text) {
+  const key = cacheKey(text);
+  const entry = resultCache.get(key);
+  if (!entry) return null;
+  if (Date.now() > entry.expiresAt) {
+    resultCache.delete(key);
+    return null;
+  }
+  return entry.result;
+}
+
+function setCachedResult(text, result) {
+  resultCache.set(cacheKey(text), { result, expiresAt: Date.now() + RESULT_CACHE_TTL });
 }
 
 // ── Firefox path (WebExtensions AI API) ──────────────────────────────────────
@@ -287,6 +345,32 @@ const FEW_SHOT = [
   },
 ];
 
+function extractEarlySentiment(raw, usesConstraint) {
+  if (usesConstraint) {
+    const m = raw.match(/"sentiment"\s*:\s*"(positive|neutral|negative|toxic)"/);
+    return m ? m[1] : null;
+  }
+  const m = raw.match(/^(positive|neutral|negative|toxic)"/);
+  return m ? m[1] : null;
+}
+
+function buildMessages(text, fewShotBaked, usesConstraint) {
+  const userMsg = { role: 'user', content: `Classify the tone of this comment:\n"${text.replace(/"/g, '\\"')}"` };
+  const messages = fewShotBaked ? [userMsg] : [...FEW_SHOT, userMsg];
+  // The assistant prefill was a reliable way to get the first token quickly on
+  // older builds, but responseConstraint can request the full JSON object at
+  // creation time. When the constraint is active, the prefix would produce an
+  // invalid partial object, so omit it and parse the model's complete JSON.
+  if (!usesConstraint) {
+    messages.push({ role: 'assistant', content: '{"sentiment":', prefix: true });
+  }
+  return messages;
+}
+
+function parseAnalysisResponse(raw, usesConstraint) {
+  return normalize(parseResponse(usesConstraint ? raw : '{"sentiment":' + raw));
+}
+
 async function analyzeText(text, onEarlySentiment, signal) {
   if (isFirefoxMLContext()) return analyzeViaBackground(text);
   const acquired = await getSession();
@@ -296,24 +380,22 @@ async function analyzeText(text, onEarlySentiment, signal) {
   // overflows. A clone starts fresh from the initial prompts and is cheap
   // (no model reload), so analyze on a throwaway clone.
   const session = acquired.cloneCapable ? await base.clone() : base;
-  const messages = [
-    ...(acquired.fewShotBaked ? [] : FEW_SHOT),
-    { role: 'user',      content: `Classify the tone of this comment:\n"${text.replace(/"/g, '\\"')}"` },
-    { role: 'assistant', content: '{"sentiment":', prefix: true },
-  ];
+  const usesConstraint = acquired.responseConstraint;
+  const messages = buildMessages(text, acquired.fewShotBaked, usesConstraint);
+
   try {
     const raw = typeof session.promptStreaming === 'function'
-      ? await streamPrompt(session, messages, onEarlySentiment, signal)
+      ? await streamPrompt(session, messages, onEarlySentiment, signal, usesConstraint)
       : await callPrompt(session, 'prompt', messages, signal);
-    return normalize(parseResponse('{"sentiment":' + raw));
+    return parseAnalysisResponse(raw, usesConstraint);
   } finally {
     session.destroy?.();
   }
 }
 
-// Accumulates the streamed response; fires onEarlySentiment as soon as the
-// sentiment value is readable (it's the first field thanks to the prefill),
-// so the badge can color in before the reason/rewrite finish generating.
+// Calls prompt() or promptStreaming(), passing an AbortSignal only when the
+// session method accepts it. Falls back to a signal-less call if the signal
+// option is unsupported and the caller has not already aborted.
 function callPrompt(session, method, messages, signal) {
   if (!signal) return session[method](messages);
   try {
@@ -324,15 +406,18 @@ function callPrompt(session, method, messages, signal) {
   }
 }
 
-async function streamPrompt(session, messages, onEarlySentiment, signal) {
+// Accumulates the streamed response and fires onEarlySentiment as soon as the
+// sentiment value is readable, so the badge can color in before the reason and
+// rewrite finish generating.
+async function streamPrompt(session, messages, onEarlySentiment, signal, usesConstraint) {
   let raw = '';
   let signaled = false;
   for await (const chunk of callPrompt(session, 'promptStreaming', messages, signal)) {
     // older builds stream the cumulative text, newer ones stream deltas
     raw = (chunk.length > raw.length && chunk.startsWith(raw)) ? chunk : raw + chunk;
     if (!signaled && onEarlySentiment) {
-      const m = raw.match(/"(positive|neutral|negative|toxic)"/);
-      if (m) { signaled = true; onEarlySentiment(m[1]); }
+      const sentiment = extractEarlySentiment(raw, usesConstraint);
+      if (sentiment) { signaled = true; onEarlySentiment(sentiment); }
     }
   }
   return raw;
@@ -488,7 +573,7 @@ function createUI() {
   return { badge, tooltip };
 }
 
-function renderBadge(badge, tooltip, result) {
+function renderBadge(badge, tooltip, result, onRefresh) {
   const { sentiment, emoji, label, reason, rewrite } = result;
 
   const badgeEmoji = document.createElement('span');
@@ -504,12 +589,17 @@ function renderBadge(badge, tooltip, result) {
   const title = document.createElement('span');
   title.className = 'cv-tooltip-title';
   title.textContent = emoji + ' ' + label;
+  const refresh = document.createElement('span');
+  refresh.className = 'cv-tooltip-refresh';
+  refresh.setAttribute('role', 'button');
+  refresh.setAttribute('aria-label', 'Analyze again');
+  refresh.textContent = '↻';
   const close = document.createElement('span');
   close.className = 'cv-tooltip-close';
   close.setAttribute('role', 'button');
   close.setAttribute('aria-label', 'Close');
   close.textContent = '✕';
-  header.append(title, close);
+  header.append(title, refresh, close);
 
   const reasonEl = document.createElement('div');
   reasonEl.className = 'cv-tooltip-reason';
@@ -520,6 +610,13 @@ function renderBadge(badge, tooltip, result) {
     e.stopPropagation();
     dismissTooltip(tooltip);
   });
+
+  if (onRefresh) {
+    refresh.addEventListener('click', e => {
+      e.stopPropagation();
+      onRefresh();
+    });
+  }
 
   if (rewrite) {
     const rewriteContainer = document.createElement('div');
@@ -564,8 +661,8 @@ function invalidateRequest(state) {
   return ++state.requestId;
 }
 
-function beginInputChange(state, text) {
-  if (text === state.lastText) return null;
+function beginInputChange(state, text, force = false) {
+  if (!force && text === state.lastText) return null;
   const requestId = invalidateRequest(state);
   state.lastText = text;
   return requestId;
@@ -579,12 +676,14 @@ function attachToInput(el) {
   if (tracked.has(el)) return;
 
   const { badge, tooltip } = createUI();
-  const state = { badge, tooltip, debounceTimer: null, abortController: null, lastText: '', requestId: 0 };
+  const state = { badge, tooltip, debounceTimer: null, abortController: null, lastText: '', requestId: 0, skipCacheOnce: false };
   tracked.set(el, state);
 
   const onInput = () => {
     const text = getText(el).trim();
-    const requestId = beginInputChange(state, text);
+    const forceRefresh = state.skipCacheOnce;
+    state.skipCacheOnce = false;
+    const requestId = beginInputChange(state, text, forceRefresh);
     if (requestId === null) return;
     if (text.length < MIN_LENGTH) {
       sp(badge, 'display', 'none');
@@ -603,6 +702,13 @@ function attachToInput(el) {
       if (!isCurrentRequest(state, requestId)) return;
       if (modelStatus === 'unavailable') {
         sp(badge, 'display', 'none');
+        return;
+      }
+      // Re-use a recent result for identical text instead of re-running the model.
+      const cached = !forceRefresh && getCachedResult(text);
+      if (cached) {
+        renderBadge(badge, tooltip, cached, () => { state.skipCacheOnce = true; onInput(); });
+        placeBadge(badge, el);
         return;
       }
       // A stalled model call (e.g. a slow safety-classification pass) must not
@@ -636,7 +742,8 @@ function attachToInput(el) {
         if (!isCurrentRequest(state, requestId)) return;
         const localized = await localizeResult(result, lang);
         if (!isCurrentRequest(state, requestId)) return;
-        renderBadge(badge, tooltip, localized);
+        setCachedResult(text, localized);
+        renderBadge(badge, tooltip, localized, () => { state.skipCacheOnce = true; onInput(); });
       } catch (error) {
         if (error?.name !== 'AbortError' && isCurrentRequest(state, requestId)) {
           sp(badge, 'display', 'none');
@@ -650,6 +757,10 @@ function attachToInput(el) {
   };
 
   const onFocus = () => {
+    // Pre-warm the model as soon as the user focuses a comment field — this is
+    // the moment their intent to use the AI feature is clear, so we can load
+    // the session in the background instead of waiting for the first keystroke.
+    if (!isFirefoxMLContext()) getSession().catch(() => {});
     if (state.lastText.length >= MIN_LENGTH) {
       placeBadge(badge, el);
       sp(badge, 'display', 'inline-flex');
@@ -800,8 +911,13 @@ if (typeof module !== 'undefined' && module.exports) {
     analyzeText,
     analyzeViaBackground,
     beginInputChange,
+    buildMessages,
+    cacheKey,
+    cleanResultCache,
     constructSession,
     expireReusableSession,
+    extractEarlySentiment,
+    getCachedResult,
     getModelStatus,
     getSession,
     invalidateRequest,
@@ -810,8 +926,12 @@ if (typeof module !== 'undefined' && module.exports) {
     isFirefoxMLContext,
     normalize,
     normalizeDetectedLanguage,
+    parseAnalysisResponse,
     parseResponse,
     resetSessionState,
+    RESPONSE_SCHEMA,
+    RESULT_CACHE_TTL,
+    setCachedResult,
     streamPrompt,
   };
 }

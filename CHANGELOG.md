@@ -5,7 +5,30 @@ All notable changes to **Comment Vibe** are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.2.5] - 2026-07-19
+## [1.2.6] - 2026-08-03
+
+### Changed
+
+- **Prompt API now uses structured output (`responseConstraint`) for reliable
+  JSON.** Following Chrome's built-in AI do's and don'ts, `content.js` requests a
+  JSON Schema constraint at session creation and parses the model's full JSON
+  response directly, instead of relying on prompt instructions and a fragile
+  `"sentiment":` prefill. The code falls back through all older option shapes
+  (`initialPrompts` + language options, `initialPrompts` alone, legacy
+  `systemPrompt`) so every supported Chrome build keeps working.
+- **Pre-warm the model as soon as the user focuses a comment field.** This
+  matches the recommendation to start the session once user intent is clear,
+  reducing cold-start latency before the first analysis fires after the debounce.
+- **Cache recent analyses for identical text.** A short in-memory cache (5-minute
+  TTL) avoids re-running the model when the user re-types, edits back to a
+  previous phrase, or switches between similar inputs. A new ↻ refresh button in
+  the tooltip lets users force a fresh inference when they want one.
+
+### Fixed
+
+- `content.css` now includes tooltip styles for the refresh button so it is
+  visually consistent with the existing close control.
+
 
 ### Changed
 

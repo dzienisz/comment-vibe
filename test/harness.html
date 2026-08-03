@@ -69,10 +69,12 @@
   // (delta chunks with a delay, so the early-sentiment render is observable).
   // window.__stubStats counts calls for manual/scripted inspection.
   const RESPONSES = {
-    positive: '"positive","emoji":"😊","label":"Positive","reason":"Friendly and appreciative tone.","rewrite":null}',
-    negative: '"negative","emoji":"😕","label":"Negatywne","reason":"Ton jest nieprzyjazny.","rewrite":"Proszę wyrazić tę opinię uprzejmiej."}',
-    malicious: '"positive","emoji":"<img src=x onerror=alert(1)>","label":"<b>Positive</b>","reason":"<img src=x onerror=alert(2)>","rewrite":"<script>alert(3)<\\/script>"}',
-    malformed: '"toxic","emoji":{"html":"<img src=x>"},"label":{"html":"<b>Toxic</b>"},"reason":{"text":"Hostile."},"rewrite":{"text":"Be kind."}}',
+    // Modern mode uses responseConstraint, so the model streams a full JSON
+    // object that content.js parses directly (no assistant prefill).
+    positive: '{"sentiment":"positive","emoji":"😊","label":"Positive","reason":"Friendly and appreciative tone.","rewrite":null}',
+    negative: '{"sentiment":"negative","emoji":"😕","label":"Negatywne","reason":"Ton jest nieprzyjazny.","rewrite":"Proszę wyrazić tę opinię uprzejmiej."}',
+    malicious: '{"sentiment":"positive","emoji":"<img src=x onerror=alert(1)>","label":"<b>Positive</b>","reason":"<img src=x onerror=alert(2)>","rewrite":"<script>alert(3)<\\/script>"}',
+    malformed: '{"sentiment":"toxic","emoji":{"html":"<img src=x>"},"label":{"html":"<b>Toxic</b>"},"reason":{"text":"Hostile."},"rewrite":{"text":"Be kind."}}',
   };
   const CHUNK_SIZE = 12, CHUNK_DELAY_MS = 50;
 

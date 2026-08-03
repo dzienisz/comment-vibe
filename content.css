@@ -128,6 +128,22 @@
   background: rgba(255,255,255,0.1) !important;
 }
 
+.cv-tooltip-refresh {
+  color: #9ca3af !important;
+  font-size: 14px !important;
+  cursor: pointer !important;
+  line-height: 1 !important;
+  padding: 2px 4px !important;
+  margin-left: auto !important;
+  margin-right: 4px !important;
+  border-radius: 4px !important;
+}
+
+.cv-tooltip-refresh:hover {
+  color: #f9fafb !important;
+  background: rgba(255,255,255,0.1) !important;
+}
+
 .cv-tooltip-reason {
   color: #d1d5db !important;
   font-size: 12px !important;

@@ -7,8 +7,13 @@ const {
   analyzeText,
   analyzeViaBackground,
   beginInputChange,
+  buildMessages,
+  cacheKey,
+  cleanResultCache,
   constructSession,
   expireReusableSession,
+  extractEarlySentiment,
+  getCachedResult,
   getModelStatus,
   getSession,
   invalidateRequest,
@@ -17,8 +22,12 @@ const {
   isFirefoxMLContext,
   normalize,
   normalizeDetectedLanguage,
+  parseAnalysisResponse,
   parseResponse,
   resetSessionState,
+  RESPONSE_SCHEMA,
+  RESULT_CACHE_TTL,
+  setCachedResult,
   streamPrompt,
 } = require('../content.js');
 
@@ -39,6 +48,7 @@ function modernApi(create) {
 
 test.afterEach(() => {
   resetSessionState();
+  cleanResultCache(0);
   delete global.LanguageModel;
   delete global.window;
   delete global.browser;
@@ -203,16 +213,65 @@ test('streamPrompt accepts cumulative chunks', async () => {
   assert.equal(raw, '"positive","reason":"Kind."}');
 });
 
-test('streamPrompt fires the early sentiment callback exactly once', async () => {
+test('streamPrompt fires the early sentiment callback exactly once in constraint mode', async () => {
   const sentiments = [];
   const raw = await streamPrompt(
-    sessionFor(['"toxic"', ',"reason":"Hostile."', ',"rewrite":"Be respectful."}']),
+    sessionFor(['{"sentiment":"toxic"', ',"reason":"Hostile."', ',"rewrite":"Be respectful."}']),
     [{ role: 'user', content: 'message' }],
     sentiment => sentiments.push(sentiment),
+    null,
+    true,
   );
 
-  assert.equal(raw, '"toxic","reason":"Hostile.","rewrite":"Be respectful."}');
+  assert.equal(raw, '{"sentiment":"toxic","reason":"Hostile.","rewrite":"Be respectful."}');
   assert.deepEqual(sentiments, ['toxic']);
+});
+
+test('streamPrompt fires the early sentiment callback in prefill mode', async () => {
+  const sentiments = [];
+  const raw = await streamPrompt(
+    sessionFor(['toxic"', ',"reason":"Hostile."}']),
+    [{ role: 'user', content: 'message' }],
+    sentiment => sentiments.push(sentiment),
+    null,
+    false,
+  );
+
+  assert.equal(raw, 'toxic","reason":"Hostile."}');
+  assert.deepEqual(sentiments, ['toxic']);
+});
+
+test('extractEarlySentiment reads sentiment from a constrained JSON stream', () => {
+  assert.equal(extractEarlySentiment('{"sentiment":"positive",', true), 'positive');
+  assert.equal(extractEarlySentiment('{"reason":"X","sentiment":"toxic"}', true), 'toxic');
+  assert.equal(extractEarlySentiment('no match', true), null);
+});
+
+test('extractEarlySentiment reads sentiment from a prefill continuation', () => {
+  assert.equal(extractEarlySentiment('positive","reason":"Kind."}', false), 'positive');
+  assert.equal(extractEarlySentiment('neutral"}', false), 'neutral');
+  assert.equal(extractEarlySentiment('{"sentiment":"positive"}', false), null);
+});
+
+test('buildMessages omits the assistant prefill when responseConstraint is active', () => {
+  const messages = buildMessages('hello world', true, true);
+  assert.deepEqual(messages, [{ role: 'user', content: 'Classify the tone of this comment:\n"hello world"' }]);
+});
+
+test('buildMessages includes few-shot examples and assistant prefill when constraint is inactive', () => {
+  const messages = buildMessages('hello world', false, false);
+  assert.equal(messages.length, 6);
+  assert.equal(messages[0].role, 'user');
+  assert.equal(messages[messages.length - 2].role, 'user');
+  assert.deepEqual(messages[messages.length - 1], { role: 'assistant', content: '{"sentiment":', prefix: true });
+});
+
+test('parseAnalysisResponse parses constrained JSON directly', () => {
+  assert.equal(parseAnalysisResponse('{"sentiment":"negative"}', true).sentiment, 'negative');
+});
+
+test('parseAnalysisResponse prepends the prefill fragment for legacy streams', () => {
+  assert.equal(parseAnalysisResponse('"positive","reason":"Kind."}', false).sentiment, 'positive');
 });
 
 test('invalidateRequest clears pending work and increments the request ID once', () => {
@@ -251,6 +310,41 @@ test('beginInputChange leaves an unchanged input request active', () => {
   clearTimeout(timer);
 });
 
+test('beginInputChange forces a new request when asked', () => {
+  let abortCalls = 0;
+  const timer = setTimeout(() => {}, 60_000);
+  const state = {
+    debounceTimer: timer,
+    abortController: { abort: () => { abortCalls++; } },
+    lastText: 'same comment text',
+    requestId: 3,
+  };
+
+  const requestId = beginInputChange(state, 'same comment text', true);
+
+  assert.equal(requestId, 4);
+  assert.equal(state.requestId, 4);
+  assert.equal(state.debounceTimer, null);
+  assert.equal(abortCalls, 1);
+});
+
+test('cacheKey trims whitespace', () => {
+  assert.equal(cacheKey('  hello world  '), 'hello world');
+});
+
+test('setCachedResult and getCachedResult round-trip a localized result', () => {
+  const result = { sentiment: 'positive', emoji: '😊', label: 'Positive', reason: 'Kind.', rewrite: null, lang: 'en' };
+  setCachedResult('hello world', result);
+  assert.equal(getCachedResult('  hello world  '), result);
+});
+
+test('getCachedResult returns null after TTL expiry and cleanResultCache evicts expired entries', () => {
+  const result = { sentiment: 'neutral' };
+  setCachedResult('hello world', result);
+  cleanResultCache(Date.now() + RESULT_CACHE_TTL + 10_000);
+  assert.equal(getCachedResult('hello world'), null);
+});
+
 test('cleanup eligibility rejects connected elements', () => {
   assert.equal(isCleanupEligible({ isConnected: true }), false);
 });
@@ -272,7 +366,7 @@ test('an aborted stream cannot produce a current final result', async () => {
     async * promptStreaming(messages, options) {
       assert.deepEqual(messages, [{ role: 'user', content: 'message' }]);
       assert.equal(options.signal, controller.signal);
-      yield '"negative"';
+      yield '{"sentiment":"negative"';
       if (options.signal.aborted) throw new DOMException('Aborted', 'AbortError');
       yield ',"reason":"Harsh."}';
     },
@@ -284,6 +378,7 @@ test('an aborted stream cannot produce a current final result', async () => {
       [{ role: 'user', content: 'message' }],
       () => invalidateRequest(state),
       controller.signal,
+      true,
     ).then(() => {
       if (isCurrentRequest(state, requestId)) finalRendered = true;
     }),
@@ -295,7 +390,7 @@ test('an aborted stream cannot produce a current final result', async () => {
   assert.equal(finalRendered, false);
 });
 
-test('constructSession prefers standard API with initial prompts and language options', async () => {
+test('constructSession prefers standard API with initial prompts, language options, and response constraint', async () => {
   const session = { clone() {} };
   const optionsSeen = [];
   let legacyCreates = 0;
@@ -316,20 +411,22 @@ test('constructSession prefers standard API with initial prompts and language op
 
   assert.equal(metadata.session, session);
   assert.equal(metadata.fewShotBaked, true);
+  assert.equal(metadata.responseConstraint, true);
   assert.equal(metadata.cloneCapable, true);
   assert.equal(optionsSeen.length, 1);
   assert.equal(optionsSeen[0].initialPrompts.length, 5);
   assert.deepEqual(optionsSeen[0].expectedInputs, [{ type: 'text', languages: ['en'] }]);
   assert.deepEqual(optionsSeen[0].expectedOutputs, [{ type: 'text', languages: ['en'] }]);
+  assert.equal(optionsSeen[0].responseConstraint, RESPONSE_SCHEMA);
   assert.equal(legacyCreates, 0);
 });
 
-test('constructSession retries initial prompts without language options', async () => {
+test('constructSession retries through option reductions when response constraint or language options are unsupported', async () => {
   const optionsSeen = [];
   const session = { clone() {} };
   global.LanguageModel = modernApi(async options => {
     optionsSeen.push(options);
-    if (optionsSeen.length === 1) throw new TypeError('unsupported language options');
+    if (optionsSeen.length < 4) throw new TypeError('unsupported options');
     return session;
   });
 
@@ -337,9 +434,21 @@ test('constructSession retries initial prompts without language options', async 
 
   assert.equal(metadata.session, session);
   assert.equal(metadata.fewShotBaked, true);
-  assert.equal(optionsSeen.length, 2);
-  assert.equal(optionsSeen[1].initialPrompts.length, 5);
+  assert.equal(metadata.responseConstraint, false);
+  assert.equal(optionsSeen.length, 4);
+  // 1st: full modern options including responseConstraint
+  assert.equal(optionsSeen[0].responseConstraint, RESPONSE_SCHEMA);
+  assert.deepEqual(optionsSeen[0].expectedInputs, [{ type: 'text', languages: ['en'] }]);
+  // 2nd: responseConstraint without language options
+  assert.equal(optionsSeen[1].responseConstraint, RESPONSE_SCHEMA);
   assert.equal('expectedInputs' in optionsSeen[1], false);
+  // 3rd: language options without responseConstraint
+  assert.equal('responseConstraint' in optionsSeen[2], false);
+  assert.deepEqual(optionsSeen[2].expectedInputs, [{ type: 'text', languages: ['en'] }]);
+  // 4th: minimal initialPrompts
+  assert.equal(optionsSeen[3].initialPrompts.length, 5);
+  assert.equal('expectedInputs' in optionsSeen[3], false);
+  assert.equal('responseConstraint' in optionsSeen[3], false);
 });
 
 test('constructSession falls back to the standard system prompt shape', async () => {
@@ -347,7 +456,7 @@ test('constructSession falls back to the standard system prompt shape', async ()
   const session = {};
   global.LanguageModel = modernApi(async options => {
     optionsSeen.push(options);
-    if (optionsSeen.length < 3) throw new DOMException('unsupported', 'NotSupportedError');
+    if (optionsSeen.length < 5) throw new DOMException('unsupported', 'NotSupportedError');
     return session;
   });
 
@@ -355,10 +464,11 @@ test('constructSession falls back to the standard system prompt shape', async ()
 
   assert.equal(metadata.session, session);
   assert.equal(metadata.fewShotBaked, false);
+  assert.equal(metadata.responseConstraint, false);
   assert.equal(metadata.cloneCapable, false);
-  assert.equal(optionsSeen.length, 3);
-  assert.equal(typeof optionsSeen[2].systemPrompt, 'string');
-  assert.equal('initialPrompts' in optionsSeen[2], false);
+  assert.equal(optionsSeen.length, 5);
+  assert.equal(typeof optionsSeen[4].systemPrompt, 'string');
+  assert.equal('initialPrompts' in optionsSeen[4], false);
 });
 
 test('constructSession does not retry operational creation failures', async () => {
@@ -497,8 +607,8 @@ test('clone-capable analyses reuse one base and destroy separate clones', async 
         async * promptStreaming(messages) {
           stats.stream++;
           promptedSessions.push(id);
-          assert.equal(messages.length, 2);
-          yield '"positive","reason":"Kind."}';
+          assert.equal(messages.length, 1);
+          yield '{"sentiment":"positive","reason":"Kind."}';
         },
         destroy() { stats.cloneDestroy++; },
       };
