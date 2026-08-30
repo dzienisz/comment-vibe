@@ -331,33 +331,46 @@ console.log(result.corrections); // lista poprawek`,
   {
     id: 'webmcp',
     name: 'WebMCP',
-    globalName: 'navigator.modelContext',
+    globalName: 'document.modelContext',
     status: 'origin-trial',
     tagline: 'Strona udostępnia swoje funkcje agentom AI jako narzędzia.',
     description: `Nowość w <strong>Chrome 149</strong> (origin trial). Inna bajka niż generatywne API
       powyżej — WebMCP nie generuje tekstu. Pozwala stronie <strong>wystawić własne funkcje i formularze
       jako narzędzia</strong>, które agent AI w przeglądarce może wywołać wprost, zamiast zgadywać, gdzie
-      kliknąć. To krok w stronę „agentic web". <br><br>To wczesna propozycja standardu — kształt API
-      może się jeszcze zmienić, dlatego to wpis informacyjny, bez dema.`,
+      kliknąć. To krok w stronę „agentic web". <br><br>API wciąż się zmienia: kanoniczna przestrzeń
+      to teraz <code>document.modelContext</code> (stare <code>navigator.modelContext</code> jest
+      wycofywane od Chrome 150 — narzędzia należą do konkretnej strony, nie do przeglądarki),
+      a od Chrome 153 (dziś jeszcze Canary/Dev — stabilny to 152) <code>execute</code> zawsze
+      dostaje <code>AbortSignal</code> w drugim argumencie, by móc grzecznie przerwać anulowane
+      wywołania. Dlatego to wpis informacyjny, bez dema.`,
     versions: [
-      { v: 'Chrome 149', label: 'Origin trial (od czerwca 2026) — wcześniej tylko za flagą', state: 'now' },
+      { v: 'Chrome 149', label: 'Origin trial (od czerwca 2026) — wcześniej tylko za flagą', state: 'past' },
+      { v: 'Chrome 150', label: 'navigator.modelContext wycofywane na rzecz document.modelContext', state: 'now' },
+      { v: 'Chrome 153', label: 'execute(input, { signal }) — AbortSignal do anulowania wywołań (na razie Canary/Dev)', state: 'future' },
     ],
     links: [
       { label: 'Dokumentacja: WebMCP', url: 'https://developer.chrome.com/docs/ai/webmcp' },
       { label: 'Chrome at I/O 2026', url: 'https://developer.chrome.com/blog/chrome-at-io26' },
     ],
     usage: `// Szkic koncepcyjny — API jest na wczesnym etapie i może się zmienić.
-// Strona rejestruje narzędzie, które agent AI może wywołać:
-navigator.modelContext.registerTool({
+// Strona rejestruje narzędzie, które agent AI może wywołać.
+// Od Chrome 153 (na razie Canary/Dev) execute dostaje { signal } (AbortSignal)
+// w drugim argumencie — przekaż go do fetch() itp., by anulowanie przerwało
+// też pracę w toku. Destrukturyzacja jest bezpieczna też na starszym Chrome,
+// o ile podasz domyślną wartość: async execute(input, { signal } = {}) { … }.
+const ac = new AbortController();
+await document.modelContext.registerTool({
   name: 'add-to-cart',
   description: 'Dodaje produkt do koszyka',
   inputSchema: { /* JSON Schema parametrów */ },
-  async execute({ productId }) {
-    // ...logika strony...
+  async execute({ productId }, { signal } = {}) {
+    await fetch('/cart', { method: 'POST', body: productId, signal });
     return { content: [{ type: 'text', text: 'Dodano do koszyka' }] };
   },
-});`,
-    check: async () => (typeof navigator !== 'undefined' && navigator.modelContext) ? 'available' : 'no-api',
+}, { signal: ac.signal });
+
+// Wyrejestrowanie: ac.abort() — uwaga: NIE anuluje już trwających wywołań.`,
+    check: async () => (typeof document !== 'undefined' && (document.modelContext || navigator.modelContext)) ? 'available' : 'no-api',
     demo: null,
   },
 ];
