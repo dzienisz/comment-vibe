@@ -1,7 +1,7 @@
 'use strict';
 
 // ── Dane wszystkich wbudowanych API AI w Chrome ───────────────────────────────
-// Stan na czerwiec 2026. Źródło: https://developer.chrome.com/docs/ai/built-in-apis
+// Zweryfikowany stan: RELEASE_INFO. Źródło: https://developer.chrome.com/docs/ai/built-in-apis
 //
 // Każdy wpis opisuje jedno API: status z dokumentacji, historię wersji, linki,
 // przykład użycia oraz konfigurację interaktywnego demo (pola + funkcja `run`).
@@ -12,7 +12,43 @@
 
 // Helper: podpina podgląd pobierania modelu do opcji create({ monitor }).
 const dl = report => m =>
-  m.addEventListener('downloadprogress', e => report.progress(e.loaded));
+  m.addEventListener('downloadprogress', e => {
+    const fraction = e.total > 0 ? e.loaded / e.total : e.loaded;
+    if (Number.isFinite(fraction)) report.progress(Math.max(0, Math.min(1, fraction)));
+  });
+
+const RELEASE_INFO = {
+  verifiedAt: '2026-09-10',
+  stable: 153,
+  beta: 154,
+  nextStableDate: '2026-09-22',
+  source: 'https://developer.chrome.com/blog/chrome-two-week-start',
+  betaSource: 'https://developer.chrome.com/blog/chrome-154-beta',
+  roadmap: 'https://chromestatus.com/roadmap',
+};
+
+function getApi(globalName) {
+  if (globalName === 'LanguageModel') return globalThis.LanguageModel ?? globalThis.ai?.languageModel;
+  if (globalName === 'document.modelContext') return globalThis.document?.modelContext ?? globalThis.navigator?.modelContext;
+  return globalThis[globalName];
+}
+
+function getApiOptions(api, values) {
+  const defaults = Object.fromEntries((api.demo?.fields || []).map(field => [field.id, field.value]));
+  return api.demo?.options?.({ ...defaults, ...values }) ?? api.availabilityOptions ?? {};
+}
+
+async function runWithSession(id, values, report, run) {
+  const api = APIS.find(api => api.id === id);
+  const factory = getApi(api.globalName);
+  if (typeof factory?.create !== 'function') throw new Error(`${api.name}: brak metody create() w tej przeglądarce.`);
+  const session = await factory.create({ ...getApiOptions(api, values), monitor: dl(report) });
+  try {
+    return await run(session);
+  } finally {
+    session.destroy?.();
+  }
+}
 
 const APIS = [
   // ── Prompt API ──────────────────────────────────────────────────────────────
@@ -28,8 +64,13 @@ const APIS = [
       <br><br>Od Chrome 148 jest stabilne także na <strong>zwykłych stronach web</strong> (nie tylko
       w rozszerzeniach) — bez tokenu i bez flag. Uwaga na nazewnictwo: stara przestrzeń
       <code>window.ai.languageModel</code> jest wycofywana na rzecz globalnego <code>LanguageModel</code>.
-      Możliwości multimodalne (obraz / dźwięk na wejściu) są na razie dostępne tylko dla uczestników
-      Early Preview Program.`,
+      Aktualna dokumentacja opisuje wejście tekstowe, obraz i dźwięk oraz wyłącznie tekst na wyjściu.
+      Obsługę konkretnej kombinacji sprawdzaj przez <code>availability()</code> z tymi samymi
+      <code>expectedInputs</code> i <code>expectedOutputs</code>, których użyjesz w <code>create()</code>;
+      wejście audio wymaga GPU. Udokumentowane języki to en, ja, es, de i fr — demo domyślnie używa angielskiego.
+      <br><br>Na web parametr <code>samplingMode</code> pozostaje osobnym origin trial.
+      <code>topK</code>, <code>temperature</code> i <code>LanguageModel.params()</code> to nadal ścieżka
+      rozszerzeń, nie domyślne API strony. Rozwój kolejnych języków nie ma tu przypisanej daty stable.`,
     versions: [
       { v: 'Chrome 127', label: 'Pierwsze wydanie za flagą (wczesny dostęp / origin trial)', state: 'past' },
       { v: 'Chrome 138', label: 'Stabilne dla rozszerzeń', state: 'past' },
@@ -38,8 +79,11 @@ const APIS = [
     links: [
       { label: 'Dokumentacja: Prompt API', url: 'https://developer.chrome.com/docs/ai/prompt-api' },
       { label: 'Pierwsze kroki z wbudowanym AI', url: 'https://developer.chrome.com/docs/ai/get-started' },
+      { label: 'Zarządzanie kontekstem i kompaktowanie sesji', url: 'https://developer.chrome.com/docs/ai/session-compacting' },
     ],
     usage: `const session = await LanguageModel.create({
+  expectedInputs: [{ type: 'text', languages: ['en'] }],
+  expectedOutputs: [{ type: 'text', languages: ['en'] }],
   initialPrompts: [
     { role: 'system', content: 'You are a helpful assistant.' },
   ],
@@ -52,16 +96,19 @@ session.destroy();`,
     availabilityOptions: undefined,
     demo: {
       fields: [
-        { type: 'textarea', id: 'text', label: 'Twój prompt',
-          value: 'Napisz krótkie, miłe powitanie dla widzów mojego kanału na YouTube.' },
+        { type: 'textarea', id: 'text', label: 'Twój prompt (demo w języku angielskim)',
+          value: 'Write a short, friendly welcome for viewers of my YouTube channel.' },
       ],
+      options: () => globalThis.LanguageModel ? {
+        expectedInputs: [{ type: 'text', languages: ['en'] }],
+        expectedOutputs: [{ type: 'text', languages: ['en'] }],
+      } : {},
       run: async (v, report) => {
         report.status('Tworzę sesję…');
-        const session = await LanguageModel.create({ monitor: dl(report) });
-        report.status('Generuję odpowiedź…');
-        const out = await session.prompt(v.text);
-        session.destroy?.();
-        return out;
+        return runWithSession('prompt', v, report, session => {
+          report.status('Generuję odpowiedź…');
+          return session.prompt(v.text);
+        });
       },
     },
   },
@@ -75,7 +122,8 @@ session.destroy();`,
     tagline: 'Streszczanie długich tekstów na urządzeniu.',
     description: `Dedykowane API do kondensowania długich treści — artykułów, wątków komentarzy,
       transkrypcji. Pozwala wybrać typ (np. „tl;dr", lista punktów), długość i format wyniku.
-      Działa wyłącznie w trybie tekst → tekst.`,
+      Działa wyłącznie w trybie tekst → tekst. Demo deklaruje angielski na wejściu i wyjściu;
+      aktualnie udokumentowane języki to en, ja, es, de i fr.`,
     versions: [
       { v: 'Chrome 138', label: 'Stabilne (web + rozszerzenia)', state: 'now' },
     ],
@@ -83,6 +131,8 @@ session.destroy();`,
       { label: 'Dokumentacja: Summarizer API', url: 'https://developer.chrome.com/docs/ai/summarizer-api' },
     ],
     usage: `const summarizer = await Summarizer.create({
+  expectedInputLanguages: ['en'],
+  outputLanguage: 'en',
   type: 'tldr',     // 'tldr' | 'key-points' | 'teaser' | 'headline'
   length: 'short',  // 'short' | 'medium' | 'long'
 });
@@ -97,15 +147,15 @@ console.log(summary);`,
         { type: 'select', id: 'length', label: 'Długość', value: 'short',
           options: [['short', 'Krótko'], ['medium', 'Średnio'], ['long', 'Długo']] },
         { type: 'textarea', id: 'text', label: 'Tekst do streszczenia', rows: 6,
-          value: 'Wbudowane w Chrome API AI pozwalają uruchamiać model Gemini Nano bezpośrednio w przeglądarce, bez wysyłania danych na serwer. Dzięki temu deweloperzy mogą budować funkcje oparte na AI z zachowaniem prywatności użytkownika, niższym kosztem i działające także offline. Część API jest już stabilna, część wciąż w fazie testów.' },
+          value: 'Chrome built-in AI APIs run models directly in the browser without sending text to a server. Developers can build privacy-preserving features that work offline after the initial model download. Some APIs are stable, while others remain experimental. Availability depends on the device, language, browser policies, and the options used to create a session.' },
       ],
+      options: v => ({ type: v.type, length: v.length, expectedInputLanguages: ['en'], outputLanguage: 'en' }),
       run: async (v, report) => {
         report.status('Tworzę summarizer…');
-        const s = await Summarizer.create({ type: v.type, length: v.length, monitor: dl(report) });
-        report.status('Streszczam…');
-        const out = await s.summarize(v.text);
-        s.destroy?.();
-        return out;
+        return runWithSession('summarizer', v, report, s => {
+          report.status('Streszczam…');
+          return s.summarize(v.text);
+        });
       },
     },
   },
@@ -142,14 +192,14 @@ console.log(pl);`,
           options: [['pl', 'polski'], ['en', 'angielski'], ['es', 'hiszpański'], ['de', 'niemiecki'], ['fr', 'francuski'], ['ja', 'japoński']] },
         { type: 'textarea', id: 'text', label: 'Tekst', value: 'Built-in AI runs entirely on your device.' },
       ],
+      options: v => ({ sourceLanguage: v.source, targetLanguage: v.target }),
       run: async (v, report) => {
         if (v.source === v.target) throw new Error('Wybierz dwa różne języki.');
         report.status('Tworzę tłumacza…');
-        const t = await Translator.create({ sourceLanguage: v.source, targetLanguage: v.target, monitor: dl(report) });
-        report.status('Tłumaczę…');
-        const out = await t.translate(v.text);
-        t.destroy?.();
-        return out;
+        return runWithSession('translator', v, report, t => {
+          report.status('Tłumaczę…');
+          return t.translate(v.text);
+        });
       },
     },
   },
@@ -182,13 +232,13 @@ console.log(best.detectedLanguage, best.confidence);`,
       ],
       run: async (v, report) => {
         report.status('Tworzę detektor…');
-        const d = await LanguageDetector.create({ monitor: dl(report) });
-        report.status('Wykrywam język…');
-        const res = await d.detect(v.text);
-        d.destroy?.();
-        return res.slice(0, 5)
-          .map(r => `${r.detectedLanguage.padEnd(8)} ${(r.confidence * 100).toFixed(1)}%`)
-          .join('\n');
+        return runWithSession('detector', v, report, async d => {
+          report.status('Wykrywam język…');
+          const res = await d.detect(v.text);
+          return res.slice(0, 5)
+            .map(r => `${r.detectedLanguage.padEnd(8)} ${(r.confidence * 100).toFixed(1)}%`)
+            .join('\n');
+        });
       },
     },
   },
@@ -204,9 +254,9 @@ console.log(best.detectedLanguage, best.confidence);`,
       post. Pozwala sterować tonem, formatem i długością. <strong>Wciąż eksperymentalne
       (developer trial)</strong> — może nie być dostępne bez flagi lub udziału w Early
       Preview Program, dlatego w Comment Vibe go nie używam.
-      <br><br>⚠️ Sygnał: pełny origin trial (Chrome 137–148) <strong>zakończył się bez awansu
-      do stable</strong> — API cofnęło się do trybu „za flagą". W praktyce pokrywa się z tym, co
-      już potrafi Prompt API, więc nie warto na nim opierać produkcyjnej funkcji.`,
+      <br><br>Origin trial Chrome 137–148 zakończył się; aktualna tabela Google podaje
+      developer trial, bez potwierdzonej wersji stable. Wygaśnięcie trial nie oznacza porzucenia API.
+      Przed użyciem w produkcji sprawdzaj dostępność i zapewnij alternatywną ścieżkę.`,
     versions: [
       { v: 'Origin trial 137–148', label: 'Trial zakończony; nadal brak stabilnego wydania (developer trial / EPP)', state: 'trial' },
     ],
@@ -227,13 +277,13 @@ const text = await writer.write('A short product description for a coffee mug.')
           options: [['formal', 'formalny'], ['neutral', 'neutralny'], ['casual', 'swobodny']] },
         { type: 'textarea', id: 'text', label: 'Zadanie', value: 'A short, friendly intro for a YouTube video about Chrome built-in AI.' },
       ],
+      options: v => ({ tone: v.tone }),
       run: async (v, report) => {
         report.status('Tworzę writer…');
-        const w = await Writer.create({ tone: v.tone, monitor: dl(report) });
-        report.status('Piszę…');
-        const out = await w.write(v.text);
-        w.destroy?.();
-        return out;
+        return runWithSession('writer', v, report, w => {
+          report.status('Piszę…');
+          return w.write(v.text);
+        });
       },
     },
   },
@@ -248,9 +298,9 @@ const text = await writer.write('A short product description for a coffee mug.')
     description: `Przeredagowuje istniejący tekst — zmienia ton, długość lub formę.
       To naturalny kandydat, by zastąpić „ręczne" przepisywanie przez Prompt API w Comment Vibe.
       <strong>Na razie developer trial</strong>, więc czekam aż się ustabilizuje, zanim na nim oprę produkcyjną funkcję.
-      <br><br>⚠️ Sygnał: pełny origin trial (Chrome 137–148) <strong>zakończył się bez awansu
-      do stable</strong> — API wróciło do trybu „za flagą". Prompt API (już stabilne) robi
-      to samo wystarczająco dobrze, więc w Comment Vibe zostaję przy nim.`,
+      <br><br>Origin trial Chrome 137–148 zakończył się; aktualny status to developer trial.
+      Nie ma potwierdzonej daty stabilnego wydania. Prompt API pozostaje alternatywą,
+      ale dostępność i jakość obu rozwiązań trzeba oceniać osobno.`,
     versions: [
       { v: 'Origin trial 137–148', label: 'Trial zakończony; nadal brak stabilnego wydania (developer trial / EPP)', state: 'trial' },
     ],
@@ -272,13 +322,13 @@ const text = await rewriter.rewrite(
           options: [['as-is', 'bez zmian'], ['more-formal', 'bardziej formalnie'], ['more-casual', 'bardziej swobodnie']] },
         { type: 'textarea', id: 'text', label: 'Tekst do przepisania', value: 'You are completely wrong and this idea makes no sense at all.' },
       ],
+      options: v => ({ tone: v.tone }),
       run: async (v, report) => {
         report.status('Tworzę rewriter…');
-        const r = await Rewriter.create({ tone: v.tone, monitor: dl(report) });
-        report.status('Przepisuję…');
-        const out = await r.rewrite(v.text);
-        r.destroy?.();
-        return out;
+        return runWithSession('rewriter', v, report, r => {
+          report.status('Przepisuję…');
+          return r.rewrite(v.text);
+        });
       },
     },
   },
@@ -288,13 +338,14 @@ const text = await rewriter.rewrite(
     id: 'proofreader',
     name: 'Proofreader API',
     globalName: 'Proofreader',
-    status: 'origin-trial',
+    status: 'dev-trial',
     tagline: 'Korekta gramatyki, ortografii i interpunkcji.',
     description: `Interaktywna korekta tekstu — zwraca poprawioną wersję oraz listę konkretnych
-      poprawek. Świetne jako warstwa „gramatyczna" nad analizą tonu. <strong>W trakcie origin
-      trial</strong>, więc dostępność zależy od wersji Chrome i ewentualnego tokenu OT.`,
+      poprawek. Może uzupełniać analizę tonu o korektę gramatyczną. <strong>Developer trial</strong>:
+      origin trial Chrome 141–145 zakończył się, a aktualna tabela Google nie podaje stabilnego wydania.
+      Dostępność sprawdzaj metodą <code>availability()</code>; flaga lub EPP mogą być wymagane.`,
     versions: [
-      { v: 'Origin trial 141–145', label: 'Trial zakończony; dalej w fazie testów (EPP) — brak stabilnego wydania', state: 'trial' },
+      { v: 'Origin trial 141–145', label: 'Trial zakończony; aktualnie developer trial — brak potwierdzonej wersji stable', state: 'trial' },
     ],
     links: [
       { label: 'Dokumentacja: Proofreader API', url: 'https://developer.chrome.com/docs/ai/proofreader-api' },
@@ -311,18 +362,18 @@ console.log(result.corrections); // lista poprawek`,
       ],
       run: async (v, report) => {
         report.status('Tworzę proofreader…');
-        const p = await Proofreader.create({ monitor: dl(report) });
-        report.status('Sprawdzam…');
-        const res = await p.proofread(v.text);
-        p.destroy?.();
-        const corrected = res.correctedInput ?? res.corrected ?? '(brak pola correctedInput)';
-        let out = `Poprawiony tekst:\n${corrected}`;
-        const corrections = res.corrections ?? [];
-        if (corrections.length) {
-          out += `\n\nPoprawki (${corrections.length}):\n` +
-            corrections.map((c, i) => `${i + 1}. ${JSON.stringify(c)}`).join('\n');
-        }
-        return out;
+        return runWithSession('proofreader', v, report, async p => {
+          report.status('Sprawdzam…');
+          const res = await p.proofread(v.text);
+          const corrected = res.correctedInput ?? res.corrected ?? '(brak pola correctedInput)';
+          let out = `Poprawiony tekst:\n${corrected}`;
+          const corrections = res.corrections ?? [];
+          if (corrections.length) {
+            out += `\n\nPoprawki (${corrections.length}):\n` +
+              corrections.map((c, i) => `${i + 1}. ${JSON.stringify(c)}`).join('\n');
+          }
+          return out;
+        });
       },
     },
   },
@@ -340,26 +391,33 @@ console.log(result.corrections); // lista poprawek`,
       kliknąć. To krok w stronę „agentic web". <br><br>API wciąż się zmienia: kanoniczna przestrzeń
       to teraz <code>document.modelContext</code> (stare <code>navigator.modelContext</code> jest
       wycofywane od Chrome 150 — narzędzia należą do konkretnej strony, nie do przeglądarki),
-      a od Chrome 153 (dziś jeszcze Canary/Dev — stabilny to 152) <code>execute</code> zawsze
-      dostaje <code>AbortSignal</code> w drugim argumencie, by móc grzecznie przerwać anulowane
-      wywołania. Dlatego to wpis informacyjny, bez dema.`,
+      a w Chrome 153 <code>execute(input, { signal })</code> pozwala obsługiwać anulowanie
+      wywołań. Wyrejestrowanie narzędzia nie przerywa już trwającego wykonania.
+      <strong>Chrome 153 jest stabilny, ale WebMCP nadal jest origin trial</strong> — numer
+      przeglądarki nie oznacza stabilności API. Wykrycie <code>registerTool</code> nie potwierdza
+      obecności agenta. To wpis informacyjny, bez dema; agent może korzystać z usług sieciowych.`,
     versions: [
       { v: 'Chrome 149', label: 'Origin trial (od czerwca 2026) — wcześniej tylko za flagą', state: 'past' },
-      { v: 'Chrome 150', label: 'navigator.modelContext wycofywane na rzecz document.modelContext', state: 'now' },
-      { v: 'Chrome 153', label: 'execute(input, { signal }) — AbortSignal do anulowania wywołań (na razie Canary/Dev)', state: 'future' },
+      { v: 'Chrome 150', label: 'navigator.modelContext wycofywane na rzecz document.modelContext', state: 'past' },
+      { v: 'Chrome 153', label: 'Anulowanie przez execute(input, { signal }); wyrejestrowanie nie przerywa aktywnych wywołań. API nadal w trial.', state: 'now' },
+      { v: 'Kolejne wersje', label: 'Brak potwierdzonej daty stable WebMCP; śledź dokumentację i wykrywaj metody, nie numer Chrome.', state: 'future' },
     ],
     links: [
       { label: 'Dokumentacja: WebMCP', url: 'https://developer.chrome.com/docs/ai/webmcp' },
-      { label: 'Chrome at I/O 2026', url: 'https://developer.chrome.com/blog/chrome-at-io26' },
+      { label: 'Imperative API: rejestracja i anulowanie narzędzi', url: 'https://developer.chrome.com/docs/ai/webmcp/imperative-api' },
     ],
     usage: `// Szkic koncepcyjny — API jest na wczesnym etapie i może się zmienić.
 // Strona rejestruje narzędzie, które agent AI może wywołać.
-// Od Chrome 153 (na razie Canary/Dev) execute dostaje { signal } (AbortSignal)
+// W Chrome 153 (API nadal w trial) execute dostaje { signal } (AbortSignal)
 // w drugim argumencie — przekaż go do fetch() itp., by anulowanie przerwało
 // też pracę w toku. Destrukturyzacja jest bezpieczna też na starszym Chrome,
 // o ile podasz domyślną wartość: async execute(input, { signal } = {}) { … }.
+const context = document.modelContext ?? navigator.modelContext;
+if (typeof context?.registerTool !== 'function') {
+  throw new Error('WebMCP is not available');
+}
 const ac = new AbortController();
-await document.modelContext.registerTool({
+await context.registerTool({
   name: 'add-to-cart',
   description: 'Dodaje produkt do koszyka',
   inputSchema: { /* JSON Schema parametrów */ },
@@ -370,7 +428,7 @@ await document.modelContext.registerTool({
 }, { signal: ac.signal });
 
 // Wyrejestrowanie: ac.abort() — uwaga: NIE anuluje już trwających wywołań.`,
-    check: async () => (typeof document !== 'undefined' && (document.modelContext || navigator.modelContext)) ? 'available' : 'no-api',
+    check: async () => typeof getApi('document.modelContext')?.registerTool === 'function' ? 'detected' : 'no-api',
     demo: null,
   },
 ];
@@ -385,6 +443,8 @@ const STATUS_META = {
 };
 
 const AVAIL_META = {
+  'detected':     { label: 'Interfejs wykryty — nie potwierdza obecności agenta', cls: 'av-ok' },
+  'unknown':      { label: 'Nieznany status API — sprawdź aktualną dokumentację i konsolę', cls: 'av-no' },
   'available':    { label: '✅ Dostępne i gotowe', cls: 'av-ok' },
   'downloadable': { label: '⬇️ Dostępne — model do pobrania', cls: 'av-dl' },
   'downloading':  { label: '⏳ Model się pobiera…', cls: 'av-dl' },

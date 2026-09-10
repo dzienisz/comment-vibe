@@ -37,23 +37,31 @@ function aiLog(msg, extra) {
 
 // ── Live availability ─────────────────────────────────────────────────────────
 
-async function checkApi(api) {
+async function checkApi(api, values) {
   // Wpisy informacyjne (np. WebMCP) mają własny test obecności zamiast availability().
   if (typeof api.check === 'function') {
     try { const s = await api.check(); aiLog(`${api.name}: ${s}`); return s; }
     catch (e) { console.warn(`[Built-in AI] ${api.name}.check() rzuciło:`, e); return 'error'; }
   }
-  const ctor = window[api.globalName];
-  if (!ctor || typeof ctor.availability !== 'function') {
+  const ctor = getApi(api.globalName);
+  if (!ctor) {
     aiLog(`${api.globalName}: brak tego API w przeglądarce`);
     return 'no-api';
   }
   try {
-    const state = await ctor.availability(api.availabilityOptions || undefined);
-    aiLog(`${api.globalName}.availability() → ${state}`);
-    return state;
+    let state;
+    if (typeof ctor.availability === 'function') {
+      state = await ctor.availability(getApiOptions(api, values));
+    } else if (api.globalName === 'LanguageModel' && typeof ctor.capabilities === 'function') {
+      const { available } = await ctor.capabilities();
+      state = { readily: 'available', 'after-download': 'downloadable', no: 'unavailable' }[available];
+    } else {
+      return 'unknown';
+    }
+    aiLog(`${api.globalName}: ${state}`);
+    return Object.hasOwn(AVAIL_META, state) ? state : 'unknown';
   } catch (e) {
-    console.warn(`[Built-in AI] ${api.globalName}.availability() rzuciło wyjątek:`, e);
+    console.warn(`[Built-in AI] ${api.globalName}: sprawdzenie dostępności rzuciło wyjątek:`, e);
     return 'error';
   }
 }
@@ -78,7 +86,8 @@ function buildSidebar() {
     el('span', { class: 'cta-title', text: '⬇️ Pobierz Comment Vibe' }),
     el('span', { class: 'cta-sub', text: 'wtyczka do Chrome — przetestuj' }),
   ]));
-  foot.appendChild(el('div', { class: 'foot-note', html: 'Część projektu <strong>Comment Vibe</strong> · Chrome 149 (czerwiec 2026)' }));
+  foot.appendChild(el('div', { class: 'foot-note', html:
+    `Część projektu <strong>Comment Vibe</strong> · stan na ${RELEASE_INFO.verifiedAt} · Chrome ${RELEASE_INFO.stable} Stable` }));
 }
 
 function navItem(id, label, dotCls) {
@@ -105,9 +114,21 @@ function renderOverview() {
 
   main.appendChild(el('h1', { text: 'Wbudowane AI w Chrome — środowisko testowe' }));
   main.appendChild(el('p', { class: 'lead', html:
-    `Wszystkie modele działają <strong>lokalnie</strong> (Gemini Nano), bez wysyłania danych na serwer.
+    `Dema modeli działają <strong>lokalnie</strong>, bez wysyłania tekstu na serwer.
+     Generatywne API korzystają z Gemini Nano; Translator i Language Detector mają osobne modele.
+     WebMCP udostępnia narzędzia agentom, a nie uruchamia lokalnego modelu.
      Wybierz API z menu po lewej, sprawdź czy działa u Ciebie i odpal demo na żywo.
-     Stan opisany na podstawie dokumentacji Chrome — aktualny stabilny kanał: <strong>Chrome 149</strong> (czerwiec 2026).` }));
+     Dokumentację zweryfikowano <strong>${RELEASE_INFO.verifiedAt}</strong>:
+     <strong>Chrome ${RELEASE_INFO.stable} Stable</strong>, Chrome ${RELEASE_INFO.beta} Beta.
+     To datowany stan dokumentacji, nie automatycznie aktualizowany wykaz wydań.` }));
+  main.appendChild(el('p', { class: 'muted', html:
+    `Kolejne wydanie: Chrome ${RELEASE_INFO.beta} Stable jest <strong>planowane na ${RELEASE_INFO.nextStableDate}</strong>.
+     Od Chrome 153 wydania Stable ukazują się co dwa tygodnie.
+     Plan nie jest potwierdzeniem wdrożenia API — trial nie staje się stable wraz z aktualizacją przeglądarki.
+     <a target="_blank" rel="noopener" href="${RELEASE_INFO.source}">Harmonogram Google</a> ·
+     <a target="_blank" rel="noopener" href="${RELEASE_INFO.betaSource}">Zmiany w Beta</a> ·
+     <a target="_blank" rel="noopener" href="${RELEASE_INFO.roadmap}">Bieżąca mapa wydań</a>.
+     Na nowszych wersjach nadal używamy wykrywania API i ich metod, bez blokady numerem wersji.` }));
 
   // CTA wtyczki
   const cta = el('div', { class: 'cta-card' });
@@ -129,18 +150,19 @@ function renderOverview() {
   const ua = navigator.userAgent;
   const m = ua.match(/Chrome\/(\d+)/);
   const chromeVer = m ? m[1] : 'nie wykryto';
-  env.appendChild(infoRow('Wersja Chrome', chromeVer + (m && +m[1] < 138 ? ' (zalecane 138+)' : '')));
+  env.appendChild(infoRow('Wersja Chromium z User-Agent (nie określa kanału)', chromeVer));
   env.appendChild(infoRow('Bezpieczny kontekst (isSecureContext)', String(window.isSecureContext)));
   env.appendChild(infoRow('Origin', location.origin || '(file://)'));
   if (!window.isSecureContext) {
     env.appendChild(el('p', { class: 'warn', html:
-      'To API wymagają bezpiecznego kontekstu. Otwórz tę stronę przez <code>http://localhost</code> ' +
-      '(np. <code>python3 -m http.server</code>), a nie z pliku <code>file://</code>.' }));
+      'Te API wymagają bezpiecznego kontekstu. Otwórz stronę przez HTTPS lub <code>http://localhost</code> ' +
+      '(np. <code>python3 -m http.server</code>). Sam bezpieczny kontekst nie gwarantuje dostępności API.' }));
   }
   env.appendChild(el('p', { class: 'muted', html:
-    'Model Gemini Nano (~2–4 GB) pobiera się automatycznie przy pierwszym użyciu — to ten sam komponent ' +
-    '„Optimization Guide On Device Model", o którym było głośno (pobierany bez wyraźnej zgody, maj 2026). ' +
-    'Status zobaczysz w <code>chrome://on-device-internals</code>, a wyłączyć i usunąć model możesz w ustawieniach Chrome.' }));
+    'Modele są pobierane osobno. Pierwsze użycie może wymagać pobrania danych i aktywacji przez użytkownika; ' +
+    'samo sprawdzenie dostępności nie uruchamia pobierania. Wymagania zależą od API, sprzętu, języka i polityk przeglądarki. ' +
+    'Status zobaczysz w <code>chrome://on-device-internals</code>. ' +
+    '<a target="_blank" rel="noopener" href="https://developer.chrome.com/docs/ai/get-started">Aktualne wymagania Google</a>.' }));
   main.appendChild(env);
 
   // Macierz dostępności
@@ -198,15 +220,24 @@ function renderApi(api) {
   // Live check — „czy mogę tego użyć?"
   const checkCard = el('div', { class: 'card' });
   checkCard.appendChild(el('h2', { text: 'Czy zadziała u Ciebie?' }));
+  checkCard.appendChild(el('p', { class: 'muted', text:
+    `Status dokumentacji: ${RELEASE_INFO.verifiedAt}. Test przeglądarki używa opcji wybranych w demo; nie pobiera modelu.` }));
   const result = el('div', {}, el('span', { class: 'pill av-pending', text: '… sprawdzam' }));
   const refresh = el('button', { class: 'btn ghost', text: 'Sprawdź ponownie',
     onclick: () => runCheck() });
   checkCard.appendChild(el('div', { class: 'check-row' }, [result, refresh]));
   main.appendChild(checkCard);
+  let demoValues;
+  let checkId = 0;
   const runCheck = () => {
+    const id = ++checkId;
     result.innerHTML = '';
     result.appendChild(el('span', { class: 'pill av-pending', text: '… sprawdzam' }));
-    checkApi(api).then(state => { result.innerHTML = ''; result.appendChild(availPill(state)); });
+    checkApi(api, demoValues).then(state => {
+      if (id !== checkId) return;
+      result.innerHTML = '';
+      result.appendChild(availPill(state));
+    });
   };
   runCheck();
 
@@ -254,7 +285,7 @@ function renderApi(api) {
 
   // Demo na żywo (wpisy informacyjne, np. WebMCP, nie mają dema)
   if (api.demo) {
-    main.appendChild(buildDemo(api));
+    main.appendChild(buildDemo(api, values => { demoValues = values; runCheck(); }));
   } else {
     const note = el('div', { class: 'card' });
     note.appendChild(el('h2', { text: 'Demo' }));
@@ -267,7 +298,7 @@ function renderApi(api) {
 
 // ── Demo runner ────────────────────────────────────────────────────────────────
 
-function buildDemo(api) {
+function buildDemo(api, onOptionsChange = () => {}) {
   const card = el('div', { class: 'card demo' });
   card.appendChild(el('h2', { text: 'Demo na żywo' }));
 
@@ -287,6 +318,9 @@ function buildDemo(api) {
       }
     }
     inputs[f.id] = control;
+    if (f.type === 'select') control.addEventListener('change', () => {
+      onOptionsChange(Object.fromEntries(Object.entries(inputs).map(([id, input]) => [id, input.value])));
+    });
     field.appendChild(control);
     card.appendChild(field);
   }
@@ -302,6 +336,8 @@ function buildDemo(api) {
 
     runBtn.disabled = true;
     output.textContent = '';
+    output.classList.remove('error');
+    output.removeAttribute('role');
     status.textContent = '';
     bar.style.display = 'none';
     bar.querySelector('.progress-fill').style.width = '0%';
@@ -337,7 +373,7 @@ function buildDemo(api) {
         `• To API jest niedostępne w tej wersji Chrome (zobacz „Czy zadziała u Ciebie?")\n` +
         `• Model nie został jeszcze pobrany — uruchom ponownie\n` +
         `• Strona nie jest w bezpiecznym kontekście (użyj http://localhost)`;
-      setTimeout(() => output.classList.remove('error'), 4000);
+      output.setAttribute('role', 'alert');
       aiLog(`❌ błąd: ${e?.message || e}`);
       console.error('[Built-in AI] pełny błąd:', e);
     } finally {
@@ -353,12 +389,12 @@ function buildDemo(api) {
 }
 
 // ── Baner: Prompt API niedostępne na web ──────────────────────────────────────
-// Na publicznej stronie web Prompt API (global `LanguageModel`) jest gated —
-// bez tokenu Origin Trial lub flagi po prostu nie istnieje. Wykrywamy to
-// synchronicznie i podpowiadamy, co zrobić. Stabilne API działają mimo to.
+// Na publicznej stronie web Prompt API może być nieobecne mimo wydania stable —
+// zależy od sprzętu, kontekstu i polityk przeglądarki. Wykrywamy to
+// synchronicznie i podpowiadamy, co zrobić. Pozostałe API działają niezależnie.
 
 function injectBanner(main) {
-  if (typeof LanguageModel !== 'undefined') return;            // Prompt API jest — bez baneru
+  if (getApi('LanguageModel')) return;                        // Prompt API jest — bez baneru
   if (sessionStorage.getItem('cv-banner-dismissed')) return;
   const banner = el('div', { class: 'banner' }, [
     el('span', { html:
@@ -386,9 +422,11 @@ function route() {
   document.getElementById('main').scrollTop = 0;
 }
 
-buildSidebar();
-window.addEventListener('hashchange', route);
-route();
+if (typeof document !== 'undefined') {
+  buildSidebar();
+  window.addEventListener('hashchange', route);
+  route();
 
-aiLog('Otwórz DevTools → Console. Każde wywołanie API loguje się tutaj. ' +
-  'Inferencja jest w 100% lokalna — w zakładce Network nie zobaczysz żądań do modelu.');
+  aiLog('Otwórz DevTools → Console. Każde wywołanie API loguje się tutaj. ' +
+    'Dema wykonują inferencję lokalnie; pobieranie modeli wymaga sieci. WebMCP nie jest lokalnym modelem.');
+}
