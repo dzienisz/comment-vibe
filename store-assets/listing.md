@@ -28,8 +28,13 @@ Powered by Chrome's built-in AI (Gemini Nano), everything runs on your device: n
 
 HOW IT WORKS
 1. Type a comment on LinkedIn, X (Twitter), YouTube, Reddit — any site with a text box.
-2. A small badge appears next to the box showing the detected tone.
-3. Click the badge to see why — and if your comment sounds harsh or toxic, get an instant kinder rewrite you can copy in one click.
+2. A small badge appears next to the box showing the detected tone — it stays put and updates quietly while you type, no flicker.
+3. Click the badge to see why — and if your comment sounds harsh or toxic, get an instant kinder rewrite. "Use this rewrite" inserts it into the box for you; copy still works too.
+
+YOU'RE IN CONTROL
+• "Hide on this site" right in the tooltip — one click and the badge never shows there again
+• Popup toggles: turn Comment Vibe off globally or per site, applied instantly
+• Preferences sync across your signed-in Chrome devices via storage.sync
 
 FOUR CLEAR TONE LABELS
 😊 Positive — constructive and friendly
@@ -66,6 +71,7 @@ TIP: The very first analysis can take a moment while Chrome loads the model — 
 | shot3-rewrite.png | 1280×800 | Screenshot 3 — kinder rewrite flow |
 | shot4-languages.png | 1280×800 | Screenshot 4 — multilingual (Polish demo) |
 | shot5-privacy.png | 1280×800 | Screenshot 5 — on-device privacy |
+| shot6-controls.png | 1280×800 | Screenshot 6 — per-site & global controls (v1.3.0) |
 | tile-small.png | 440×280 | Small promo tile |
 | tile-marquee.png | 1400×560 | Marquee promo tile |
 

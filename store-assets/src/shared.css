@@ -74,6 +74,7 @@ body {
 }
 .cv-tooltip-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
 .cv-tooltip-title { font-weight: 700; font-size: 15px; }
+.cv-tooltip-refresh { color: #9ca3af; font-size: 14px; line-height: 1; margin-left: auto; margin-right: 5px; }
 .cv-tooltip-close { color: #9ca3af; font-size: 16px; line-height: 1; }
 .cv-tooltip-reason { color: #d1d5db; font-size: 13px; margin-bottom: 4px; }
 .cv-tooltip-rewrite { border-top: 1px solid #374151; padding-top: 11px; margin-top: 11px; }
@@ -85,11 +86,22 @@ body {
   background: #111827; border-radius: 8px; padding: 11px;
   color: #e5e7eb; font-size: 13px; line-height: 1.6; margin-bottom: 11px;
 }
-.cv-tooltip-copy {
+.cv-tooltip-actions { display: flex; gap: 8px; }
+.cv-tooltip-apply {
   display: inline-flex; align-items: center; gap: 6px;
   background: #3b82f6; color: #fff; border-radius: 7px;
   padding: 6px 14px; font-size: 12.5px; font-weight: 600;
 }
+.cv-tooltip-copy {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: transparent; color: #d1d5db; border: 1px solid #4b5563; border-radius: 7px;
+  padding: 6px 14px; font-size: 12.5px; font-weight: 600;
+}
+.cv-tooltip-footer {
+  border-top: 1px solid #374151; margin-top: 10px; padding-top: 8px;
+  display: flex; justify-content: flex-end;
+}
+.cv-tooltip-mute { font-size: 11px; color: #6b7280; }
 
 /* ── Footer brand strip on screenshots ── */
 .brand-strip {

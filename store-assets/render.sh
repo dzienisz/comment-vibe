@@ -17,5 +17,6 @@ shot shot2-labels    1280 800
 shot shot3-rewrite   1280 800
 shot shot4-languages 1280 800
 shot shot5-privacy   1280 800
+shot shot6-controls  1280 800
 shot tile-small       440 280
 shot tile-marquee    1400 560

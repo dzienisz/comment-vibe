@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="shared.css">
+<style>
+.popup {
+  width: 320px; background: #fff; border-radius: 16px; padding: 20px;
+  box-shadow: 0 18px 50px rgba(49,46,129,0.16), 0 2px 6px rgba(49,46,129,0.08);
+  display: flex; flex-direction: column; gap: 13px;
+}
+.popup .p-head { display: flex; align-items: center; gap: 10px; }
+.popup .p-head .icon { font-size: 26px; line-height: 1; }
+.popup .p-head .t { font-size: 16px; font-weight: 700; color: #111827; }
+.popup .p-head .s { font-size: 11px; color: #6b7280; }
+.p-status {
+  display: flex; align-items: center; gap: 8px; background: #f0fdf4;
+  color: #15803d; font-size: 13px; font-weight: 500;
+  padding: 8px 12px; border-radius: 10px;
+}
+.p-dot { width: 8px; height: 8px; border-radius: 50%; background: #22c55e; }
+.p-prefs { border-top: 1px solid #e5e7eb; border-bottom: 1px solid #e5e7eb; padding: 11px 0; display: flex; flex-direction: column; gap: 9px; }
+.p-row { display: flex; align-items: center; gap: 9px; font-size: 13px; font-weight: 500; color: #374151; }
+.p-row .box {
+  width: 15px; height: 15px; border-radius: 4px; background: #3b82f6;
+  color: #fff; font-size: 11px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+}
+.p-pills { display: flex; flex-wrap: wrap; gap: 6px; }
+.p-pills .cv-badge { padding: 3px 10px; font-size: 12px; box-shadow: none; }
+.callout {
+  position: absolute; background: #fff; border-radius: 14px; padding: 14px 18px;
+  box-shadow: 0 10px 30px rgba(49,46,129,0.15); font-size: 14px; color: #374151;
+  display: flex; align-items: center; gap: 10px; font-weight: 500;
+}
+.callout .dot { width: 9px; height: 9px; border-radius: 50%; background: #6d28d9; }
+.stage { position: relative; }
+</style></head>
+<body>
+<div class="canvas">
+  <div class="headline">In control — <em>per site, per click.</em></div>
+  <div class="subline">Mute the badge on any site from the tooltip's "Hide on this site" link, or flip the switches in the popup. Your preferences sync with your browser profile.</div>
+
+  <div class="stage" style="gap:56px;">
+    <div class="popup">
+      <div class="p-head">
+        <span class="icon">💬</span>
+        <div><div class="t">Comment Vibe</div><div class="s">Write kinder, more constructive comments</div></div>
+      </div>
+      <div class="p-status"><span class="p-dot"></span>Chrome AI ready ✓</div>
+      <div class="p-prefs">
+        <div class="p-row"><span class="box">✓</span>Enable Comment Vibe</div>
+        <div class="p-row"><span class="box">✓</span>Enabled on linkedin.com</div>
+      </div>
+      <div class="p-pills">
+        <span class="cv-badge cv-badge--positive">😊 Positive</span>
+        <span class="cv-badge cv-badge--neutral">😐 Neutral</span>
+        <span class="cv-badge cv-badge--negative">😕 Negative</span>
+        <span class="cv-badge cv-badge--toxic">🚫 Toxic</span>
+      </div>
+    </div>
+
+    <div class="cv-tooltip" style="width:340px;">
+      <div class="cv-tooltip-header">
+        <span class="cv-tooltip-title">😕 Negative</span>
+        <span class="cv-tooltip-refresh">↻</span>
+        <span class="cv-tooltip-close">✕</span>
+      </div>
+      <div class="cv-tooltip-reason">Direct personal criticism — this may come across as harsh to the reader.</div>
+      <div class="cv-tooltip-footer"><span class="cv-tooltip-mute" style="color:#93c5fd; text-decoration:underline;">Hide on this site</span></div>
+    </div>
+  </div>
+
+  <div class="callout" style="right:96px; bottom:120px;"><span class="dot"></span>One click — no reload needed</div>
+
+  <div class="brand-strip">
+    <svg width="26" height="26" viewBox="0 0 128 128"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8b5cf6"/><stop offset="1" stop-color="#4f46e5"/></linearGradient></defs><rect width="128" height="128" rx="30" fill="url(#g)"/><rect x="18" y="26" width="92" height="60" rx="14" fill="#fff"/><path d="M36 82 L36 102 L58 84 Z" fill="#fff"/><circle cx="44" cy="56" r="8.5" fill="#22c55e"/><circle cx="64" cy="56" r="8.5" fill="#f59e0b"/><circle cx="84" cy="56" r="8.5" fill="#ef4444"/></svg>
+    Comment Vibe <span class="tag">· unobtrusive by default, off when you say so</span>
+  </div>
+</div>
+</body></html>
