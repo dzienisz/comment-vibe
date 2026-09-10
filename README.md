@@ -216,8 +216,9 @@ zip -r comment-vibe.zip . -x "*.DS_Store" -x "*.zip" -x "*.git*"
 3. The text is sent to a `LanguageModel` session (Chrome's Prompt API) using few-shot examples + prefix prompting to force structured JSON output from Gemini Nano
 4. The JSON response is parsed and normalised — the `normalize()` function maps any alternative key names the model invents back to the expected schema
 5. In parallel, the **Language Detector API** identifies the comment's language. If it isn't English, the **Translator API** translates the label, reason, and rewrite into that language (cached per language pair). This is best-effort — any failure falls back to the English result
-6. A fixed-position badge appears at the bottom-right corner of the input, coloured by sentiment
-7. Clicking the badge opens a dark tooltip with the reason and (for negative/toxic results) a rewrite suggestion with a one-click copy button
+6. A fixed-position badge appears at the bottom-right corner of the input, coloured by sentiment. While you keep typing the last verdict stays on screen (dimmed, with a spinner) instead of flashing "Analyzing…" on every keystroke
+7. Clicking the badge opens a dark tooltip with the reason and (for negative/toxic results) a rewrite suggestion you can insert straight into the field with **Use this rewrite**, or copy with one click
+8. Don't want it somewhere? The tooltip's **Hide on this site** link or the popup's per-site/global toggles silence the badge — preferences sync via `storage.sync` and apply instantly, no reload needed
 
 ## License
 

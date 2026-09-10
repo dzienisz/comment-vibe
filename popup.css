@@ -68,6 +68,37 @@ body {
   font-size: 11px;
 }
 .setup.visible { display: block; }
+
+/* Download prompt is informational, not a warning */
+.setup--info {
+  background: #eff6ff;
+  border-color: #93c5fd;
+  color: #1e3a8a;
+}
+.setup--info .setup-button { background: #2563eb; }
+.setup--info .setup-button:hover:not(:disabled) { background: #1d4ed8; }
+.setup--info code { background: rgba(0,0,0,0.07); }
+
+/* ── Enable / per-site toggles ── */
+.prefs {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-top: 1px solid #e5e7eb;
+  border-bottom: 1px solid #e5e7eb;
+  padding: 10px 0;
+}
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #374151;
+  cursor: pointer;
+}
+.toggle input { accent-color: #3b82f6; width: 14px; height: 14px; }
+
 .setup-button {
   display: block;
   margin: 8px 0;
@@ -103,3 +134,19 @@ body {
 
 /* ── Footer ── */
 .footer { font-size: 10px; color: #d1d5db; text-align: center; }
+
+/* ── Dark mode ── */
+@media (prefers-color-scheme: dark) {
+  body { background: #111827; color: #f3f4f6; }
+  .header-text p { color: #9ca3af; }
+  .info { color: #9ca3af; }
+  .status--checking { background: #1f2937; color: #d1d5db; }
+  .status--ok { background: #052e16; color: #4ade80; }
+  .status--err { background: #450a0a; color: #fca5a5; }
+  .setup { background: #292004; border-color: #713f12; color: #fde68a; }
+  .setup code { background: rgba(255,255,255,0.12); }
+  .setup--info { background: #172554; border-color: #1d4ed8; color: #bfdbfe; }
+  .prefs { border-color: #374151; }
+  .toggle { color: #d1d5db; }
+  .footer { color: #9ca3af; }
+}

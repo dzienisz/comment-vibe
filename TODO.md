@@ -23,10 +23,11 @@ file is only the forward look. Current release: **v1.2.3** (Chrome + Firefox).
       setup on both browsers, but in-page the badge still silently never appears
       when the model is unavailable. A one-time, dismissible hint near a focused
       comment box would help adoption.
-- [ ] **Firefox: honest first-run download feedback in-page.** The popup shows
+- [x] **Firefox: honest first-run download feedback in-page.** The popup shows
       model-download progress, but the very first `cv-analyze` after enabling can
       be slow; consider a "Preparing…" badge state on the Firefox path too
       (Chrome already has one via `getModelStatus`).
+      → shipped: after `FIREFOX_SLOW_MS` the badge swaps to "Preparing AI model…".
 
 ## Visibility / marketing (started 2026-07-19)
 

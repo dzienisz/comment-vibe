@@ -6,6 +6,8 @@ const assert = require('node:assert/strict');
 const {
   analyzeText,
   analyzeViaBackground,
+  applyRewrite,
+  applyViaExecCommand,
   beginInputChange,
   buildMessages,
   cacheKey,
@@ -16,12 +18,14 @@ const {
   getCachedResult,
   getModelStatus,
   getSession,
+  hostDisabled,
   invalidateRequest,
   isCleanupEligible,
   isCurrentRequest,
   isFirefoxMLContext,
   normalize,
   normalizeDetectedLanguage,
+  normalizeHost,
   parseAnalysisResponse,
   parseResponse,
   resetSessionState,
@@ -780,6 +784,82 @@ test('analyzeViaBackground surfaces background errors', async () => {
 
   global.browser = { runtime: { sendMessage: async () => undefined } };
   await assert.rejects(analyzeViaBackground('long enough text'), /analysis failed/);
+});
+
+test('normalizeHost lowercases and strips a leading www.', () => {
+  assert.equal(normalizeHost('WWW.LinkedIn.COM'), 'linkedin.com');
+  assert.equal(normalizeHost('news.ycombinator.com'), 'news.ycombinator.com');
+  assert.equal(normalizeHost(''), '');
+  assert.equal(normalizeHost(undefined), '');
+});
+
+test('hostDisabled matches the normalized host list and the global toggle', () => {
+  const hosts = new Set(['linkedin.com']);
+  assert.equal(hostDisabled('www.linkedin.com', hosts, true), true);
+  assert.equal(hostDisabled('linkedin.com', hosts, true), true);
+  assert.equal(hostDisabled('m.linkedin.com', hosts, true), false);
+  assert.equal(hostDisabled('linkedin.com', hosts, false), true);
+  assert.equal(hostDisabled('anything.example', hosts, false), true);
+  assert.equal(hostDisabled('anything.example', new Set(), true), false);
+});
+
+test('applyRewrite sets a textarea value and fires an input event', () => {
+  const dispatched = [];
+  const el = {
+    tagName: 'TEXTAREA',
+    value: 'harsh draft',
+    dispatchEvent: event => dispatched.push(event),
+    focus() { this.focused = true; },
+  };
+
+  applyRewrite(el, 'kinder version');
+
+  assert.equal(el.value, 'kinder version');
+  assert.equal(el.focused, true);
+  assert.equal(dispatched.length, 1);
+  assert.equal(dispatched[0].type, 'input');
+  assert.equal(dispatched[0].bubbles, true);
+});
+
+test('applyRewrite prefers execCommand for rich-text editors', () => {
+  const commands = [];
+  const dispatched = [];
+  const el = {
+    tagName: 'DIV',
+    textContent: 'harsh draft',
+    ownerDocument: {
+      execCommand: (command, ui, value) => { commands.push([command, value]); return true; },
+      getSelection: () => null,
+      createRange: () => null,
+    },
+    dispatchEvent: event => dispatched.push(event),
+    focus() {},
+  };
+
+  applyRewrite(el, 'kinder version');
+
+  assert.deepEqual(commands, [['insertText', 'kinder version']]);
+  assert.equal(el.textContent, 'harsh draft');
+  assert.equal(dispatched.length, 1);
+});
+
+test('applyRewrite falls back to textContent when execCommand is unavailable', () => {
+  const el = {
+    tagName: 'DIV',
+    textContent: 'harsh draft',
+    ownerDocument: {},
+    dispatchEvent() {},
+    focus() {},
+  };
+
+  applyRewrite(el, 'kinder version');
+
+  assert.equal(el.textContent, 'kinder version');
+});
+
+test('applyViaExecCommand reports false when the document cannot run it', () => {
+  assert.equal(applyViaExecCommand({ tagName: 'DIV', ownerDocument: {} }, 'x'), false);
+  assert.equal(applyViaExecCommand({ tagName: 'DIV' }, 'x'), false);
 });
 
 test('Chrome Prompt API wins over the Firefox path when both exist', async () => {
