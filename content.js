@@ -286,9 +286,11 @@ function applySettings(list, enabled) {
 
 function loadSettings() {
   const area = getStorageArea();
-  if (!area) return;
+  if (!area) return Promise.resolve();
   const defaults = { [STORAGE_KEYS.disabledHosts]: [], [STORAGE_KEYS.enabled]: true };
-  Promise.resolve(area.get(defaults))
+  // Awaited by init() before tracking starts — otherwise a slow storage read
+  // could let the badge fire on a site the user already disabled.
+  return Promise.resolve(area.get(defaults))
     .then(data => applySettings(data?.[STORAGE_KEYS.disabledHosts], data?.[STORAGE_KEYS.enabled]))
     .catch(() => {});
 }
@@ -1081,7 +1083,7 @@ function watchDOM() {
 async function init() {
   const hasChromeAI = typeof LanguageModel !== 'undefined' || !!window.ai?.languageModel;
   if (hasChromeAI) {
-    loadSettings();
+    await loadSettings();
     watchSettings();
     scanPage();
     watchDOM();
@@ -1099,10 +1101,10 @@ async function init() {
 // for the background's cv-ml-ready broadcast instead of giving up.
 function initFirefox() {
   let started = false;
-  const start = () => {
+  const start = async () => {
     if (started) return;
     started = true;
-    loadSettings();
+    await loadSettings();
     watchSettings();
     scanPage();
     watchDOM();

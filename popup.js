@@ -99,9 +99,19 @@ async function initPrefs(api) {
   globalBox.addEventListener('change', () => {
     Promise.resolve(storage.set({ cvEnabled: globalBox.checked })).catch(() => {});
   });
-  siteBox.addEventListener('change', () => {
-    if (siteBox.checked) disabled.delete(host); else disabled.add(host);
-    Promise.resolve(storage.set({ cvDisabledHosts: [...disabled] })).catch(() => {});
+  siteBox.addEventListener('change', async () => {
+    // Re-read before writing: `disabled` is a snapshot from popup-open time and
+    // another tab or synced device may have edited the list since.
+    const fresh = await Promise.resolve(
+      storage.get({ cvDisabledHosts: [] }),
+    ).catch(() => null);
+    const current = new Set(
+      (fresh?.cvDisabledHosts ?? [...disabled]).map(normalizeHost),
+    );
+    if (siteBox.checked) current.delete(host); else current.add(host);
+    disabled.clear();
+    current.forEach(h => disabled.add(h));
+    Promise.resolve(storage.set({ cvDisabledHosts: [...current] })).catch(() => {});
   });
 }
 
