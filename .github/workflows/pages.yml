@@ -41,7 +41,7 @@ jobs:
           cp -r playground/. _site/playground/
           # assets referenced by the landing page (favicon + social card)
           cp icons/icon128.png _site/icon128.png
-          cp store-assets/shot1-hero.png _site/og-image.png
+          cp store-assets/og-image.png _site/og-image.png
 
       - name: Configure Pages
         uses: actions/configure-pages@v6

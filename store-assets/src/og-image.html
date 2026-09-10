@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="shared.css">
+<style>
+/* OG card: rendered at exactly 1200×630 (1.91:1) — no crop, but keep
+   everything inside a ~48px safe margin anyway for stricter scrapers. */
+.og-canvas {
+  width: 1200px; height: 630px;
+  background: linear-gradient(150deg, #f5f3ff 0%, #eef2ff 55%, #e0e7ff 100%);
+  padding: 0 64px;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center; text-align: center;
+  position: relative;
+}
+.og-headline {
+  font-size: 56px; font-weight: 800; letter-spacing: -0.02em;
+  color: #1e1b4b; line-height: 1.15; max-width: 950px;
+}
+.og-headline em { font-style: normal; color: #6d28d9; }
+.og-badges { display: flex; gap: 10px; margin-top: 34px; }
+.og-badges .cv-badge { font-size: 15px; padding: 6px 16px; }
+.og-brand {
+  position: absolute; bottom: 36px;
+  display: flex; align-items: center; gap: 10px;
+  font-size: 17px; font-weight: 700; color: #4338ca;
+}
+.og-brand .tag { font-weight: 500; color: #6b7280; }
+</style></head>
+<body>
+<div class="og-canvas">
+  <div class="og-headline">Know how you sound — <em>before</em> you post.</div>
+  <div class="og-badges">
+    <span class="cv-badge cv-badge--positive">😊 Positive</span>
+    <span class="cv-badge cv-badge--neutral">😐 Neutral</span>
+    <span class="cv-badge cv-badge--negative">😕 Negative</span>
+    <span class="cv-badge cv-badge--toxic">🚫 Toxic</span>
+  </div>
+  <div class="og-brand">
+    <svg width="28" height="28" viewBox="0 0 128 128"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8b5cf6"/><stop offset="1" stop-color="#4f46e5"/></linearGradient></defs><rect width="128" height="128" rx="30" fill="url(#g)"/><rect x="18" y="26" width="92" height="60" rx="14" fill="#fff"/><path d="M36 82 L36 102 L58 84 Z" fill="#fff"/><circle cx="44" cy="56" r="8.5" fill="#22c55e"/><circle cx="64" cy="56" r="8.5" fill="#f59e0b"/><circle cx="84" cy="56" r="8.5" fill="#ef4444"/></svg>
+    Comment Vibe <span class="tag">· on-device AI tone check</span>
+  </div>
+</div>
+</body></html>
