@@ -17,11 +17,10 @@ file is only the forward look. Current release: **v1.3.0** (Chrome + Firefox).
 - **Release**: `scripts/bump-version.sh` → edit `CHANGELOG.md` → commit → push a
   `vX.Y.Z` tag → `.github/workflows/release.yml` builds both zips (via
   `scripts/package.sh`) and publishes the GitHub Release.
-- **v1.3.0 status (2026-09-10):** GitHub Release + AMO done. CWS publish was
-  blocked until Privacy practices were filled (new `storage`/`activeTab`
-  permissions) — done manually, in review. Refreshed store screenshots
-  (incl. new `shot6-controls.png`) and updated `listing.md` copy are ready
-  to upload to the CWS dashboard once 1.3.0 goes live.
+- **v1.3.0 status:** live on all three channels (GitHub Release, AMO,
+  Chrome Web Store — approved and public 2026-09-10).
+- [ ] **Upload refreshed CWS listing assets** — replace shot1/3/4, add
+      `shot6-controls.png`, paste updated description from `store-assets/listing.md`.
 
 ## Shippable UX (no new API needed)
 
