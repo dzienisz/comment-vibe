@@ -368,12 +368,12 @@ function buildDemo(api, onOptionsChange = () => {}) {
       bar.style.display = 'none';
       status.textContent = '';
       output.classList.add('error');
+      output.setAttribute('role', 'alert');
       output.textContent = `Błąd: ${e?.message || e}\n\n` +
         `Najczęstsze przyczyny:\n` +
         `• To API jest niedostępne w tej wersji Chrome (zobacz „Czy zadziała u Ciebie?")\n` +
         `• Model nie został jeszcze pobrany — uruchom ponownie\n` +
         `• Strona nie jest w bezpiecznym kontekście (użyj http://localhost)`;
-      output.setAttribute('role', 'alert');
       aiLog(`❌ błąd: ${e?.message || e}`);
       console.error('[Built-in AI] pełny błąd:', e);
     } finally {
