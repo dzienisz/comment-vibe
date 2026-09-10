@@ -5,6 +5,41 @@ All notable changes to **Comment Vibe** are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **Per-site and global on/off controls.** The tooltip gains a "Hide on this
+  site" link and the popup gains "Enable Comment Vibe" + "Enabled on
+  <hostname>" toggles, backed by `storage.sync` (new `storage` + `activeTab`
+  permissions). Content scripts listen to `storage.onChanged`, so toggling
+  applies to already-open pages without a reload.
+- **"Use this rewrite" button.** The tooltip can now insert the kinder
+  suggestion directly into the field — via the native value setter for
+  React-controlled textareas and `execCommand('insertText')` for rich-text
+  editors like Quill/Draft — instead of requiring copy → select-all → paste.
+- **"Download model" button in the popup.** When `LanguageModel.availability()`
+  reports `downloadable`/`downloading`, the popup now says so honestly and can
+  start the Gemini Nano download itself (with progress) instead of showing the
+  stale `chrome://flags` instructions. The "not available" path was rewritten
+  for Chrome 138+ (version/hardware requirements, `chrome://on-device-internals`;
+  flags only mentioned for 127–137).
+- **Keyboard accessibility.** The badge is a focusable `role="button"`
+  (Enter/Space opens the tooltip), Escape dismisses the tooltip, and
+  `prefers-reduced-motion` disables the spinner/badge animations.
+- **Firefox first-run feedback.** If a `cv-analyze` call is still running
+  after a few seconds (almost always the silent first-run model download), the
+  badge switches to "Preparing AI model…" instead of spinning "Analyzing…"
+  forever.
+- Dark-mode styling for the popup (`prefers-color-scheme`), matching the
+  already-dark tooltip.
+
+### Changed
+
+- **No more badge flicker while typing.** Re-analysis now keeps the last
+  verdict on screen, dimmed with a small spinner, instead of flashing a gray
+  "Analyzing…" pill on every keystroke.
+
 ## [1.2.6] - 2026-08-03
 
 ### Changed

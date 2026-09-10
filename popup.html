@@ -27,15 +27,35 @@
       the tone of your comments in real time — completely on-device, no data sent anywhere.
     </div>
 
+    <div id="prefs" class="prefs" hidden>
+      <label class="toggle">
+        <input type="checkbox" id="global-enabled" checked>
+        <span>Enable Comment Vibe</span>
+      </label>
+      <label class="toggle" id="site-row" hidden>
+        <input type="checkbox" id="site-enabled" checked>
+        <span id="site-label">Enabled on this site</span>
+      </label>
+    </div>
+
+    <div id="setup-download" class="setup setup--info">
+      <strong>⏳ AI model not downloaded yet</strong>
+      <p>Chrome needs to fetch the Gemini Nano model once (a few GB). It usually
+        downloads automatically in the background — you can also start it now:</p>
+      <button id="dl-start" class="setup-button" type="button">Download model</button>
+      <p id="dl-progress" hidden></p>
+    </div>
+
     <div id="setup" class="setup">
       <strong>⚠️ Chrome AI not available</strong>
-      <p>To enable it:</p>
+      <p>Your Chrome version or hardware may not support Gemini Nano:</p>
       <ol>
-        <li>Open <code>chrome://flags</code></li>
-        <li>Search for <em>"Prompt API"</em></li>
-        <li>Set it to <strong>Enabled</strong></li>
-        <li>Relaunch Chrome</li>
-        <li>Visit <code>chrome://components</code> and update <em>Optimization Guide On Device Model</em></li>
+        <li>Use <strong>Chrome 138+</strong> on desktop (Windows 10/11, macOS 13+, Linux)</li>
+        <li>Hardware minimums: 16 GB RAM, &gt;4 GB VRAM, 22 GB free disk</li>
+        <li>Check <code>chrome://on-device-internals</code> for model status</li>
+        <li>On Chrome 127–137 only: enable <em>"Prompt API for Gemini Nano"</em> in
+          <code>chrome://flags</code>, then update <em>Optimization Guide On Device
+          Model</em> in <code>chrome://components</code></li>
       </ol>
     </div>
 
@@ -58,7 +78,7 @@
       <span class="pill pill--toxic">🚫 Toxic</span>
     </div>
 
-    <div class="footer">Works on LinkedIn · Twitter/X · YouTube · and more</div>
+    <div class="footer">Works on LinkedIn · Twitter/X · YouTube · and more<span id="version"></span></div>
 
   </div>
   <script src="popup.js"></script>

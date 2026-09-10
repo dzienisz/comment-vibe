@@ -8,6 +8,12 @@ const SESSION_TTL = 600_000;
 const ANALYSIS_TIMEOUT_MS = 30_000;
 const MODEL_DOWNLOAD_TIMEOUT_MS = 300_000;
 const RESULT_CACHE_TTL = 300_000; // 5 minutes
+// Firefox's classifier has no "downloading" availability probe; if an analysis
+// is still running after this delay it is almost certainly the first-run model
+// download, so the badge swaps to the honest "preparing" state.
+const FIREFOX_SLOW_MS = 6_000;
+
+const STORAGE_KEYS = { disabledHosts: 'cvDisabledHosts', enabled: 'cvEnabled' };
 
 const SENTIMENT_CLASS = {
   positive: 'cv-badge--positive',
@@ -219,6 +225,94 @@ function getCachedResult(text) {
 
 function setCachedResult(text, result) {
   resultCache.set(cacheKey(text), { result, expiresAt: Date.now() + RESULT_CACHE_TTL });
+}
+
+// ── Site enablement (storage.sync prefs) ─────────────────────────────────────
+//
+// The badge can be silenced globally or per hostname — from the popup toggles
+// or the tooltip's "Hide on this site" link. Preferences live in storage.sync
+// so they follow the user's browser profile. storage.onChanged pushes edits to
+// already-injected content scripts, so toggling works without a page reload.
+// When storage is unavailable (e.g. the test harness page) the extension
+// defaults to enabled everywhere.
+
+let globallyEnabled = true;
+const disabledHosts = new Set();
+const liveStates = new Set();
+
+function getStorageArea() {
+  if (typeof browser !== 'undefined' && browser.storage?.sync) return browser.storage.sync;
+  if (typeof chrome !== 'undefined' && chrome.storage?.sync) return chrome.storage.sync;
+  return null;
+}
+
+function getStorageOnChanged() {
+  if (typeof browser !== 'undefined' && browser.storage?.onChanged) return browser.storage.onChanged;
+  if (typeof chrome !== 'undefined' && chrome.storage?.onChanged) return chrome.storage.onChanged;
+  return null;
+}
+
+// "www.linkedin.com" and "linkedin.com" are the same site to a user.
+function normalizeHost(host) {
+  return String(host || '').toLowerCase().replace(/^www\./, '');
+}
+
+function hostDisabled(host, hosts = disabledHosts, enabled = globallyEnabled) {
+  return !enabled || hosts.has(normalizeHost(host));
+}
+
+function siteDisabled() {
+  if (typeof location === 'undefined') return false;
+  return hostDisabled(location.hostname);
+}
+
+function disableState(state) {
+  invalidateRequest(state);
+  sp(state.badge, 'display', 'none');
+  dismissTooltip(state.tooltip);
+}
+
+function applySettings(list, enabled) {
+  disabledHosts.clear();
+  (Array.isArray(list) ? list : []).forEach(h => disabledHosts.add(normalizeHost(h)));
+  globallyEnabled = enabled !== false;
+  if (siteDisabled()) {
+    for (const state of liveStates) disableState(state);
+  } else {
+    // Re-enabled: force a fresh pass so badges come back immediately.
+    for (const state of liveStates) state.onInput?.(true);
+  }
+}
+
+function loadSettings() {
+  const area = getStorageArea();
+  if (!area) return;
+  const defaults = { [STORAGE_KEYS.disabledHosts]: [], [STORAGE_KEYS.enabled]: true };
+  Promise.resolve(area.get(defaults))
+    .then(data => applySettings(data?.[STORAGE_KEYS.disabledHosts], data?.[STORAGE_KEYS.enabled]))
+    .catch(() => {});
+}
+
+function watchSettings() {
+  getStorageOnChanged()?.addListener((changes, areaName) => {
+    if (areaName && areaName !== 'sync') return;
+    const hostChange = changes[STORAGE_KEYS.disabledHosts];
+    const enabledChange = changes[STORAGE_KEYS.enabled];
+    if (!hostChange && !enabledChange) return;
+    applySettings(
+      hostChange ? hostChange.newValue : [...disabledHosts],
+      enabledChange ? enabledChange.newValue : globallyEnabled,
+    );
+  });
+}
+
+function disableSite(host) {
+  disabledHosts.add(normalizeHost(host));
+  const area = getStorageArea();
+  if (area) {
+    Promise.resolve(area.set({ [STORAGE_KEYS.disabledHosts]: [...disabledHosts] })).catch(() => {});
+  }
+  for (const state of liveStates) disableState(state);
 }
 
 // ── Firefox path (WebExtensions AI API) ──────────────────────────────────────
@@ -510,10 +604,23 @@ function showBadge(badge, sentiment) {
 function showAnalyzing(badge) {
   badge.className = 'cv-badge cv-badge--analyzing';
   badge.innerHTML = '<span class="cv-spinner"></span><span>Analyzing…</span>';
+  badge.setAttribute('aria-label', 'Analyzing comment tone');
   sp(badge, 'display',    'inline-flex');
   sp(badge, 'background', '#e5e7eb');
   sp(badge, 'color',      '#374151');
   sp(badge, 'border',     'none');
+}
+
+// While the user keeps typing we re-analyze on every debounce; flashing the
+// gray "Analyzing…" pill each keystroke is visual noise. Instead keep the last
+// verdict on screen, dimmed with a small spinner, until the new result lands.
+function showUpdating(badge) {
+  badge.classList.add('cv-badge--updating');
+  if (!badge.querySelector('.cv-spinner')) {
+    const spinner = document.createElement('span');
+    spinner.className = 'cv-spinner';
+    badge.prepend(spinner);
+  }
 }
 
 function showModelDownloading(badge) {
@@ -550,6 +657,9 @@ function escHtml(str = '') {
 function createUI() {
   const badge = document.createElement('div');
   badge.className = 'cv-badge';
+  badge.setAttribute('role', 'button');
+  badge.setAttribute('tabindex', '0');
+  badge.setAttribute('aria-label', 'Comment tone');
   sp(badge, 'display', 'none');
 
   const tooltip = document.createElement('div');
@@ -558,6 +668,12 @@ function createUI() {
 
   document.body.appendChild(badge);
   document.body.appendChild(tooltip);
+
+  badge.addEventListener('keydown', e => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    e.preventDefault();
+    badge.click();
+  });
 
   badge.addEventListener('click', e => {
     e.stopPropagation();
@@ -573,8 +689,9 @@ function createUI() {
   return { badge, tooltip };
 }
 
-function renderBadge(badge, tooltip, result, onRefresh) {
+function renderBadge(badge, tooltip, result, actions = {}) {
   const { sentiment, emoji, label, reason, rewrite } = result;
+  const { onRefresh, onApplyRewrite, onHideSite } = actions;
 
   const badgeEmoji = document.createElement('span');
   badgeEmoji.textContent = emoji;
@@ -582,6 +699,7 @@ function renderBadge(badge, tooltip, result, onRefresh) {
   badgeLabel.textContent = label;
   badge.className = `cv-badge ${SENTIMENT_CLASS[sentiment] ?? SENTIMENT_CLASS.neutral}`;
   badge.replaceChildren(badgeEmoji, badgeLabel);
+  badge.setAttribute('aria-label', `Comment tone: ${label}. Activate for details.`);
   showBadge(badge, sentiment);
 
   const header = document.createElement('div');
@@ -627,19 +745,46 @@ function renderBadge(badge, tooltip, result, onRefresh) {
     const rewriteText = document.createElement('div');
     rewriteText.className = 'cv-tooltip-rewrite-text';
     rewriteText.textContent = rewrite;
+    const actionsRow = document.createElement('div');
+    actionsRow.className = 'cv-tooltip-actions';
+    const applyBtn = document.createElement('button');
+    applyBtn.className = 'cv-tooltip-apply';
+    applyBtn.textContent = '✨ Use this rewrite';
     const copyBtn = document.createElement('button');
     copyBtn.className = 'cv-tooltip-copy';
-    copyBtn.textContent = '📋 Copy suggestion';
-    rewriteContainer.append(rewriteLabel, rewriteText, copyBtn);
+    copyBtn.textContent = '📋 Copy';
+    actionsRow.append(applyBtn, copyBtn);
+    rewriteContainer.append(rewriteLabel, rewriteText, actionsRow);
     tooltip.appendChild(rewriteContainer);
+
+    applyBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      onApplyRewrite?.(rewrite);
+      dismissTooltip(tooltip);
+    });
 
     copyBtn.addEventListener('click', e => {
       e.stopPropagation();
       navigator.clipboard.writeText(rewrite).then(() => {
         copyBtn.textContent = '✓ Copied!';
-        setTimeout(() => { copyBtn.textContent = '📋 Copy suggestion'; }, 2000);
+        setTimeout(() => { copyBtn.textContent = '📋 Copy'; }, 2000);
       }).catch(() => {});
     });
+  }
+
+  if (onHideSite) {
+    const footer = document.createElement('div');
+    footer.className = 'cv-tooltip-footer';
+    const mute = document.createElement('button');
+    mute.className = 'cv-tooltip-mute';
+    mute.type = 'button';
+    mute.textContent = 'Hide on this site';
+    mute.addEventListener('click', e => {
+      e.stopPropagation();
+      onHideSite();
+    });
+    footer.appendChild(mute);
+    tooltip.appendChild(footer);
   }
 }
 
@@ -651,6 +796,44 @@ function getText(el) {
   return (el.tagName === 'TEXTAREA' || el.tagName === 'INPUT')
     ? el.value
     : (el.innerText || el.textContent || '');
+}
+
+// Replacing the user's text needs care: React-controlled fields ignore a plain
+// `el.value =` assignment (the native setter must be invoked), and rich-text
+// editors like Quill/Draft only keep their internal model in sync when the
+// insertion goes through execCommand's real input pipeline.
+function applyViaExecCommand(el, text) {
+  try {
+    const doc = el.ownerDocument;
+    if (!doc?.execCommand) return false;
+    el.focus?.();
+    const selection = doc.getSelection?.();
+    const range = doc.createRange?.();
+    if (selection && range) {
+      range.selectNodeContents(el);
+      selection.removeAllRanges();
+      selection.addRange(range);
+    }
+    return doc.execCommand('insertText', false, text) === true;
+  } catch {
+    return false;
+  }
+}
+
+function applyRewrite(el, text) {
+  if (el.tagName === 'TEXTAREA' || el.tagName === 'INPUT') {
+    const proto = el.tagName === 'TEXTAREA'
+      ? globalThis.HTMLTextAreaElement?.prototype
+      : globalThis.HTMLInputElement?.prototype;
+    const setter = proto ? Object.getOwnPropertyDescriptor(proto, 'value')?.set : null;
+    if (setter) setter.call(el, text); else el.value = text;
+  } else if (!applyViaExecCommand(el, text)) {
+    el.textContent = text;
+  }
+  // The synthetic input event re-triggers our own onInput — deduped or turned
+  // into a fresh analysis of the kinder text, either way it's intended.
+  el.dispatchEvent?.(new Event('input', { bubbles: true }));
+  el.focus?.();
 }
 
 function invalidateRequest(state) {
@@ -676,14 +859,22 @@ function attachToInput(el) {
   if (tracked.has(el)) return;
 
   const { badge, tooltip } = createUI();
-  const state = { badge, tooltip, debounceTimer: null, abortController: null, lastText: '', requestId: 0, skipCacheOnce: false };
+  const state = { badge, tooltip, debounceTimer: null, abortController: null, lastText: '', lastResult: null, requestId: 0, skipCacheOnce: false };
   tracked.set(el, state);
+  liveStates.add(state);
 
-  const onInput = () => {
+  const ui = {
+    onRefresh: () => { state.skipCacheOnce = true; onInput(); },
+    onApplyRewrite: text => applyRewrite(el, text),
+    onHideSite: () => disableSite(location.hostname),
+  };
+
+  const onInput = (force = false) => {
+    if (siteDisabled()) return;
     const text = getText(el).trim();
     const forceRefresh = state.skipCacheOnce;
     state.skipCacheOnce = false;
-    const requestId = beginInputChange(state, text, forceRefresh);
+    const requestId = beginInputChange(state, text, force || forceRefresh);
     if (requestId === null) return;
     if (text.length < MIN_LENGTH) {
       sp(badge, 'display', 'none');
@@ -693,7 +884,7 @@ function attachToInput(el) {
 
     const abortController = new AbortController();
     state.abortController = abortController;
-    showAnalyzing(badge);
+    if (state.lastResult) showUpdating(badge); else showAnalyzing(badge);
     placeBadge(badge, el);
 
     state.debounceTimer = setTimeout(async () => {
@@ -707,7 +898,8 @@ function attachToInput(el) {
       // Re-use a recent result for identical text instead of re-running the model.
       const cached = !forceRefresh && getCachedResult(text);
       if (cached) {
-        renderBadge(badge, tooltip, cached, () => { state.skipCacheOnce = true; onInput(); });
+        state.lastResult = cached;
+        renderBadge(badge, tooltip, cached, ui);
         placeBadge(badge, el);
         return;
       }
@@ -719,6 +911,17 @@ function attachToInput(el) {
         showModelDownloading(badge);
         placeBadge(badge, el);
       }
+      // Firefox's first post-enable analysis blocks on a silent model download
+      // (the background owns that lifecycle and reports no progress in-page).
+      // If it's still running after a few seconds, say so instead of spinning.
+      const slowTimer = isFirefoxMLContext()
+        ? setTimeout(() => {
+            if (isCurrentRequest(state, requestId)) {
+              showModelDownloading(badge);
+              placeBadge(badge, el);
+            }
+          }, FIREFOX_SLOW_MS)
+        : null;
       const giveUpTimer = setTimeout(() => {
         abortController.abort();
         if (isCurrentRequest(state, requestId)) sp(badge, 'display', 'none');
@@ -726,13 +929,14 @@ function attachToInput(el) {
       try {
         const onEarlySentiment = sentiment => {
           if (!isCurrentRequest(state, requestId)) return;
-          renderBadge(badge, tooltip, {
+          state.lastResult = {
             sentiment,
             emoji:   EMOJI_FOR[sentiment],
             label:   LABEL_FOR[sentiment],
             reason:  '…',
             rewrite: null,
-          });
+          };
+          renderBadge(badge, tooltip, state.lastResult, ui);
           placeBadge(badge, el);
         };
         const [result, lang] = await Promise.all([
@@ -743,12 +947,14 @@ function attachToInput(el) {
         const localized = await localizeResult(result, lang);
         if (!isCurrentRequest(state, requestId)) return;
         setCachedResult(text, localized);
-        renderBadge(badge, tooltip, localized, () => { state.skipCacheOnce = true; onInput(); });
+        state.lastResult = localized;
+        renderBadge(badge, tooltip, localized, ui);
       } catch (error) {
         if (error?.name !== 'AbortError' && isCurrentRequest(state, requestId)) {
           sp(badge, 'display', 'none');
         }
       } finally {
+        clearTimeout(slowTimer);
         clearTimeout(giveUpTimer);
         if (state.abortController === abortController) state.abortController = null;
       }
@@ -757,6 +963,7 @@ function attachToInput(el) {
   };
 
   const onFocus = () => {
+    if (siteDisabled()) return;
     // Pre-warm the model as soon as the user focuses a comment field — this is
     // the moment their intent to use the AI feature is clear, so we can load
     // the session in the background instead of waiting for the first keystroke.
@@ -780,8 +987,10 @@ function attachToInput(el) {
     }
   };
 
-  el.addEventListener('input',  onInput);
-  el.addEventListener('keyup',  onInput);
+  const onInputEvent = () => onInput();
+  el.addEventListener('input',  onInputEvent);
+  el.addEventListener('keyup',  onInputEvent);
+  state.onInput = onInput;
   el.addEventListener('focus',  onFocus);
   el.addEventListener('blur',   onBlur);
   // capture: true — scroll events don't bubble, so this is the only way to
@@ -799,8 +1008,9 @@ function attachToInput(el) {
     badge.remove();
     tooltip.remove();
     resizeObserver.disconnect();
-    el.removeEventListener('input',  onInput);
-    el.removeEventListener('keyup',  onInput);
+    liveStates.delete(state);
+    el.removeEventListener('input',  onInputEvent);
+    el.removeEventListener('keyup',  onInputEvent);
     el.removeEventListener('focus',  onFocus);
     el.removeEventListener('blur',   onBlur);
     window.removeEventListener('scroll', reposition, { capture: true });
@@ -849,6 +1059,9 @@ function cleanupSubtree(root) {
 
 function watchDOM() {
   document.addEventListener('click', dismissActiveTooltip);
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') dismissActiveTooltip();
+  });
   new MutationObserver(mutations => {
     mutations.forEach(mutation => {
       mutation.addedNodes.forEach(node => {
@@ -868,6 +1081,8 @@ function watchDOM() {
 async function init() {
   const hasChromeAI = typeof LanguageModel !== 'undefined' || !!window.ai?.languageModel;
   if (hasChromeAI) {
+    loadSettings();
+    watchSettings();
     scanPage();
     watchDOM();
     return;
@@ -887,6 +1102,8 @@ function initFirefox() {
   const start = () => {
     if (started) return;
     started = true;
+    loadSettings();
+    watchSettings();
     scanPage();
     watchDOM();
   };
@@ -910,6 +1127,8 @@ if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     analyzeText,
     analyzeViaBackground,
+    applyRewrite,
+    applyViaExecCommand,
     beginInputChange,
     buildMessages,
     cacheKey,
@@ -920,12 +1139,14 @@ if (typeof module !== 'undefined' && module.exports) {
     getCachedResult,
     getModelStatus,
     getSession,
+    hostDisabled,
     invalidateRequest,
     isCleanupEligible,
     isCurrentRequest,
     isFirefoxMLContext,
     normalize,
     normalizeDetectedLanguage,
+    normalizeHost,
     parseAnalysisResponse,
     parseResponse,
     resetSessionState,

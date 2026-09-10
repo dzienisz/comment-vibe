@@ -27,6 +27,14 @@
 
 .cv-badge:hover { opacity: 0.85 !important; }
 
+.cv-badge:focus-visible {
+  outline: 2px solid #3b82f6 !important;
+  outline-offset: 2px !important;
+}
+
+/* re-analysis in progress — keep the last verdict visible but dimmed */
+.cv-badge--updating { opacity: 0.6 !important; }
+
 .cv-badge--analyzing {
   background: #e5e7eb !important;
   color: #374151 !important;
@@ -178,7 +186,12 @@
   word-break: break-word !important;
 }
 
-.cv-tooltip-copy {
+.cv-tooltip-actions {
+  display: flex !important;
+  gap: 8px !important;
+}
+
+.cv-tooltip-apply {
   all: unset !important;
   display: inline-flex !important;
   align-items: center !important;
@@ -194,6 +207,56 @@
   transition: background 0.15s !important;
 }
 
-.cv-tooltip-copy:hover {
+.cv-tooltip-apply:hover {
   background: #2563eb !important;
+}
+
+.cv-tooltip-copy {
+  all: unset !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+  background: transparent !important;
+  color: #d1d5db !important;
+  border: 1px solid #4b5563 !important;
+  border-radius: 7px !important;
+  padding: 5px 12px !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  font-family: inherit !important;
+  cursor: pointer !important;
+  transition: background 0.15s !important;
+}
+
+.cv-tooltip-copy:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: #f9fafb !important;
+}
+
+.cv-tooltip-footer {
+  border-top: 1px solid #374151 !important;
+  margin-top: 10px !important;
+  padding-top: 8px !important;
+  display: flex !important;
+  justify-content: flex-end !important;
+}
+
+.cv-tooltip-mute {
+  all: unset !important;
+  font-size: 11px !important;
+  color: #6b7280 !important;
+  font-family: inherit !important;
+  cursor: pointer !important;
+  padding: 2px 4px !important;
+  border-radius: 4px !important;
+}
+
+.cv-tooltip-mute:hover {
+  color: #d1d5db !important;
+  text-decoration: underline !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cv-spinner { animation: none !important; }
+  .cv-badge { transition: none !important; }
 }

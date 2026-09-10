@@ -23,6 +23,7 @@
       "48": "icons/icon48.png"
     }
   },
+  "permissions": ["storage", "activeTab"],
   "optional_permissions": ["trialML"],
   "background": {
     "scripts": ["background.js"]
