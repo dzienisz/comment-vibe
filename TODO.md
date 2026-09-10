@@ -1,24 +1,50 @@
 # TODO / Roadmap
 
 Working notes for what's next. Shipped history lives in `CHANGELOG.md`; this
-file is only the forward look. Current release: **v1.2.3** (Chrome + Firefox).
+file is only the forward look. Current release: **v1.3.0** (Chrome + Firefox).
 
 ## State of play
 
-- **Chrome** (Prompt API / Gemini Nano): tone badge, streaming, kinder rewrites,
-  multilingual output. Stable path.
-- **Firefox** (WebExtensions AI API / `browser.trial.ml`): tone badge only —
-  zero-shot classifier via `background.js`, no rewrite/streaming/translation
-  (the API exposes classification, not generation). Delegated from `content.js`.
-- **Tests**: `node --test` (`test/content.test.js`, `test/background.test.js`)
-  plus `test/harness.html` (`?api=modern|legacy|firefox`).
+- **Chrome** (Prompt API / Gemini Nano): tone badge, streaming, one-click
+  rewrite insertion, multilingual output, per-site/global off via storage.sync.
+  Stable path.
+- **Firefox** (WebExtensions AI API / `browser.trial.ml`): tone badge +
+  per-site/global off — zero-shot classifier via `background.js`, no
+  rewrite/streaming/translation (the API exposes classification, not
+  generation). Delegated from `content.js`.
+- **Tests**: `node --test` (`test/content.test.js`, `test/background.test.js`,
+  `test/playground.test.js`) plus `test/harness.html` (`?api=modern|legacy|firefox`).
 - **Release**: `scripts/bump-version.sh` → edit `CHANGELOG.md` → commit → push a
   `vX.Y.Z` tag → `.github/workflows/release.yml` builds both zips (via
   `scripts/package.sh`) and publishes the GitHub Release.
+- **v1.3.0 status (2026-09-10):** GitHub Release + AMO done. CWS publish was
+  blocked until Privacy practices were filled (new `storage`/`activeTab`
+  permissions) — done manually, in review. Refreshed store screenshots
+  (incl. new `shot6-controls.png`) and updated `listing.md` copy are ready
+  to upload to the CWS dashboard once 1.3.0 goes live.
 
 ## Shippable UX (no new API needed)
 
+Planned next (decided 2026-09-10, in rough priority order):
+
+- [ ] **Personal vibe stats** — candidate headline feature for 1.4.0. Popup
+      dashboard with positive/neutral/negative breakdown over 7 and 30 days,
+      stored locally via `chrome.storage` (permission already granted).
+      Turns a sometimes-helper into a habit/metric users return to — and gives
+      a fresh screenshot for the next release.
+- [ ] **Context-aware analysis** — read the post being replied to and factor it
+      into the tone judgement ("measured reply to an aggressive post" vs
+      "unprovoked attack"). Biggest quality jump available; the hard part is
+      per-site DOM parsing, not the AI.
+- [ ] **Platform tone calibration** — stricter system prompt on LinkedIn, more
+      relaxed on Reddit; a domain→prompt map is a few lines.
+- [ ] **Summarizer API for long threads** (✅ stable since Chrome 138) —
+      summarise the thread before the user replies; natural extension of
+      context-aware analysis.
 - [ ] **Keyboard shortcut** to trigger analysis on demand (bypass the 900 ms debounce).
+- [ ] **"Rate Comment Vibe" link in the popup** — shown only after ~10
+      analyses. No telemetry (privacy is the selling point), so store ratings
+      are the only feedback loop we get.
 - [ ] **Better "AI unavailable" content-script state.** The popup now explains
       setup on both browsers, but in-page the badge still silently never appears
       when the model is unavailable. A one-time, dismissible hint near a focused
@@ -34,10 +60,11 @@ file is only the forward look. Current release: **v1.2.3** (Chrome + Firefox).
 - [x] **Landing page** — `site/` deploys to https://dzienko.dev/comment-vibe/
       (playground moved to `/playground/`). Interactive simulated demo, both
       store CTAs, SEO/OG tags.
-- [ ] **Store title ASO** — apply "Comment Vibe — AI Comment Tone Checker":
-      AMO via dashboard (no re-upload needed), Chrome with the next version
-      upload (title comes from the manifest `name`). Proposals recorded in both
-      `store-assets/*listing.md` files.
+- [ ] **Store title ASO** — apply "Comment Vibe — AI Comment Tone Checker".
+      AMO: change in the dashboard, no re-upload needed — do it now.
+      Chrome: the title comes from manifest `name`, and 1.3.0 shipped without
+      the change — either wait for the next version or cut a 1.3.1 with just
+      the name bump. Proposals recorded in both `store-assets/*listing.md` files.
 - [ ] **Fire the posts** — drafts ready in `promo/posts.md`: Show HN,
       r/firefox (API experience report), r/SideProject, dev.to long-form,
       social (EN/PL), and a follow-up comment for issue #1. One channel at a
@@ -50,9 +77,11 @@ file is only the forward look. Current release: **v1.2.3** (Chrome + Firefox).
 
 ## Store / distribution
 
-- [ ] **`<all_urls>` justification** for both stores — it's the most common
-      review flag. Draft a short rationale (passive support on any comment box)
-      and keep it with the listing copy.
+- [x] **`<all_urls>` justification** — drafted and entered in the CWS Privacy
+      practices tab (2026-09-10, together with `activeTab`/`storage`
+      justifications for 1.3.0). Keep the text with the listing copy for AMO.
+      Remember: permission changes need Privacy practices updated *before*
+      tagging, or the release workflow stalls at the publish step.
 - [x] **Firefox AMO listing** — approved and linked from `README.md`:
       https://addons.mozilla.org/firefox/addon/comment-vibe-on-device-check/
 - [x] **Store submissions are automated** since v1.2.4: the release workflow

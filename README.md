@@ -153,7 +153,7 @@ The model is ~2–4 GB and downloads silently in the background. If the popup st
 
 ### Near-term
 - [ ] **Proofreader API** (🧪 origin trial) — layer grammar and spelling fixes on top of tone analysis
-- [ ] **Streaming** — switch to `promptStreaming()` so the badge updates as the model responds instead of waiting for the full result
+- [x] **Streaming** (✅ shipped in 1.2.6) — `promptStreaming()` colors the badge as soon as the sentiment token arrives, before reason/rewrite finish
 - [ ] **Keyboard shortcut** — manually trigger analysis instead of waiting for the debounce
 
 ### Medium-term
