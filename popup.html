@@ -7,80 +7,94 @@
   <link rel="stylesheet" href="popup.css">
 </head>
 <body>
-  <div class="wrap">
-
-    <div class="header">
-      <div class="header-icon">💬</div>
+  <main class="wrap">
+    <header class="header">
+      <div class="header-mark" aria-hidden="true">
+        <svg viewBox="0 0 40 40" fill="none"><path d="M8 9.5C8 6.46 10.46 4 13.5 4h13C29.54 4 32 6.46 32 9.5v10c0 3.04-2.46 5.5-5.5 5.5H19l-6.6 7.2c-.76.83-2.15.29-2.15-.84V25.1A5.5 5.5 0 0 1 8 20.5v-11Z" fill="currentColor"/><path d="M14 14h12M14 18.5h8" stroke="white" stroke-width="2.2" stroke-linecap="round"/></svg>
+      </div>
       <div class="header-text">
         <h1>Comment Vibe</h1>
-        <p>Write kinder, more constructive comments</p>
+        <p>A little clarity before you post.</p>
       </div>
-    </div>
+      <span class="private-mark" title="Your comments stay on this device">On-device</span>
+    </header>
 
-    <div id="status" class="status status--checking">
-      <span class="status-dot"></span>
+    <section id="status" class="status status--checking" aria-live="polite">
+      <span class="status-dot" aria-hidden="true"></span>
       <span id="status-text">Checking on-device AI…</span>
-    </div>
+    </section>
 
-    <div id="info" class="info">
-      Comment Vibe uses <strong>Chrome's built-in AI</strong> (Gemini Nano) to analyse
-      the tone of your comments in real time — completely on-device, no data sent anywhere.
-    </div>
+    <section id="info" class="info">
+      Comment Vibe reads the tone of the comment you are writing, then offers a calmer way to say it when useful. Your text stays on this device.
+    </section>
 
-    <div id="prefs" class="prefs" hidden>
+    <section id="prefs" class="prefs" hidden aria-label="Comment Vibe preferences">
+      <div class="section-heading">
+        <span>Where it helps</span>
+        <small>Changes apply right away</small>
+      </div>
       <label class="toggle">
+        <span class="toggle-copy">
+          <strong>Comment Vibe</strong>
+          <small>Show tone guidance while you write</small>
+        </span>
         <input type="checkbox" id="global-enabled" checked>
-        <span>Enable Comment Vibe</span>
+        <span class="switch" aria-hidden="true"></span>
       </label>
-      <label class="toggle" id="site-row" hidden>
+      <label class="toggle toggle--site" id="site-row" hidden>
+        <span class="toggle-copy">
+          <strong id="site-label">Enabled on this site</strong>
+          <small>Keep this conversation in your hands</small>
+        </span>
         <input type="checkbox" id="site-enabled" checked>
-        <span id="site-label">Enabled on this site</span>
+        <span class="switch" aria-hidden="true"></span>
       </label>
-    </div>
+    </section>
 
-    <div id="setup-download" class="setup setup--info">
-      <strong>⏳ AI model not downloaded yet</strong>
-      <p>Chrome needs to fetch the Gemini Nano model once (a few GB). It usually
-        downloads automatically in the background — you can also start it now:</p>
+    <section id="setup-download" class="setup setup--info">
+      <strong>AI is getting ready</strong>
+      <p>Chrome needs to download its local Gemini Nano model once. It is a few GB and normally happens in the background.</p>
       <button id="dl-start" class="setup-button" type="button">Download model</button>
-      <p id="dl-progress" hidden></p>
-    </div>
+      <p id="dl-progress" class="setup-progress" hidden></p>
+    </section>
 
-    <div id="setup" class="setup">
-      <strong>⚠️ Chrome AI not available</strong>
-      <p>Your Chrome version or hardware may not support Gemini Nano:</p>
+    <section id="setup" class="setup">
+      <strong>Chrome AI is not available here</strong>
+      <p>Your Chrome version or hardware may not support Gemini Nano.</p>
       <ol>
-        <li>Use <strong>Chrome 138+</strong> on desktop (Windows 10/11, macOS 13+, Linux)</li>
-        <li>Hardware minimums: 16 GB RAM, &gt;4 GB VRAM, 22 GB free disk</li>
-        <li>Check <code>chrome://on-device-internals</code> for model status</li>
-        <li>On Chrome 127–137 only: enable <em>"Prompt API for Gemini Nano"</em> in
-          <code>chrome://flags</code>, then update <em>Optimization Guide On Device
-          Model</em> in <code>chrome://components</code></li>
+        <li>Use <strong>Chrome 138+</strong> on a desktop computer</li>
+        <li>Check for 16 GB RAM, 4 GB VRAM, and 22 GB free disk space</li>
+        <li>Review model status in <code>chrome://on-device-internals</code></li>
+        <li>On Chrome 127–137, enable <em>Prompt API for Gemini Nano</em> in <code>chrome://flags</code></li>
       </ol>
-    </div>
+    </section>
 
-    <div id="setup-firefox" class="setup">
-      <strong>🦊 Enable Firefox on-device AI</strong>
-      <p>Comment Vibe can classify tone with Firefox's local AI runtime
-        (Firefox 134+). A small model (~65&nbsp;MB) is downloaded once;
-        everything stays on your device.</p>
+    <section id="setup-firefox" class="setup">
+      <strong>Enable Firefox on-device AI</strong>
+      <p>Comment Vibe can classify tone with Firefox’s local AI runtime. The small model downloads once and your comments stay on your device.</p>
       <button id="ff-enable" class="setup-button" type="button">Enable on-device AI</button>
-      <p id="ff-progress" hidden></p>
-      <p>On non-Nightly builds you may also need to set
-        <code>browser.ml.enable</code> and <code>extensions.ml.enabled</code>
-        to <em>true</em> in <code>about:config</code>.</p>
-    </div>
+      <p id="ff-progress" class="setup-progress" hidden></p>
+      <p>On non-Nightly builds, also set <code>browser.ml.enable</code> and <code>extensions.ml.enabled</code> to <em>true</em> in <code>about:config</code>.</p>
+    </section>
 
-    <div class="legend">
-      <span class="pill pill--positive">😊 Positive</span>
-      <span class="pill pill--neutral">😐 Neutral</span>
-      <span class="pill pill--negative">😕 Negative</span>
-      <span class="pill pill--toxic">🚫 Toxic</span>
-    </div>
+    <section class="legend" aria-label="Tone signals">
+      <div class="section-heading">
+        <span>How your words land</span>
+        <small>Tap a badge for detail</small>
+      </div>
+      <div class="legend-grid">
+        <span class="pill pill--positive"><i aria-hidden="true">✦</i> Positive</span>
+        <span class="pill pill--neutral"><i aria-hidden="true">•</i> Neutral</span>
+        <span class="pill pill--negative"><i aria-hidden="true">↘</i> Negative</span>
+        <span class="pill pill--toxic"><i aria-hidden="true">!</i> Needs care</span>
+      </div>
+    </section>
 
-    <div class="footer">Works on LinkedIn · Twitter/X · YouTube · and more<span id="version"></span></div>
-
-  </div>
+    <footer class="footer">
+      <span><b aria-hidden="true">⌁</b> Private by design</span>
+      <span>LinkedIn, X, YouTube, and more<span id="version"></span></span>
+    </footer>
+  </main>
   <script src="popup.js"></script>
 </body>
 </html>

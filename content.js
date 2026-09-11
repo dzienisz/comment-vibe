@@ -636,10 +636,15 @@ function showModelDownloading(badge) {
 
 function showTooltip(tooltip, badge) {
   sp(tooltip, 'display', 'block');
+  badge.setAttribute('aria-expanded', 'true');
   placeTooltip(tooltip, badge);
 }
 
-function hideTooltip(tooltip) { sp(tooltip, 'display', 'none'); }
+function hideTooltip(tooltip) {
+  sp(tooltip, 'display', 'none');
+  const badge = tooltip.__cvBadge;
+  if (badge) badge.setAttribute('aria-expanded', 'false');
+}
 
 function dismissTooltip(tooltip) {
   hideTooltip(tooltip);
@@ -662,10 +667,14 @@ function createUI() {
   badge.setAttribute('role', 'button');
   badge.setAttribute('tabindex', '0');
   badge.setAttribute('aria-label', 'Comment tone');
+  badge.setAttribute('aria-expanded', 'false');
   sp(badge, 'display', 'none');
 
   const tooltip = document.createElement('div');
   tooltip.className = 'cv-tooltip';
+  tooltip.setAttribute('role', 'dialog');
+  tooltip.setAttribute('aria-label', 'Comment tone details');
+  tooltip.__cvBadge = badge;
   sp(tooltip, 'display', 'none');
 
   document.body.appendChild(badge);
@@ -704,22 +713,39 @@ function renderBadge(badge, tooltip, result, actions = {}) {
   badge.setAttribute('aria-label', `Comment tone: ${label}. Activate for details.`);
   showBadge(badge, sentiment);
 
+  tooltip.className = `cv-tooltip cv-tooltip--${sentiment}`;
+
   const header = document.createElement('div');
   header.className = 'cv-tooltip-header';
+  const signal = document.createElement('span');
+  signal.className = 'cv-tooltip-signal';
+  signal.setAttribute('aria-hidden', 'true');
+  signal.textContent = emoji;
+  const titleGroup = document.createElement('div');
+  titleGroup.className = 'cv-tooltip-title-group';
+  const kicker = document.createElement('span');
+  kicker.className = 'cv-tooltip-kicker';
+  kicker.textContent = 'Comment tone';
   const title = document.createElement('span');
   title.className = 'cv-tooltip-title';
-  title.textContent = emoji + ' ' + label;
-  const refresh = document.createElement('span');
-  refresh.className = 'cv-tooltip-refresh';
-  refresh.setAttribute('role', 'button');
+  title.textContent = label;
+  titleGroup.append(kicker, title);
+  const controls = document.createElement('div');
+  controls.className = 'cv-tooltip-controls';
+  const refresh = document.createElement('button');
+  refresh.className = 'cv-tooltip-icon';
+  refresh.type = 'button';
   refresh.setAttribute('aria-label', 'Analyze again');
   refresh.textContent = '↻';
-  const close = document.createElement('span');
-  close.className = 'cv-tooltip-close';
-  close.setAttribute('role', 'button');
+  refresh.title = 'Analyze again';
+  const close = document.createElement('button');
+  close.className = 'cv-tooltip-icon';
+  close.type = 'button';
   close.setAttribute('aria-label', 'Close');
   close.textContent = '✕';
-  header.append(title, refresh, close);
+  close.title = 'Close';
+  controls.append(refresh, close);
+  header.append(signal, titleGroup, controls);
 
   const reasonEl = document.createElement('div');
   reasonEl.className = 'cv-tooltip-reason';
@@ -743,7 +769,7 @@ function renderBadge(badge, tooltip, result, actions = {}) {
     rewriteContainer.className = 'cv-tooltip-rewrite';
     const rewriteLabel = document.createElement('span');
     rewriteLabel.className = 'cv-tooltip-rewrite-label';
-    rewriteLabel.textContent = 'Try instead:';
+    rewriteLabel.textContent = 'A kinder way to say it';
     const rewriteText = document.createElement('div');
     rewriteText.className = 'cv-tooltip-rewrite-text';
     rewriteText.textContent = rewrite;
@@ -751,10 +777,10 @@ function renderBadge(badge, tooltip, result, actions = {}) {
     actionsRow.className = 'cv-tooltip-actions';
     const applyBtn = document.createElement('button');
     applyBtn.className = 'cv-tooltip-apply';
-    applyBtn.textContent = '✨ Use this rewrite';
+    applyBtn.textContent = 'Use this rewrite';
     const copyBtn = document.createElement('button');
     copyBtn.className = 'cv-tooltip-copy';
-    copyBtn.textContent = '📋 Copy';
+    copyBtn.textContent = 'Copy';
     actionsRow.append(applyBtn, copyBtn);
     rewriteContainer.append(rewriteLabel, rewriteText, actionsRow);
     tooltip.appendChild(rewriteContainer);
@@ -768,8 +794,8 @@ function renderBadge(badge, tooltip, result, actions = {}) {
     copyBtn.addEventListener('click', e => {
       e.stopPropagation();
       navigator.clipboard.writeText(rewrite).then(() => {
-        copyBtn.textContent = '✓ Copied!';
-        setTimeout(() => { copyBtn.textContent = '📋 Copy'; }, 2000);
+        copyBtn.textContent = 'Copied';
+        setTimeout(() => { copyBtn.textContent = 'Copy'; }, 2000);
       }).catch(() => {});
     });
   }
@@ -777,6 +803,9 @@ function renderBadge(badge, tooltip, result, actions = {}) {
   if (onHideSite) {
     const footer = document.createElement('div');
     footer.className = 'cv-tooltip-footer';
+    const note = document.createElement('span');
+    note.className = 'cv-tooltip-footer-note';
+    note.textContent = 'Private, on-device guidance';
     const mute = document.createElement('button');
     mute.className = 'cv-tooltip-mute';
     mute.type = 'button';
@@ -785,7 +814,7 @@ function renderBadge(badge, tooltip, result, actions = {}) {
       e.stopPropagation();
       onHideSite();
     });
-    footer.appendChild(mute);
+    footer.append(note, mute);
     tooltip.appendChild(footer);
   }
 }
