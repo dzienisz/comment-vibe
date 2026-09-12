@@ -9,104 +9,104 @@ body {
 /* ── Light screenshot canvas ── */
 .canvas {
   width: 1280px; height: 800px;
-  background: linear-gradient(150deg, #f5f3ff 0%, #eef2ff 55%, #e0e7ff 100%);
+  background: #eef0fb;
   padding: 56px 72px;
   position: relative;
   display: flex; flex-direction: column;
 }
 .headline {
   font-size: 50px; font-weight: 800; letter-spacing: -0.02em;
-  color: #1e1b4b; line-height: 1.12;
+  color: #263149; line-height: 1.12;
 }
-.headline em { font-style: normal; color: #6d28d9; }
+.headline em { font-style: normal; color: #5c57d9; }
 .subline {
   margin-top: 14px; font-size: 22px; font-weight: 500;
-  color: #55538a; line-height: 1.45; max-width: 900px;
+  color: #65708a; line-height: 1.45; max-width: 900px;
 }
 .stage { flex: 1; display: flex; align-items: center; justify-content: center; }
 
 /* ── Composer mockup (generic comment box) ── */
 .composer {
-  width: 620px; background: #fff; border-radius: 16px;
-  box-shadow: 0 18px 50px rgba(49, 46, 129, 0.16), 0 2px 6px rgba(49,46,129,0.08);
+  width: 620px; background: #fff; border-radius: 18px;
+  box-shadow: 0 18px 50px rgba(37, 47, 80, 0.14), 0 2px 6px rgba(37, 47, 80, 0.07);
   padding: 22px 24px 20px; position: relative;
 }
 .composer-head { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
 .avatar {
   width: 42px; height: 42px; border-radius: 50%;
-  background: linear-gradient(135deg, #c7d2fe, #a5b4fc);
+  background: #dad9ff;
   display: flex; align-items: center; justify-content: center;
-  font-weight: 700; color: #3730a3; font-size: 17px;
+  font-weight: 700; color: #4b47bc; font-size: 17px;
 }
-.composer-meta .name { font-weight: 700; font-size: 15px; color: #111827; }
-.composer-meta .sub  { font-size: 12px; color: #9ca3af; margin-top: 1px; }
+.composer-meta .name { font-weight: 700; font-size: 15px; color: #263149; }
+.composer-meta .sub  { font-size: 12px; color: #7a849b; margin-top: 1px; }
 .composer-box {
-  border: 1.5px solid #e5e7eb; border-radius: 12px;
-  padding: 14px 16px 40px; font-size: 16px; line-height: 1.55; color: #1f2937;
-  position: relative; min-height: 96px; background: #fcfcfd;
+  border: 1.5px solid #dfe3ed; border-radius: 12px;
+  padding: 14px 16px 40px; font-size: 16px; line-height: 1.55; color: #38445d;
+  position: relative; min-height: 96px; background: #fff;
 }
 .caret { border-right: 2px solid #6366f1; padding-right: 1px; }
 .composer-actions { display: flex; justify-content: flex-end; margin-top: 14px; }
 .post-btn {
-  background: #4f46e5; color: #fff; font-weight: 600; font-size: 14px;
+  background: #5c57d9; color: #fff; font-weight: 600; font-size: 14px;
   border-radius: 999px; padding: 8px 22px;
 }
 
 /* ── Badge (mirrors content.css) ── */
 .cv-badge {
-  display: inline-flex; align-items: center; gap: 5px;
-  padding: 4px 12px; border-radius: 999px;
-  font-size: 13px; font-weight: 600; white-space: nowrap; line-height: 1.4;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 10px; border-radius: 999px;
+  font-size: 13px; font-weight: 700; white-space: nowrap; line-height: 1.2;
+  box-shadow: 0 5px 16px rgba(30,39,66,0.16);
 }
-.cv-badge--positive { background: #dcfce7; color: #15803d; border: 1px solid #86efac; }
-.cv-badge--neutral  { background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; }
-.cv-badge--negative { background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; }
-.cv-badge--toxic    { background: #f3e8ff; color: #6d28d9; border: 1px solid #c4b5fd; }
+.cv-badge--positive { background: #eaf9f4; color: #08755e; border: 1px solid #bfeade; }
+.cv-badge--neutral  { background: #fff8e3; color: #796123; border: 1px solid #f0dfae; }
+.cv-badge--negative { background: #fff0ee; color: #ad4842; border: 1px solid #f3d0cc; }
+.cv-badge--toxic    { background: #f4effd; color: #674b9e; border: 1px solid #ded0f4; }
 .badge-float { position: absolute; right: 14px; bottom: 12px; }
 
 /* ── Tooltip (mirrors content.css) ── */
 .cv-tooltip {
-  background: #1f2937; color: #f9fafb; border-radius: 12px;
+  background: #fff; border: 1px solid #e0e4ed; color: #263149; border-radius: 15px;
   padding: 16px; width: 320px;
-  box-shadow: 0 8px 30px rgba(0,0,0,0.35);
+  box-shadow: 0 16px 46px rgba(27,36,62,0.24);
   font-size: 13px; line-height: 1.55; text-align: left;
 }
-.cv-tooltip-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
-.cv-tooltip-title { font-weight: 700; font-size: 15px; }
-.cv-tooltip-refresh { color: #9ca3af; font-size: 14px; line-height: 1; margin-left: auto; margin-right: 5px; }
-.cv-tooltip-close { color: #9ca3af; font-size: 16px; line-height: 1; }
-.cv-tooltip-reason { color: #d1d5db; font-size: 13px; margin-bottom: 4px; }
-.cv-tooltip-rewrite { border-top: 1px solid #374151; padding-top: 11px; margin-top: 11px; }
+.cv-tooltip-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.cv-tooltip-title { font-weight: 750; font-size: 15px; color: #263149; }
+.cv-tooltip-refresh { color: #71809b; font-size: 14px; line-height: 1; margin-left: auto; margin-right: 8px; }
+.cv-tooltip-close { color: #71809b; font-size: 16px; line-height: 1; }
+.cv-tooltip-reason { color: #536078; font-size: 13px; margin-bottom: 4px; }
+.cv-tooltip-rewrite { border-top: 1px solid #e8eaf0; padding-top: 11px; margin-top: 11px; }
 .cv-tooltip-rewrite-label {
-  display: block; font-size: 10px; font-weight: 700; color: #9ca3af;
-  text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 7px;
+  display: block; font-size: 10px; font-weight: 750; color: #64708a;
+  margin-bottom: 7px;
 }
 .cv-tooltip-rewrite-text {
-  background: #111827; border-radius: 8px; padding: 11px;
-  color: #e5e7eb; font-size: 13px; line-height: 1.6; margin-bottom: 11px;
+  background: #f6f6fe; border: 1px solid #e3e3f8; border-radius: 9px; padding: 11px;
+  color: #36405d; font-size: 13px; line-height: 1.6; margin-bottom: 11px;
 }
 .cv-tooltip-actions { display: flex; gap: 8px; }
 .cv-tooltip-apply {
   display: inline-flex; align-items: center; gap: 6px;
-  background: #3b82f6; color: #fff; border-radius: 7px;
-  padding: 6px 14px; font-size: 12.5px; font-weight: 600;
+  background: #5c57d9; color: #fff; border-radius: 8px;
+  padding: 7px 12px; font-size: 12.5px; font-weight: 700;
 }
 .cv-tooltip-copy {
   display: inline-flex; align-items: center; gap: 6px;
-  background: transparent; color: #d1d5db; border: 1px solid #4b5563; border-radius: 7px;
-  padding: 6px 14px; font-size: 12.5px; font-weight: 600;
+  background: transparent; color: #536078; border: 1px solid #d8dce6; border-radius: 8px;
+  padding: 7px 12px; font-size: 12.5px; font-weight: 700;
 }
 .cv-tooltip-footer {
-  border-top: 1px solid #374151; margin-top: 10px; padding-top: 8px;
+  border-top: 1px solid #e8eaf0; margin-top: 10px; padding-top: 8px;
   display: flex; justify-content: flex-end;
 }
-.cv-tooltip-mute { font-size: 11px; color: #6b7280; }
+.cv-tooltip-mute { font-size: 11px; color: #6f7890; }
 
 /* ── Footer brand strip on screenshots ── */
 .brand-strip {
   position: absolute; left: 72px; bottom: 34px;
   display: flex; align-items: center; gap: 10px;
-  font-size: 16px; font-weight: 700; color: #4338ca;
+  font-size: 16px; font-weight: 700; color: #4540b8;
 }
-.brand-strip .tag { font-weight: 500; color: #6b7280; }
+.brand-strip .tag { font-weight: 500; color: #65708a; }

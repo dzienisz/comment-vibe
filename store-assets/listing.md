@@ -6,54 +6,52 @@ The store shows the manifest `name`, so a title change ships with the next
 upload (any version bump — Chrome update reviews are usually fast). Keep the
 brand, append the searchable keywords people actually type:
 
-> **Comment Vibe — AI Comment Tone Checker**
+> **Comment Vibe — Private AI Tone Checker**
 
 Why: "Comment Vibe" alone carries zero search keywords; "tone checker",
-"comment" and "AI" are the discovery phrases. Do not fully rename — the
-listing URL, reviews and existing links stay tied to the current identity.
+"comment", "AI" and "private" describe the benefit people are looking for.
+Do not fully rename — the listing URL, reviews and existing links stay tied to
+the current identity.
 
 ## Summary (max 132 chars — this is the `description` field in manifest.json)
 
-Option A (current, 128 chars):
-> Check comment tone with Chrome's on-device AI. Get kinder rewrite suggestions before you post. Private — no data sent anywhere.
-
-Option B (benefit-first, 130 chars):
-> See how your comment sounds before you post. On-device AI tone check with kinder rewrites. 100% private — nothing leaves Chrome.
+Recommended (129 chars):
+> Write with more clarity. Private, on-device AI shows how your comment may land and suggests a kinder rewrite before you post.
 
 ## Detailed description (paste into the CWS dashboard — plain text, no markdown)
 
-Ever hit Post and instantly regretted the tone? Comment Vibe reads your comment as you type and shows you how it sounds — before the internet does.
+Your words matter. Comment Vibe gives you a quiet second look before you share them.
 
-Powered by Chrome's built-in AI (Gemini Nano), everything runs on your device: no servers, no account, no data collection.
+As you write a comment, a small badge shows how it may land. If your draft sounds harsh, click it for a clear explanation and a kinder rewrite that keeps your point. Everything is powered by Chrome's built-in Gemini Nano model on your device — no account, no servers, and no data collection.
 
 HOW IT WORKS
-1. Type a comment on LinkedIn, X (Twitter), YouTube, Reddit — any site with a text box.
-2. A small badge appears next to the box showing the detected tone — it stays put and updates quietly while you type, no flicker.
-3. Click the badge to see why — and if your comment sounds harsh or toxic, get an instant kinder rewrite. "Use this rewrite" inserts it into the box for you; copy still works too.
+1. Type a comment on LinkedIn, X (Twitter), YouTube, Reddit — or anywhere with a comment box.
+2. See a small, steady badge beside your draft. It updates quietly as you write.
+3. Tap the badge for context. When your draft needs care, choose a kinder rewrite or copy it for later.
 
 YOU'RE IN CONTROL
-• "Hide on this site" right in the tooltip — one click and the badge never shows there again
-• Popup toggles: turn Comment Vibe off globally or per site, applied instantly
-• Preferences sync across your signed-in Chrome devices via storage.sync
+• Hide the guidance on one site directly from the tone card
+• Turn Comment Vibe on or off globally, or set a site-specific preference
+• Changes apply right away and sync with your signed-in Chrome profile
 
 FOUR CLEAR TONE LABELS
 😊 Positive — constructive and friendly
 😐 Neutral — balanced and factual
 😕 Negative — may come across as harsh or critical
-🚫 Toxic — contains aggressive or harmful language
+🚫 Toxic — potentially aggressive or harmful language
 
 SPEAKS YOUR LANGUAGE
-Writing in Polish, Spanish, Japanese — anything other than English? Comment Vibe detects your comment's language automatically and shows the tone label, the explanation and the rewrite in that same language, ready to paste. No translating needed. (Powered by Chrome's on-device Language Detector and Translator APIs.)
+Writing in Polish, Spanish, Japanese — or another language? Comment Vibe detects your language and returns the tone label, explanation, and rewrite in that same language. No translating needed. (Powered by Chrome's on-device Language Detector and Translator APIs.)
 
 WHY PEOPLE USE IT
-• Catch negativity before you regret posting it
-• Turn a heated draft into a point that actually lands
-• Build better online communication habits over time
-• Works in your own language, not just English
-• Zero setup — install and start typing
+• Catch a heated tone before it creates friction
+• Make your point without making things personal
+• Build better communication habits over time
+• Write in your own language
+• Start without an account or a setup flow
 
-100% PRIVATE, BY DESIGN
-All analysis happens locally using Chrome's on-device Gemini Nano model. Your comments are never sent to any server. No account, no tracking, no analytics — and it keeps working offline once the model is downloaded.
+PRIVATE BY DESIGN
+All analysis happens locally using Chrome's on-device Gemini Nano model. Your comments never leave your device. There is no account, tracking, or analytics — and it continues working offline once the model is downloaded.
 
 REQUIREMENTS
 • Chrome 138 or later, on desktop (Windows, macOS or Linux)
@@ -66,12 +64,12 @@ TIP: The very first analysis can take a moment while Chrome loads the model — 
 
 | File | Size | CWS slot |
 |---|---|---|
-| shot1-hero.png | 1280×800 | Screenshot 1 — hero (badge + tooltip) |
+| shot1-hero.png | 1280×800 | Screenshot 1 — hero (tone card + rewrite) |
 | shot2-labels.png | 1280×800 | Screenshot 2 — four tone labels |
 | shot3-rewrite.png | 1280×800 | Screenshot 3 — kinder rewrite flow |
 | shot4-languages.png | 1280×800 | Screenshot 4 — multilingual (Polish demo) |
 | shot5-privacy.png | 1280×800 | Screenshot 5 — on-device privacy |
-| shot6-controls.png | 1280×800 | Screenshot 6 — per-site & global controls (v1.3.0) |
+| shot6-controls.png | 1280×800 | Screenshot 6 — polished per-site & global controls |
 | tile-small.png | 440×280 | Small promo tile |
 | tile-marquee.png | 1400×560 | Marquee promo tile |
 
