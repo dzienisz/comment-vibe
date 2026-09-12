@@ -638,12 +638,19 @@ function showTooltip(tooltip, badge) {
   sp(tooltip, 'display', 'block');
   badge.setAttribute('aria-expanded', 'true');
   placeTooltip(tooltip, badge);
+  // Put keyboard and screen-reader users inside the newly opened dialog. The
+  // buttons are rendered with the result, so choose the first available one.
+  const focusTarget = tooltip.querySelector('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+  focusTarget?.focus?.();
 }
 
 function hideTooltip(tooltip) {
   sp(tooltip, 'display', 'none');
   const badge = tooltip.__cvBadge;
   if (badge) badge.setAttribute('aria-expanded', 'false');
+  // Restore focus only when the dialog owned focus. This keeps Escape and the
+  // close button predictable without stealing focus from an outside click.
+  if (badge && tooltip.contains(document.activeElement)) badge.focus?.();
 }
 
 function dismissTooltip(tooltip) {
