@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Comment Vibe popup preview</title>
+  <link rel="stylesheet" href="../../popup.css">
+  <style>
+    html { background: #eef0fb; min-height: 100%; }
+    body { border-radius: 18px; box-shadow: 0 20px 55px rgba(35, 42, 72, .22); margin: 54px auto; overflow: hidden; }
+  </style>
+  <script>
+    window.LanguageModel = { availability: async () => 'available' };
+    window.chrome = {
+      runtime: { id: 'comment-vibe-preview', getManifest: () => ({ version: '1.3.0' }) },
+      storage: { sync: { get: async () => ({ cvDisabledHosts: [], cvEnabled: true }), set: async () => {} } },
+      tabs: { query: async () => [{ url: 'https://www.linkedin.com/feed/' }] },
+    };
+  </script>
+</head>
+<body>
+  <main class="wrap">
+    <header class="header">
+      <div class="header-mark" aria-hidden="true">
+        <svg viewBox="0 0 40 40" fill="none"><path d="M8 9.5C8 6.46 10.46 4 13.5 4h13C29.54 4 32 6.46 32 9.5v10c0 3.04-2.46 5.5-5.5 5.5H19l-6.6 7.2c-.76.83-2.15.29-2.15-.84V25.1A5.5 5.5 0 0 1 8 20.5v-11Z" fill="currentColor"/><path d="M14 14h12M14 18.5h8" stroke="white" stroke-width="2.2" stroke-linecap="round"/></svg>
+      </div>
+      <div class="header-text"><h1>Comment Vibe</h1><p>A little clarity before you post.</p></div>
+      <span class="private-mark">On-device</span>
+    </header>
+    <section id="status" class="status status--checking" aria-live="polite"><span class="status-dot" aria-hidden="true"></span><span id="status-text">Checking on-device AI…</span></section>
+    <section id="info" class="info">Comment Vibe reads the tone of the comment you are writing, then offers a calmer way to say it when useful. Your text stays on this device.</section>
+    <section id="prefs" class="prefs" hidden aria-label="Comment Vibe preferences">
+      <div class="section-heading"><span>Where it helps</span><small>Changes apply right away</small></div>
+      <label class="toggle"><span class="toggle-copy"><strong>Comment Vibe</strong><small>Show tone guidance while you write</small></span><input type="checkbox" id="global-enabled" checked><span class="switch" aria-hidden="true"></span></label>
+      <label class="toggle toggle--site" id="site-row" hidden><span class="toggle-copy"><strong id="site-label">Enabled on this site</strong><small>Keep this conversation in your hands</small></span><input type="checkbox" id="site-enabled" checked><span class="switch" aria-hidden="true"></span></label>
+    </section>
+    <section class="legend" aria-label="Tone signals"><div class="section-heading"><span>How your words land</span><small>Tap a badge for detail</small></div><div class="legend-grid"><span class="pill pill--positive"><i>✦</i> Positive</span><span class="pill pill--neutral"><i>•</i> Neutral</span><span class="pill pill--negative"><i>↘</i> Negative</span><span class="pill pill--toxic"><i>!</i> Needs care</span></div></section>
+    <footer class="footer"><span><b>⌁</b> Private by design</span><span>LinkedIn, X, YouTube, and more<span id="version"></span></span></footer>
+  </main>
+  <script src="../../popup.js"></script>
+</body>
+</html>
