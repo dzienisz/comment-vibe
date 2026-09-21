@@ -16,7 +16,7 @@ Current display name: **Comment Vibe: on-device check**. AMO allows editing the
 display name from the developer hub ("Edit Product Page") without uploading a
 new version, so the keyword-carrying title below can be applied any time:
 
-> **Comment Vibe — AI Comment Tone Checker**
+> **Comment Vibe — Private AI Tone Checker**
 
 ## Summary (AMO "Summary", max 250 chars)
 

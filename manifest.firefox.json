@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Comment Vibe",
+  "name": "Comment Vibe — Private AI Tone Checker",
   "short_name": "Comment Vibe",
   "description": "See how your comment sounds before you post. On-device AI tone check. 100% private — nothing leaves Firefox.",
   "version": "1.3.0",

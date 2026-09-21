@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Comment Vibe",
+  "name": "Comment Vibe — Private AI Tone Checker",
   "short_name": "Comment Vibe",
   "description": "Write with more clarity. Private, on-device AI shows how your comment may land and suggests a kinder rewrite before you post.",
   "version": "1.3.0",
