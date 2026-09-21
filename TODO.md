@@ -38,6 +38,33 @@ Planned next (decided 2026-09-10, in rough priority order):
 - [x] Honest in-page AI readiness notices.
 - [x] Rate prompt after repeated successful rewrites.
 
+### 1.5.0 — X coach (planned 2026-09-21, from the @dzienko account audit)
+
+Site-specific mode for x.com / twitter.com, on top of the 1.4.0 rewrite chips.
+Everything local (`chrome.storage`), no new permissions, no telemetry.
+
+- [ ] **X-only rewrite chips**: Hookier (stronger first line), Fit 280 (trim to
+      the limit, keep the point), Less snarky (keep the opinion, drop the
+      insult), Add a question (end with something people can answer),
+      To English (translate, keep tone). Chips replace the generic set only
+      when the host is x.com; generic chips stay elsewhere.
+- [ ] **Pre-post nudges** (rule-based, no model needed), shown as a one-line
+      hint under the compose box: link in the main post → "put it in the first
+      reply"; mixed PL/EN in one post; politics/insult keywords → suggest
+      "Less snarky"; more than 3 originals today → "you already posted N
+      times, save it for tomorrow".
+- [ ] **Local posting log** (date, original vs reply, language, length, had
+      link, chips used) → popup "This week on X" self-report: originals vs
+      replies, link ratio, language mix, tone mix. No analytics scraping —
+      X's CSV export stays the source for reach numbers.
+- [ ] **Compose-box detection for x.com**: the tweet editor is a contenteditable
+      Draft.js root, not a textarea; make sure badge/tooltip anchor to it and
+      survive the modal composer.
+- [ ] Ship first as an unpacked private branch for @dzienko, promote to the
+      store once the chips prove useful for a month.
+
+### Later candidates
+
 - [ ] **Personal vibe stats** — candidate headline feature for 1.4.0. Popup
       dashboard with positive/neutral/negative breakdown over 7 and 30 days,
       stored locally via `chrome.storage` (permission already granted).
