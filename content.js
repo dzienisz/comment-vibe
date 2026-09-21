@@ -1422,8 +1422,7 @@ function attachToInput(el) {
             linkHref: 'https://dzienko.dev/comment-vibe/#browsers',
             onHideSite: ui.onHideSite,
           });
-          showTooltip(tooltip, badge);
-          activeTooltip = tooltip;
+          placeBadge(badge, el);
         } else {
           sp(badge, 'display', 'none');
         }

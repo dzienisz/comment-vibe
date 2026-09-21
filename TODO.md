@@ -54,9 +54,8 @@ Planned next (decided 2026-09-10, in rough priority order):
       context-aware analysis.
 - [x] **Keyboard shortcut** to trigger analysis on demand (bypass the 900 ms debounce).
 - [x] **"Rate Comment Vibe" link in the popup** — shown after repeated
-      successful rewrites.
-      analyses. No telemetry (privacy is the selling point), so store ratings
-      are the only feedback loop we get.
+      successful rewrites (1.4.0). No telemetry (privacy is the selling point),
+      so store ratings are the only feedback loop we get.
 - [x] **Better "AI unavailable" content-script state.** The popup now explains
       setup on both browsers, but in-page the badge still silently never appears
       when the model is unavailable. A one-time, dismissible hint near a focused
