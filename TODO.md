@@ -59,7 +59,7 @@ Planned next (decided 2026-09-10, in rough priority order):
 - [x] **Landing page** — `site/` deploys to https://dzienko.dev/comment-vibe/
       (playground moved to `/playground/`). Interactive simulated demo, both
       store CTAs, SEO/OG tags.
-- [ ] **Store title ASO** — apply "Comment Vibe — AI Comment Tone Checker".
+- [ ] **Store title ASO** — apply "Comment Vibe — Private AI Tone Checker".
       AMO: change in the dashboard, no re-upload needed — do it now.
       Chrome: the title comes from manifest `name`, and 1.3.0 shipped without
       the change — either wait for the next version or cut a 1.3.1 with just
