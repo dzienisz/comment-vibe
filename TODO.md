@@ -18,7 +18,11 @@ file is only the forward look. Current release: **v1.3.0** (Chrome + Firefox).
   `vX.Y.Z` tag → `.github/workflows/release.yml` builds both zips (via
   `scripts/package.sh`) and publishes the GitHub Release.
 - **v1.3.0 status:** live on all three channels (GitHub Release, AMO,
-  Chrome Web Store — approved and public 2026-09-10).
+  Chrome Web Store — approved and public 2026-09-10). Note: the automated CWS
+  publish step failed on the 1.3.0 tag ("mandatory privacy information" 400)
+  and 1.3.0 was published from the dashboard by hand; privacy fields have
+  since been filled in — the 1.3.1 tag is the test that the automation works.
+- **v1.3.1:** UX refresh + ASO title. Tag `v1.3.1` after merging the release PR.
 - [ ] **Upload refreshed CWS listing assets** — replace shot1/3/4, add
       `shot6-controls.png`, paste updated description from `store-assets/listing.md`.
 
@@ -59,11 +63,9 @@ Planned next (decided 2026-09-10, in rough priority order):
 - [x] **Landing page** — `site/` deploys to https://dzienko.dev/comment-vibe/
       (playground moved to `/playground/`). Interactive simulated demo, both
       store CTAs, SEO/OG tags.
-- [ ] **Store title ASO** — apply "Comment Vibe — Private AI Tone Checker".
-      AMO: change in the dashboard, no re-upload needed — do it now.
-      Chrome: the title comes from manifest `name`, and 1.3.0 shipped without
-      the change — either wait for the next version or cut a 1.3.1 with just
-      the name bump. Proposals recorded in both `store-assets/*listing.md` files.
+- [x] **Store title ASO** — "Comment Vibe — Private AI Tone Checker" is the
+      manifest `name` in both builds as of 1.3.1. AMO: also set it in the
+      dashboard so the listing updates before the new version is approved.
 - [ ] **Fire the posts** — drafts ready in `promo/posts.md`: Show HN,
       r/firefox (API experience report), r/SideProject, dev.to long-form,
       social (EN/PL), and a follow-up comment for issue #1. One channel at a
