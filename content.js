@@ -1251,6 +1251,7 @@ function attachToInput(el) {
   const render = result => {
     renderBadge(badge, tooltip, result, {
       ...ui,
+      undoText: state.undoText,
       showRatePrompt: shouldShowRatePrompt(rewriteCount, ratePromptState),
     });
     placeTooltip(tooltip, badge);
