@@ -13,7 +13,14 @@ const RESULT_CACHE_TTL = 300_000; // 5 minutes
 // download, so the badge swaps to the honest "preparing" state.
 const FIREFOX_SLOW_MS = 6_000;
 
-const STORAGE_KEYS = { disabledHosts: 'cvDisabledHosts', enabled: 'cvEnabled' };
+const STORAGE_KEYS = {
+  disabledHosts: 'cvDisabledHosts',
+  enabled: 'cvEnabled',
+  mode: 'cvMode',
+  rewriteCount: 'cvRewriteCount',
+  ratePrompt: 'cvRatePrompt',
+};
+const RATE_AFTER_APPLIES = 3;
 
 const SENTIMENT_CLASS = {
   positive: 'cv-badge--positive',
@@ -39,6 +46,24 @@ Respond with raw JSON only — no markdown, no explanation outside the JSON obje
 Use exactly this structure:
 {"sentiment":"positive|neutral|negative|toxic","emoji":"😊|😐|😕|🚫","label":"Positive|Neutral|Negative|Toxic","reason":"one sentence max 20 words","rewrite":"improved kinder version or null"}
 Set rewrite to a kinder rewritten version when sentiment is negative or toxic, otherwise null.`;
+
+const REWRITE_SYSTEM_PROMPT = `You are a writing assistant that rewrites short social-media comments and posts.
+Return only the rewritten text — no quotes, no preamble, no explanation, no markdown.
+Keep the author's meaning, point of view and language (if the text is in Polish, answer in Polish).
+Never add new claims or facts.`;
+
+const REWRITE_MODES = {
+  grammar:      { label: 'Fix grammar',       resultLabel: 'Corrected version',
+                  instruction: 'Fix spelling, grammar and punctuation only. Change nothing else — keep the wording, tone and length.' },
+  professional: { label: 'More professional', resultLabel: 'Professional version',
+                  instruction: 'Make it sound professional and polite, suitable for a workplace or LinkedIn. Keep it about the same length.' },
+  friendly:     { label: 'Friendlier',        resultLabel: 'Friendlier version',
+                  instruction: 'Make it warmer and friendlier while keeping the same message. Keep it about the same length.' },
+  shorter:      { label: 'Shorter',           resultLabel: 'Shorter version',
+                  instruction: 'Make it clearly shorter — cut filler and repetition, keep every essential point. Aim for at most half the length.' },
+  clearer:      { label: 'Clearer',           resultLabel: 'Clearer version',
+                  instruction: 'Make it clearer and easier to read: simpler words, shorter sentences, one idea per sentence. Keep the meaning and length roughly the same.' },
+};
 
 const LANGUAGE_OPTIONS = {
   expectedInputs:  [{ type: 'text', languages: ['en'] }],
@@ -79,6 +104,9 @@ const SELECTORS = [
 let reusableSession = null;
 let sessionCreation = null;
 let lastUsedAt = 0;
+let rewriteSession = null;
+let rewriteSessionCreation = null;
+let rewriteLastUsedAt = 0;
 // true when the few-shot examples are baked into the session via initialPrompts
 // (they then survive clone() and don't need re-sending with every prompt)
 
@@ -190,9 +218,119 @@ async function getSession() {
 
 function resetSessionState() {
   reusableSession?.session.destroy?.();
+  rewriteSession?.session.destroy?.();
   reusableSession = null;
   sessionCreation = null;
   lastUsedAt = 0;
+  rewriteSession = null;
+  rewriteSessionCreation = null;
+  rewriteLastUsedAt = 0;
+}
+
+function buildRewriteMessages(text, mode, lang) {
+  const rewriteMode = REWRITE_MODES[mode];
+  if (!rewriteMode) throw new Error(`Unknown rewrite mode: ${mode}`);
+  const languageLine = lang && lang !== 'en'
+    ? `Answer in the same language as the text (${lang}).\n`
+    : '';
+  return [{
+    role: 'user',
+    content: `Rewrite the following text.\nInstruction: ${rewriteMode.instruction}\n${languageLine}Text:\n"""${text}"""`,
+  }];
+}
+
+function cleanRewriteOutput(raw) {
+  let text = typeof raw === 'string' ? raw.trim() : '';
+  text = text.replace(/^```(?:[a-zA-Z0-9_-]+)?\s*\n?([\s\S]*?)\n?```\s*$/, '$1').trim();
+  const quotePairs = [
+    ['"""', '"""'],
+    ['“', '”'],
+    ['"', '"'],
+    ["'", "'"],
+  ];
+  for (const [open, close] of quotePairs) {
+    if (text.startsWith(open) && text.endsWith(close) && text.length >= open.length + close.length) {
+      text = text.slice(open.length, text.length - close.length).trim();
+      break;
+    }
+  }
+  return text.trim();
+}
+
+async function constructRewriteSession() {
+  if (typeof LanguageModel !== 'undefined') {
+    const avail = await LanguageModel.availability();
+    if (avail === 'unavailable') throw new Error('unavailable');
+    const initialPrompts = [{ role: 'system', content: REWRITE_SYSTEM_PROMPT }];
+    const combos = [
+      { initialPrompts, ...LANGUAGE_OPTIONS },
+      { initialPrompts },
+      { systemPrompt: REWRITE_SYSTEM_PROMPT },
+    ];
+    let lastError;
+    for (const options of combos) {
+      try {
+        return sessionMetadata(await LanguageModel.create(options), false, false);
+      } catch (error) {
+        if (!supportsReducedOptionsRetry(error)) throw error;
+        lastError = error;
+      }
+    }
+    throw lastError;
+  }
+  if (typeof window !== 'undefined' && window.ai?.languageModel) {
+    const { available } = await window.ai.languageModel.capabilities();
+    if (available === 'no') throw new Error('unavailable');
+    return sessionMetadata(await window.ai.languageModel.create({ systemPrompt: REWRITE_SYSTEM_PROMPT }), false, false);
+  }
+  throw new Error('Chrome AI not found');
+}
+
+function expireReusableRewriteSession(now = Date.now()) {
+  if (!rewriteSession || now - rewriteLastUsedAt <= SESSION_TTL) return;
+  rewriteSession.session.destroy?.();
+  rewriteSession = null;
+  rewriteLastUsedAt = 0;
+}
+
+async function getRewriteSession() {
+  expireReusableRewriteSession();
+  if (rewriteSession) {
+    rewriteLastUsedAt = Date.now();
+    return rewriteSession;
+  }
+  if (rewriteSessionCreation) {
+    const pending = await rewriteSessionCreation;
+    if (pending.cloneCapable) {
+      rewriteLastUsedAt = Date.now();
+      return pending;
+    }
+    return constructRewriteSession();
+  }
+  const creation = constructRewriteSession();
+  rewriteSessionCreation = creation;
+  try {
+    const created = await creation;
+    if (created.cloneCapable) {
+      rewriteSession = created;
+      rewriteLastUsedAt = Date.now();
+    }
+    return created;
+  } finally {
+    if (rewriteSessionCreation === creation) rewriteSessionCreation = null;
+  }
+}
+
+async function rewriteText(text, mode, lang, signal) {
+  if (isFirefoxMLContext()) throw new Error('rewrite unavailable');
+  const acquired = await getRewriteSession();
+  const session = acquired.cloneCapable ? await acquired.session.clone() : acquired.session;
+  try {
+    const raw = await callPrompt(session, 'prompt', buildRewriteMessages(text, mode, lang), signal);
+    return cleanRewriteOutput(raw);
+  } finally {
+    session.destroy?.();
+  }
 }
 
 // ── Result cache ──────────────────────────────────────────────────────────────
@@ -237,8 +375,38 @@ function setCachedResult(text, result) {
 // defaults to enabled everywhere.
 
 let globallyEnabled = true;
+let analysisMode = 'auto';
+let rewriteCount = 0;
+let ratePromptState = null;
+let unavailableNoticed = false;
 const disabledHosts = new Set();
 const liveStates = new Set();
+
+function analysisModeFrom(value) {
+  return value === 'manual' ? 'manual' : 'auto';
+}
+
+function shouldShowRatePrompt(count, ratePrompt) {
+  return count >= RATE_AFTER_APPLIES && ratePrompt !== 'done';
+}
+
+function storeUrl() {
+  return navigator.userAgent.includes('Firefox')
+    ? 'https://addons.mozilla.org/firefox/addon/comment-vibe-on-device-check/'
+    : 'https://chromewebstore.google.com/detail/comment-vibe/kibcnjcipaofjlbbnjdjaobbkoajiejp';
+}
+
+function markRatePromptDone() {
+  ratePromptState = 'done';
+  const area = getStorageArea();
+  Promise.resolve(area?.set?.({ [STORAGE_KEYS.ratePrompt]: 'done' })).catch(() => {});
+}
+
+function recordRewriteApply() {
+  rewriteCount += 1;
+  const area = getStorageArea();
+  Promise.resolve(area?.set?.({ [STORAGE_KEYS.rewriteCount]: rewriteCount })).catch(() => {});
+}
 
 function getStorageArea() {
   if (typeof browser !== 'undefined' && browser.storage?.sync) return browser.storage.sync;
@@ -272,26 +440,38 @@ function disableState(state) {
   dismissTooltip(state.tooltip);
 }
 
-function applySettings(list, enabled) {
+function applySettings(list, enabled, mode) {
   disabledHosts.clear();
   (Array.isArray(list) ? list : []).forEach(h => disabledHosts.add(normalizeHost(h)));
   globallyEnabled = enabled !== false;
+  analysisMode = analysisModeFrom(mode);
   if (siteDisabled()) {
     for (const state of liveStates) disableState(state);
   } else {
     // Re-enabled: force a fresh pass so badges come back immediately.
-    for (const state of liveStates) state.onInput?.(true);
+    for (const state of liveStates) state.onSettingsChange?.();
   }
 }
 
 function loadSettings() {
   const area = getStorageArea();
   if (!area) return Promise.resolve();
-  const defaults = { [STORAGE_KEYS.disabledHosts]: [], [STORAGE_KEYS.enabled]: true };
+  const defaults = {
+    [STORAGE_KEYS.disabledHosts]: [],
+    [STORAGE_KEYS.enabled]: true,
+    [STORAGE_KEYS.mode]: 'auto',
+    [STORAGE_KEYS.rewriteCount]: 0,
+    [STORAGE_KEYS.ratePrompt]: null,
+  };
   // Awaited by init() before tracking starts — otherwise a slow storage read
   // could let the badge fire on a site the user already disabled.
   return Promise.resolve(area.get(defaults))
-    .then(data => applySettings(data?.[STORAGE_KEYS.disabledHosts], data?.[STORAGE_KEYS.enabled]))
+    .then(data => {
+      rewriteCount = Number.isFinite(data?.[STORAGE_KEYS.rewriteCount])
+        ? data[STORAGE_KEYS.rewriteCount] : 0;
+      ratePromptState = data?.[STORAGE_KEYS.ratePrompt] || null;
+      applySettings(data?.[STORAGE_KEYS.disabledHosts], data?.[STORAGE_KEYS.enabled], data?.[STORAGE_KEYS.mode]);
+    })
     .catch(() => {});
 }
 
@@ -300,10 +480,16 @@ function watchSettings() {
     if (areaName && areaName !== 'sync') return;
     const hostChange = changes[STORAGE_KEYS.disabledHosts];
     const enabledChange = changes[STORAGE_KEYS.enabled];
-    if (!hostChange && !enabledChange) return;
+    const modeChange = changes[STORAGE_KEYS.mode];
+    const countChange = changes[STORAGE_KEYS.rewriteCount];
+    const rateChange = changes[STORAGE_KEYS.ratePrompt];
+    if (!hostChange && !enabledChange && !modeChange && !countChange && !rateChange) return;
+    if (countChange) rewriteCount = Number.isFinite(countChange.newValue) ? countChange.newValue : 0;
+    if (rateChange) ratePromptState = rateChange.newValue || null;
     applySettings(
       hostChange ? hostChange.newValue : [...disabledHosts],
       enabledChange ? enabledChange.newValue : globallyEnabled,
+      modeChange ? modeChange.newValue : analysisMode,
     );
   });
 }
@@ -668,7 +854,7 @@ function escHtml(str = '') {
 
 // ── Badge & tooltip rendering ─────────────────────────────────────────────────
 
-function createUI() {
+function createUI({ onIdleActivate } = {}) {
   const badge = document.createElement('div');
   badge.className = 'cv-badge';
   badge.setAttribute('role', 'button');
@@ -686,6 +872,7 @@ function createUI() {
 
   document.body.appendChild(badge);
   document.body.appendChild(tooltip);
+  tooltip.addEventListener('click', e => e.stopPropagation());
 
   badge.addEventListener('keydown', e => {
     if (e.key !== 'Enter' && e.key !== ' ') return;
@@ -695,6 +882,10 @@ function createUI() {
 
   badge.addEventListener('click', e => {
     e.stopPropagation();
+    if (badge.classList.contains('cv-badge--idle')) {
+      onIdleActivate?.();
+      return;
+    }
     if (activeTooltip && activeTooltip !== tooltip) dismissActiveTooltip();
     if (isVisible(tooltip)) {
       dismissTooltip(tooltip);
@@ -709,7 +900,10 @@ function createUI() {
 
 function renderBadge(badge, tooltip, result, actions = {}) {
   const { sentiment, emoji, label, reason, rewrite } = result;
-  const { onRefresh, onApplyRewrite, onHideSite } = actions;
+  const {
+    onRefresh, onApplyRewrite, onHideSite, onRewrite, onUndo, undoText,
+    showRatePrompt,
+  } = actions;
 
   const badgeEmoji = document.createElement('span');
   badgeEmoji.textContent = emoji;
@@ -795,7 +989,6 @@ function renderBadge(badge, tooltip, result, actions = {}) {
     applyBtn.addEventListener('click', e => {
       e.stopPropagation();
       onApplyRewrite?.(rewrite);
-      dismissTooltip(tooltip);
     });
 
     copyBtn.addEventListener('click', e => {
@@ -807,6 +1000,152 @@ function renderBadge(badge, tooltip, result, actions = {}) {
     });
   }
 
+  if (!isFirefoxMLContext() && onRewrite) {
+    const tools = document.createElement('div');
+    tools.className = 'cv-tooltip-tools';
+    const toolsLabel = document.createElement('span');
+    toolsLabel.className = 'cv-tooltip-tools-label';
+    toolsLabel.textContent = 'Improve this text';
+    const chips = document.createElement('div');
+    chips.className = 'cv-tooltip-chips';
+    for (const [mode, config] of Object.entries(REWRITE_MODES)) {
+      const chip = document.createElement('button');
+      chip.className = 'cv-tooltip-chip';
+      chip.type = 'button';
+      chip.dataset.mode = mode;
+      chip.textContent = config.label;
+      chip.addEventListener('click', e => {
+        e.stopPropagation();
+        onRewrite(mode, chip, chips);
+      });
+      chips.appendChild(chip);
+    }
+    tools.append(toolsLabel, chips);
+    tooltip.appendChild(tools);
+  }
+
+  if (undoText) {
+    const undoRow = document.createElement('div');
+    undoRow.className = 'cv-tooltip-undo';
+    const undoLabel = document.createElement('span');
+    undoLabel.textContent = 'Rewrite applied.';
+    const undoButton = document.createElement('button');
+    undoButton.className = 'cv-tooltip-copy';
+    undoButton.type = 'button';
+    undoButton.textContent = 'Undo';
+    undoButton.addEventListener('click', e => {
+      e.stopPropagation();
+      onUndo?.();
+    });
+    undoRow.append(undoLabel, undoButton);
+    tooltip.appendChild(undoRow);
+  }
+
+  if (showRatePrompt) {
+    const rateRow = document.createElement('div');
+    rateRow.className = 'cv-tooltip-rate';
+    const rateLabel = document.createElement('span');
+    rateLabel.textContent = 'Is Comment Vibe helping?';
+    const rateActions = document.createElement('span');
+    const rateButton = document.createElement('button');
+    rateButton.className = 'cv-tooltip-copy';
+    rateButton.type = 'button';
+    rateButton.textContent = 'Rate it ★';
+    const laterButton = document.createElement('button');
+    laterButton.className = 'cv-tooltip-copy';
+    laterButton.type = 'button';
+    laterButton.textContent = 'Not now';
+    rateButton.addEventListener('click', e => {
+      e.stopPropagation();
+      window.open(storeUrl(), '_blank', 'noopener');
+      markRatePromptDone();
+      actions.onRatePromptDone?.();
+    });
+    laterButton.addEventListener('click', e => {
+      e.stopPropagation();
+      markRatePromptDone();
+      actions.onRatePromptDone?.();
+    });
+    rateActions.append(rateButton, laterButton);
+    rateRow.append(rateLabel, rateActions);
+    tooltip.appendChild(rateRow);
+  }
+
+  if (onHideSite) {
+    const footer = document.createElement('div');
+    footer.className = 'cv-tooltip-footer';
+    const note = document.createElement('span');
+    note.className = 'cv-tooltip-footer-note';
+    note.textContent = 'Private, on-device guidance';
+    const mute = document.createElement('button');
+    mute.className = 'cv-tooltip-mute';
+    mute.type = 'button';
+    mute.textContent = 'Hide on this site';
+    mute.addEventListener('click', e => {
+      e.stopPropagation();
+      onHideSite();
+    });
+    footer.append(note, mute);
+    tooltip.appendChild(footer);
+  }
+}
+
+function renderNotice(badge, tooltip, {
+  emoji, label, body, linkText, linkHref,
+  onHideSite,
+}) {
+  badge.className = 'cv-badge cv-badge--notice';
+  badge.replaceChildren();
+  const badgeEmoji = document.createElement('span');
+  badgeEmoji.textContent = emoji;
+  const badgeLabel = document.createElement('span');
+  badgeLabel.textContent = label;
+  badge.append(badgeEmoji, badgeLabel);
+  badge.setAttribute('aria-label', `${label}. Activate for details.`);
+  sp(badge, 'display', 'inline-flex');
+  sp(badge, 'background', '#f4f6fa');
+  sp(badge, 'color', '#566178');
+  sp(badge, 'border', '1px solid #e1e5ed');
+
+  tooltip.className = 'cv-tooltip cv-tooltip--notice';
+  const header = document.createElement('div');
+  header.className = 'cv-tooltip-header';
+  const signal = document.createElement('span');
+  signal.className = 'cv-tooltip-signal';
+  signal.textContent = emoji;
+  const titleGroup = document.createElement('div');
+  titleGroup.className = 'cv-tooltip-title-group';
+  const kicker = document.createElement('span');
+  kicker.className = 'cv-tooltip-kicker';
+  kicker.textContent = 'Comment Vibe';
+  const title = document.createElement('span');
+  title.className = 'cv-tooltip-title';
+  title.textContent = label;
+  titleGroup.append(kicker, title);
+  const close = document.createElement('button');
+  close.className = 'cv-tooltip-icon';
+  close.type = 'button';
+  close.setAttribute('aria-label', 'Close');
+  close.textContent = '✕';
+  close.addEventListener('click', e => {
+    e.stopPropagation();
+    dismissTooltip(tooltip);
+  });
+  header.append(signal, titleGroup, close);
+  tooltip.replaceChildren(header);
+  const bodyEl = document.createElement('p');
+  bodyEl.className = 'cv-tooltip-note';
+  bodyEl.textContent = body;
+  tooltip.appendChild(bodyEl);
+  if (linkText && linkHref) {
+    const link = document.createElement('a');
+    link.className = 'cv-tooltip-link';
+    link.href = linkHref;
+    link.target = '_blank';
+    link.rel = 'noopener';
+    link.textContent = linkText;
+    tooltip.appendChild(link);
+  }
   if (onHideSite) {
     const footer = document.createElement('div');
     footer.className = 'cv-tooltip-footer';
@@ -885,6 +1224,9 @@ function invalidateRequest(state) {
 function beginInputChange(state, text, force = false) {
   if (!force && text === state.lastText) return null;
   const requestId = invalidateRequest(state);
+  state.rewriteAbort?.abort();
+  state.rewriteAbort = null;
+  state.rewrites?.clear();
   state.lastText = text;
   return requestId;
 }
@@ -896,27 +1238,167 @@ function isCurrentRequest(state, requestId) {
 function attachToInput(el) {
   if (tracked.has(el)) return;
 
-  const { badge, tooltip } = createUI();
-  const state = { badge, tooltip, debounceTimer: null, abortController: null, lastText: '', lastResult: null, requestId: 0, skipCacheOnce: false };
+  let runNow;
+  const { badge, tooltip } = createUI({ onIdleActivate: () => runNow?.() });
+  const state = {
+    badge, tooltip, debounceTimer: null, abortController: null, rewriteAbort: null,
+    lastText: '', lastLang: null, lastResult: null, rewrites: new Map(),
+    undoText: null, applying: false, openOnResult: false, requestId: 0, skipCacheOnce: false,
+  };
   tracked.set(el, state);
   liveStates.add(state);
 
+  const render = result => {
+    renderBadge(badge, tooltip, result, {
+      ...ui,
+      showRatePrompt: shouldShowRatePrompt(rewriteCount, ratePromptState),
+    });
+    placeTooltip(tooltip, badge);
+  };
+
+  const renderActionRewrite = (mode, chip, chips) => {
+    state.rewriteAbort?.abort();
+    chips.querySelectorAll('.cv-tooltip-chip').forEach(button => {
+      button.disabled = true;
+      button.classList.toggle('cv-tooltip-chip--active', button === chip);
+    });
+    tooltip.querySelector('.cv-tooltip-action-rewrite')?.remove();
+    const panel = document.createElement('div');
+    panel.className = 'cv-tooltip-rewrite cv-tooltip-action-rewrite';
+    const label = document.createElement('span');
+    label.className = 'cv-tooltip-rewrite-label';
+    label.textContent = REWRITE_MODES[mode].resultLabel;
+    const pending = document.createElement('div');
+    pending.className = 'cv-tooltip-rewrite-text';
+    pending.innerHTML = '<span class="cv-spinner"></span> Writing…';
+    panel.append(label, pending);
+    tooltip.appendChild(panel);
+    placeTooltip(tooltip, badge);
+
+    const controller = new AbortController();
+    state.rewriteAbort = controller;
+    const timer = setTimeout(() => controller.abort(), ANALYSIS_TIMEOUT_MS);
+    const source = state.lastText;
+    const cached = state.rewrites.get(mode);
+    const finish = () => {
+      clearTimeout(timer);
+      if (state.rewriteAbort !== controller) return;
+      state.rewriteAbort = null;
+      chips.querySelectorAll('.cv-tooltip-chip').forEach(button => { button.disabled = false; });
+    };
+    const showResult = text => {
+      pending.replaceChildren();
+      if (!text || text.trim() === source.trim()) {
+        pending.textContent = 'Already looks good.';
+        return;
+      }
+      pending.textContent = text;
+      const actionsRow = document.createElement('div');
+      actionsRow.className = 'cv-tooltip-actions';
+      const applyBtn = document.createElement('button');
+      applyBtn.className = 'cv-tooltip-apply';
+      applyBtn.type = 'button';
+      applyBtn.textContent = 'Use this';
+      const copyBtn = document.createElement('button');
+      copyBtn.className = 'cv-tooltip-copy';
+      copyBtn.type = 'button';
+      copyBtn.textContent = 'Copy';
+      actionsRow.append(applyBtn, copyBtn);
+      panel.appendChild(actionsRow);
+      applyBtn.addEventListener('click', e => {
+        e.stopPropagation();
+        ui.onApplyRewrite(text);
+      });
+      copyBtn.addEventListener('click', e => {
+        e.stopPropagation();
+        navigator.clipboard.writeText(text).then(() => {
+          copyBtn.textContent = 'Copied';
+          setTimeout(() => { copyBtn.textContent = 'Copy'; }, 2000);
+        }).catch(() => {});
+      });
+    };
+    if (cached !== undefined) {
+      showResult(cached);
+      finish();
+      placeTooltip(tooltip, badge);
+      return;
+    }
+    rewriteText(source, mode, state.lastLang, controller.signal).then(text => {
+      if (controller.signal.aborted || state.lastText !== source) return;
+      state.rewrites.set(mode, text);
+      showResult(text);
+    }).catch(error => {
+      if (error?.name === 'AbortError' || controller.signal.aborted) return;
+      pending.textContent = 'Couldn’t rewrite — try again.';
+    }).finally(() => {
+      finish();
+      placeTooltip(tooltip, badge);
+    });
+  };
+
   const ui = {
-    onRefresh: () => { state.skipCacheOnce = true; onInput(); },
-    onApplyRewrite: text => applyRewrite(el, text),
+    onRefresh: () => {
+      state.skipCacheOnce = true;
+      state.rewrites.clear();
+      state.rewriteAbort?.abort();
+      onInput({ force: true });
+    },
+    onRewrite: renderActionRewrite,
+    onApplyRewrite: text => {
+      state.undoText = getText(el);
+      state.applying = true;
+      try {
+        applyRewrite(el, text);
+        recordRewriteApply();
+      } finally {
+        state.applying = false;
+      }
+      if (state.lastResult) render(state.lastResult);
+    },
+    onUndo: () => {
+      if (!state.undoText) return;
+      state.applying = true;
+      try {
+        applyRewrite(el, state.undoText);
+      } finally {
+        state.applying = false;
+      }
+      state.undoText = null;
+      if (state.lastResult) render(state.lastResult);
+    },
+    onRatePromptDone: () => { if (state.lastResult) render(state.lastResult); },
     onHideSite: () => disableSite(location.hostname),
   };
 
-  const onInput = (force = false) => {
+  const onInput = (options = {}) => {
+    if (typeof options === 'boolean') options = { force: options };
+    const { force = false, immediate = false, manualOnly = false } = options;
     if (siteDisabled()) return;
     const text = getText(el).trim();
     const forceRefresh = state.skipCacheOnce;
     state.skipCacheOnce = false;
     const requestId = beginInputChange(state, text, force || forceRefresh);
     if (requestId === null) return;
+    if (!state.applying) state.undoText = null;
     if (text.length < MIN_LENGTH) {
       sp(badge, 'display', 'none');
       dismissTooltip(tooltip);
+      return;
+    }
+    if (analysisMode === 'manual' && (!force || manualOnly)) {
+      badge.className = 'cv-badge cv-badge--idle';
+      badge.replaceChildren();
+      const idleIcon = document.createElement('span');
+      idleIcon.textContent = '✎';
+      const idleLabel = document.createElement('span');
+      idleLabel.textContent = 'Check tone';
+      badge.append(idleIcon, idleLabel);
+      badge.setAttribute('aria-label', 'Check tone and improve this text');
+      sp(badge, 'display', 'inline-flex');
+      sp(badge, 'background', '#f4f6fa');
+      sp(badge, 'color', '#566178');
+      sp(badge, 'border', '1px solid #e1e5ed');
+      placeBadge(badge, el);
       return;
     }
 
@@ -930,15 +1412,35 @@ function attachToInput(el) {
       const modelStatus = await getModelStatus();
       if (!isCurrentRequest(state, requestId)) return;
       if (modelStatus === 'unavailable') {
-        sp(badge, 'display', 'none');
+        if (!unavailableNoticed) {
+          unavailableNoticed = true;
+          renderNotice(badge, tooltip, {
+            emoji: '⚠️',
+            label: 'AI not ready',
+            body: "Chrome's on-device AI (Gemini Nano) isn't available in this browser yet. Open the Comment Vibe popup from the toolbar for setup steps — it needs Chrome 138+ on a desktop with about 22 GB of free disk space.",
+            linkText: 'Setup guide',
+            linkHref: 'https://dzienko.dev/comment-vibe/#browsers',
+            onHideSite: ui.onHideSite,
+          });
+          showTooltip(tooltip, badge);
+          activeTooltip = tooltip;
+        } else {
+          sp(badge, 'display', 'none');
+        }
         return;
       }
       // Re-use a recent result for identical text instead of re-running the model.
       const cached = !forceRefresh && getCachedResult(text);
       if (cached) {
         state.lastResult = cached;
-        renderBadge(badge, tooltip, cached, ui);
+        state.lastLang = cached.lang || null;
+        render(cached);
         placeBadge(badge, el);
+        if (state.openOnResult) {
+          showTooltip(tooltip, badge);
+          activeTooltip = tooltip;
+          state.openOnResult = false;
+        }
         return;
       }
       // A stalled model call (e.g. a slow safety-classification pass) must not
@@ -947,6 +1449,12 @@ function attachToInput(el) {
       // longer, so it gets its own honest badge state and a longer bound.
       if (modelStatus !== 'available') {
         showModelDownloading(badge);
+        renderNotice(badge, tooltip, {
+          emoji: '⏳',
+          label: 'Preparing AI model',
+          body: 'Chrome is downloading the Gemini Nano model once (a few GB). Keep the browser open — Comment Vibe starts working automatically when it finishes. Progress is shown in the Comment Vibe popup.',
+          onHideSite: ui.onHideSite,
+        });
         placeBadge(badge, el);
       }
       // Firefox's first post-enable analysis blocks on a silent model download
@@ -974,7 +1482,7 @@ function attachToInput(el) {
             reason:  '…',
             rewrite: null,
           };
-          renderBadge(badge, tooltip, state.lastResult, ui);
+          render(state.lastResult);
           placeBadge(badge, el);
         };
         const [result, lang] = await Promise.all([
@@ -986,7 +1494,13 @@ function attachToInput(el) {
         if (!isCurrentRequest(state, requestId)) return;
         setCachedResult(text, localized);
         state.lastResult = localized;
-        renderBadge(badge, tooltip, localized, ui);
+        state.lastLang = lang;
+        render(localized);
+        if (state.openOnResult) {
+          showTooltip(tooltip, badge);
+          activeTooltip = tooltip;
+          state.openOnResult = false;
+        }
       } catch (error) {
         if (error?.name !== 'AbortError' && isCurrentRequest(state, requestId)) {
           sp(badge, 'display', 'none');
@@ -997,7 +1511,11 @@ function attachToInput(el) {
         if (state.abortController === abortController) state.abortController = null;
       }
       if (isCurrentRequest(state, requestId)) placeBadge(badge, el);
-    }, DEBOUNCE_MS);
+    }, immediate ? 0 : DEBOUNCE_MS);
+  };
+  runNow = () => {
+    state.openOnResult = true;
+    onInput({ force: true, immediate: true });
   };
 
   const onFocus = () => {
@@ -1029,8 +1547,20 @@ function attachToInput(el) {
   el.addEventListener('input',  onInputEvent);
   el.addEventListener('keyup',  onInputEvent);
   state.onInput = onInput;
+  state.onSettingsChange = () => onInput({
+    force: analysisMode === 'auto',
+    immediate: true,
+    manualOnly: analysisMode === 'manual',
+  });
   el.addEventListener('focus',  onFocus);
   el.addEventListener('blur',   onBlur);
+  const onShortcut = e => {
+    if (e.altKey && e.shiftKey && e.code === 'KeyC') {
+      e.preventDefault();
+      runNow();
+    }
+  };
+  el.addEventListener('keydown', onShortcut);
   // capture: true — scroll events don't bubble, so this is the only way to
   // follow scrolling inside nested containers (modals, feeds)
   window.addEventListener('scroll', reposition, { passive: true, capture: true });
@@ -1042,6 +1572,8 @@ function attachToInput(el) {
 
   state.cleanup = () => {
     invalidateRequest(state);
+    state.rewriteAbort?.abort();
+    state.rewriteAbort = null;
     if (activeTooltip === tooltip) activeTooltip = null;
     badge.remove();
     tooltip.remove();
@@ -1051,6 +1583,7 @@ function attachToInput(el) {
     el.removeEventListener('keyup',  onInputEvent);
     el.removeEventListener('focus',  onFocus);
     el.removeEventListener('blur',   onBlur);
+    el.removeEventListener('keydown', onShortcut);
     window.removeEventListener('scroll', reposition, { capture: true });
     window.removeEventListener('resize', reposition);
   };
@@ -1169,7 +1702,9 @@ if (typeof module !== 'undefined' && module.exports) {
     applyViaExecCommand,
     beginInputChange,
     buildMessages,
+    buildRewriteMessages,
     cacheKey,
+    cleanRewriteOutput,
     cleanResultCache,
     constructSession,
     expireReusableSession,
@@ -1188,8 +1723,13 @@ if (typeof module !== 'undefined' && module.exports) {
     parseAnalysisResponse,
     parseResponse,
     resetSessionState,
+    rewriteText,
+    REWRITE_MODES,
     RESPONSE_SCHEMA,
     RESULT_CACHE_TTL,
+    shouldShowRatePrompt,
+    analysisModeFrom,
+    RATE_AFTER_APPLIES,
     setCachedResult,
     streamPrompt,
   };
