@@ -5,6 +5,12 @@ const LANG_OPTS = {
   expectedOutputs: [{ type: 'text', languages: ['en'] }],
 };
 
+function storeUrl() {
+  return navigator.userAgent.includes('Firefox')
+    ? 'https://addons.mozilla.org/firefox/addon/comment-vibe-on-device-check/'
+    : 'https://chromewebstore.google.com/detail/comment-vibe/kibcnjcipaofjlbbnjdjaobbkoajiejp';
+}
+
 // 'available' | 'downloading' | 'unavailable' — the middle state matters:
 // telling a user whose model is still downloading that the AI is "not
 // available" sends them chasing flags that no longer exist on Chrome 138+.
@@ -77,10 +83,12 @@ async function initPrefs(api) {
   const siteRow   = document.getElementById('site-row');
   const siteBox   = document.getElementById('site-enabled');
   const siteLabel = document.getElementById('site-label');
+  const modeBox   = document.getElementById('auto-mode');
   prefs.hidden = false;
 
   const disabled = new Set((data.cvDisabledHosts || []).map(normalizeHost));
   globalBox.checked = data.cvEnabled !== false;
+  modeBox.checked = data.cvMode !== 'manual';
 
   let host = null;
   const tabs = await Promise.resolve(
@@ -98,6 +106,9 @@ async function initPrefs(api) {
 
   globalBox.addEventListener('change', () => {
     Promise.resolve(storage.set({ cvEnabled: globalBox.checked })).catch(() => {});
+  });
+  modeBox.addEventListener('change', () => {
+    Promise.resolve(storage.set({ cvMode: modeBox.checked ? 'auto' : 'manual' })).catch(() => {});
   });
   siteBox.addEventListener('change', async () => {
     // Re-read before writing: `disabled` is a snapshot from popup-open time and
@@ -209,6 +220,7 @@ async function initFirefoxPopup(els) {
   };
 
   const api = getExtApi();
+  document.getElementById('rate-link').href = storeUrl();
   if (api) {
     initPrefs(api);
     const version = api.runtime.getManifest?.().version;

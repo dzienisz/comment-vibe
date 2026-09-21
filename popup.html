@@ -25,7 +25,7 @@
     </section>
 
     <section id="info" class="info">
-      Comment Vibe reads the tone of the comment you are writing, then offers a calmer way to say it when useful. Your text stays on this device.
+      Comment Vibe reads the tone of what you're writing, then fixes grammar or makes it shorter, clearer, friendlier or more professional in one click. Your text never leaves this device.
     </section>
 
     <section id="prefs" class="prefs" hidden aria-label="Comment Vibe preferences">
@@ -47,6 +47,14 @@
           <small>Keep this conversation in your hands</small>
         </span>
         <input type="checkbox" id="site-enabled" checked>
+        <span class="switch" aria-hidden="true"></span>
+      </label>
+      <label class="toggle">
+        <span class="toggle-copy">
+          <strong>Check automatically while I type</strong>
+          <small>Off: click the ✎ Check tone badge or press Alt+Shift+C</small>
+        </span>
+        <input type="checkbox" id="auto-mode" checked>
         <span class="switch" aria-hidden="true"></span>
       </label>
     </section>
@@ -92,7 +100,7 @@
 
     <footer class="footer">
       <span><b aria-hidden="true">⌁</b> Private by design</span>
-      <span>LinkedIn, X, YouTube, and more<span id="version"></span></span>
+      <span>LinkedIn, X, YouTube, and more · <a id="rate-link" target="_blank" rel="noopener">Rate ★</a><span id="version"></span></span>
     </footer>
   </main>
   <script src="popup.js"></script>
