@@ -5,6 +5,20 @@ All notable changes to **Comment Vibe** are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.1] - 2026-09-21
+
+### Changed
+
+- **Refreshed UI.** Lighter, more readable tone badge and tooltip ("tone
+  coach") with a single focused rewrite action and proper dialog focus
+  handling; the popup is rebuilt around the on-device privacy story, clearer
+  controls, a tone legend and setup instructions, with dark-mode support.
+- **Store title carries search keywords.** The extension is now listed as
+  "Comment Vibe — Private AI Tone Checker" on both stores; the short
+  description is rewritten benefit-first. Same extension ID, same listing URL.
+- Chrome Web Store screenshots, promo tiles and detailed description refreshed
+  to match the new UI (`store-assets/`).
+
 ## [1.3.0] - 2026-09-10
 
 ### Added
