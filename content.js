@@ -1373,13 +1373,14 @@ function attachToInput(el) {
 
   const onInput = (options = {}) => {
     if (typeof options === 'boolean') options = { force: options };
-    const { force = false, immediate = false, manualOnly = false } = options;
+    const { force = false, immediate = false, manualOnly = false, openTooltip = false } = options;
     if (siteDisabled()) return;
     const text = getText(el).trim();
     const forceRefresh = state.skipCacheOnce;
     state.skipCacheOnce = false;
     const requestId = beginInputChange(state, text, force || forceRefresh);
     if (requestId === null) return;
+    state.openOnResult = openTooltip ? requestId : null;
     if (!state.applying) state.undoText = null;
     if (text.length < MIN_LENGTH) {
       sp(badge, 'display', 'none');
@@ -1387,6 +1388,10 @@ function attachToInput(el) {
       return;
     }
     if (analysisMode === 'manual' && (!force || manualOnly)) {
+      if (!state.applying) {
+        state.lastResult = null;
+        dismissTooltip(tooltip);
+      }
       badge.className = 'cv-badge cv-badge--idle';
       badge.replaceChildren();
       const idleIcon = document.createElement('span');
@@ -1436,10 +1441,10 @@ function attachToInput(el) {
         state.lastLang = cached.lang || null;
         render(cached);
         placeBadge(badge, el);
-        if (state.openOnResult) {
+        if (state.openOnResult === requestId) {
           showTooltip(tooltip, badge);
           activeTooltip = tooltip;
-          state.openOnResult = false;
+          state.openOnResult = null;
         }
         return;
       }
@@ -1496,10 +1501,10 @@ function attachToInput(el) {
         state.lastResult = localized;
         state.lastLang = lang;
         render(localized);
-        if (state.openOnResult) {
+        if (state.openOnResult === requestId) {
           showTooltip(tooltip, badge);
           activeTooltip = tooltip;
-          state.openOnResult = false;
+          state.openOnResult = null;
         }
       } catch (error) {
         if (error?.name !== 'AbortError' && isCurrentRequest(state, requestId)) {
@@ -1513,10 +1518,7 @@ function attachToInput(el) {
       if (isCurrentRequest(state, requestId)) placeBadge(badge, el);
     }, immediate ? 0 : DEBOUNCE_MS);
   };
-  runNow = () => {
-    state.openOnResult = true;
-    onInput({ force: true, immediate: true });
-  };
+  runNow = () => onInput({ force: true, immediate: true, openTooltip: true });
 
   const onFocus = () => {
     if (siteDisabled()) return;
@@ -1548,7 +1550,7 @@ function attachToInput(el) {
   el.addEventListener('keyup',  onInputEvent);
   state.onInput = onInput;
   state.onSettingsChange = () => onInput({
-    force: analysisMode === 'auto',
+    force: true,
     immediate: true,
     manualOnly: analysisMode === 'manual',
   });
