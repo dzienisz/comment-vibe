@@ -10,7 +10,9 @@ const {
   applyViaExecCommand,
   beginInputChange,
   buildMessages,
+  buildRewriteMessages,
   cacheKey,
+  cleanRewriteOutput,
   cleanResultCache,
   constructSession,
   expireReusableSession,
@@ -29,8 +31,13 @@ const {
   parseAnalysisResponse,
   parseResponse,
   resetSessionState,
+  rewriteText,
+  REWRITE_MODES,
   RESPONSE_SCHEMA,
   RESULT_CACHE_TTL,
+  shouldShowRatePrompt,
+  analysisModeFrom,
+  RATE_AFTER_APPLIES,
   setCachedResult,
   streamPrompt,
 } = require('../content.js');
@@ -268,6 +275,25 @@ test('buildMessages includes few-shot examples and assistant prefill when constr
   assert.equal(messages[0].role, 'user');
   assert.equal(messages[messages.length - 2].role, 'user');
   assert.deepEqual(messages[messages.length - 1], { role: 'assistant', content: '{"sentiment":', prefix: true });
+});
+
+test('buildRewriteMessages includes instruction, triple-quoted text, and non-English language hint', () => {
+  const [message] = buildRewriteMessages('hello "world"', 'grammar', 'pl');
+  assert.equal(message.role, 'user');
+  assert.match(message.content, /Fix spelling, grammar and punctuation only/);
+  assert.match(message.content, /Text:\n"""hello "world""""/);
+  assert.match(message.content, /Answer in the same language as the text \(pl\)\./);
+  assert.doesNotMatch(buildRewriteMessages('hello', 'friendly', 'en')[0].content, /same language/);
+  assert.throws(() => buildRewriteMessages('hello', 'unknown'), /Unknown rewrite mode/);
+});
+
+test('cleanRewriteOutput removes fences and wrapping quotes without touching inner quotes', () => {
+  assert.equal(cleanRewriteOutput('```text\n"Hello, "world"!"\n```'), 'Hello, "world"!');
+  assert.equal(cleanRewriteOutput('“A clearer sentence.”'), 'A clearer sentence.');
+  assert.equal(cleanRewriteOutput("'A friendly sentence.'"), 'A friendly sentence.');
+  assert.equal(cleanRewriteOutput('"""Plain text"""'), 'Plain text');
+  assert.equal(cleanRewriteOutput('  Plain "text"  '), 'Plain "text"');
+  assert.equal(cleanRewriteOutput(''), '');
 });
 
 test('parseAnalysisResponse parses constrained JSON directly', () => {
@@ -513,6 +539,90 @@ test('constructSession uses legacy namespace when standard API is absent', async
   assert.equal(metadata.cloneCapable, false);
   assert.equal(capabilities, 1);
   assert.equal(typeof optionsSeen.systemPrompt, 'string');
+});
+
+test('rewriteText uses a separate modern clone session without response constraints', async () => {
+  const optionsSeen = [];
+  let cloneCount = 0;
+  let cloneDestroy = 0;
+  const base = {
+    async clone() {
+      cloneCount++;
+      return {
+        prompt: async messages => {
+          assert.equal(messages[0].role, 'user');
+          assert.match(messages[0].content, /Rewrite the following text/);
+          return '"Rewritten text."';
+        },
+        destroy() { cloneDestroy++; },
+      };
+    },
+    destroy() {},
+  };
+  global.LanguageModel = modernApi(async options => {
+    optionsSeen.push(options);
+    return base;
+  });
+
+  assert.equal(await rewriteText('Original text', 'clearer', 'en'), 'Rewritten text.');
+  assert.equal(optionsSeen.length, 1);
+  assert.equal(optionsSeen[0].initialPrompts[0].role, 'system');
+  assert.deepEqual(optionsSeen[0].expectedInputs, [{ type: 'text', languages: ['en'] }]);
+  assert.equal('responseConstraint' in optionsSeen[0], false);
+  assert.equal(cloneCount, 1);
+  assert.equal(cloneDestroy, 1);
+});
+
+test('rewriteText retries with a reduced modern option shape after TypeError', async () => {
+  const optionsSeen = [];
+  global.LanguageModel = modernApi(async options => {
+    optionsSeen.push(options);
+    if (optionsSeen.length === 1) throw new TypeError('unsupported options');
+    return {
+      prompt: async () => '"Shorter text."',
+      destroy() {},
+    };
+  });
+
+  assert.equal(await rewriteText('Original text', 'shorter'), 'Shorter text.');
+  assert.equal(optionsSeen.length, 2);
+  assert.equal('initialPrompts' in optionsSeen[1], true);
+  assert.equal('expectedInputs' in optionsSeen[1], false);
+});
+
+test('rewriteText uses the legacy namespace and rejects in Firefox context', async () => {
+  let optionsSeen;
+  global.window = {
+    ai: {
+      languageModel: {
+        capabilities: async () => ({ available: 'readily' }),
+        create: async options => {
+          optionsSeen = options;
+          return { prompt: async () => '“Legacy rewrite.”' };
+        },
+      },
+    },
+  };
+  assert.equal(await rewriteText('Original text', 'friendly'), 'Legacy rewrite.');
+  assert.equal(optionsSeen.systemPrompt.includes('writing assistant'), true);
+
+  delete global.window;
+  global.browser = { runtime: { sendMessage: async () => ({}) } };
+  await assert.rejects(rewriteText('Original text', 'friendly'), /rewrite unavailable/);
+});
+
+test('shouldShowRatePrompt follows the threshold and completion state', () => {
+  assert.equal(shouldShowRatePrompt(RATE_AFTER_APPLIES - 1, null), false);
+  assert.equal(shouldShowRatePrompt(RATE_AFTER_APPLIES, null), true);
+  assert.equal(shouldShowRatePrompt(RATE_AFTER_APPLIES + 1, 'later'), true);
+  assert.equal(shouldShowRatePrompt(RATE_AFTER_APPLIES, 'done'), false);
+});
+
+test('analysisModeFrom only accepts manual explicitly', () => {
+  assert.equal(analysisModeFrom('manual'), 'manual');
+  assert.equal(analysisModeFrom('auto'), 'auto');
+  assert.equal(analysisModeFrom('unexpected'), 'auto');
+  assert.equal(analysisModeFrom(undefined), 'auto');
 });
 
 test('getModelStatus reports available without triggering create', async () => {

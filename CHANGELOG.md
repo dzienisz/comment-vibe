@@ -5,6 +5,16 @@ All notable changes to **Comment Vibe** are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **Writing actions** for grammar, professional, friendly, shorter and clearer rewrites, with one-click apply, copy and undo.
+- **On-demand analysis** via the manual preference, idle badge and Alt+Shift+C shortcut.
+- **Honest AI readiness notices** for unavailable and downloading Chrome models.
+- **Rate prompt** after repeated successful rewrite applications.
+- **Chrome popup controls** for automatic analysis and store ratings.
+
 ## [1.3.1] - 2026-09-21
 
 ### Changed

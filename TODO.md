@@ -30,6 +30,14 @@ file is only the forward look. Current release: **v1.3.0** (Chrome + Firefox).
 
 Planned next (decided 2026-09-10, in rough priority order):
 
+### 1.4.0 — private writing helper (shipped)
+
+- [x] Writing actions: grammar, professional, friendly, shorter and clearer.
+- [x] One-click apply, copy and undo.
+- [x] Manual mode and Alt+Shift+C on-demand analysis.
+- [x] Honest in-page AI readiness notices.
+- [x] Rate prompt after repeated successful rewrites.
+
 - [ ] **Personal vibe stats** — candidate headline feature for 1.4.0. Popup
       dashboard with positive/neutral/negative breakdown over 7 and 30 days,
       stored locally via `chrome.storage` (permission already granted).
@@ -44,11 +52,12 @@ Planned next (decided 2026-09-10, in rough priority order):
 - [ ] **Summarizer API for long threads** (✅ stable since Chrome 138) —
       summarise the thread before the user replies; natural extension of
       context-aware analysis.
-- [ ] **Keyboard shortcut** to trigger analysis on demand (bypass the 900 ms debounce).
-- [ ] **"Rate Comment Vibe" link in the popup** — shown only after ~10
+- [x] **Keyboard shortcut** to trigger analysis on demand (bypass the 900 ms debounce).
+- [x] **"Rate Comment Vibe" link in the popup** — shown after repeated
+      successful rewrites.
       analyses. No telemetry (privacy is the selling point), so store ratings
       are the only feedback loop we get.
-- [ ] **Better "AI unavailable" content-script state.** The popup now explains
+- [x] **Better "AI unavailable" content-script state.** The popup now explains
       setup on both browsers, but in-page the badge still silently never appears
       when the model is unavailable. A one-time, dismissible hint near a focused
       comment box would help adoption.
