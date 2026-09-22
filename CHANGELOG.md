@@ -7,16 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-09-22
+
 ### Added
 
-- **Writing actions** for grammar, professional, friendly, shorter and clearer rewrites, with one-click apply, copy and undo.
-- **Explicit rewrite language instructions** so generated text answers in the detected language.
-- **Undo state survives rate-counter updates** from storage synchronization.
-- **Rewrite results survive streaming re-renders** while tone analysis finishes.
-- **On-demand analysis** via the manual preference, idle badge and Alt+Shift+C shortcut.
-- **Honest AI readiness notices** for unavailable and downloading Chrome models.
-- **Rate prompt** after repeated successful rewrite applications.
-- **Chrome popup controls** for automatic analysis and store ratings.
+- **Writing actions** (Chrome). Every tooltip gets an "Improve this text" row:
+  Fix grammar · More professional · Friendlier · Shorter · Clearer — preview,
+  "Use this", Copy, and Undo after applying. Rewrites always answer in the
+  detected language of your text.
+- **On-demand analysis.** New popup toggle "Check automatically while I type";
+  when off, the badge becomes "✎ Check tone" — click it or press Alt+Shift+C
+  to analyze on demand.
+- **Honest "AI not ready" notices** in the page when Gemini Nano is unavailable
+  or still downloading, with setup hints instead of a silently missing badge.
+- **Rate prompt** after three applied rewrites, plus a permanent "Rate ★" link
+  in the popup.
 
 ## [1.3.1] - 2026-09-21
 
