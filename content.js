@@ -49,7 +49,8 @@ Set rewrite to a kinder rewritten version when sentiment is negative or toxic, o
 
 const REWRITE_SYSTEM_PROMPT = `You are a writing assistant that rewrites short social-media comments and posts.
 Return only the rewritten text — no quotes, no preamble, no explanation, no markdown.
-Keep the author's meaning, point of view and language (if the text is in Polish, answer in Polish).
+Keep the author's meaning and point of view.
+Always answer in the language named in the instruction — never translate.
 Never add new claims or facts.`;
 
 const REWRITE_MODES = {
@@ -230,13 +231,21 @@ function resetSessionState() {
 function buildRewriteMessages(text, mode, lang) {
   const rewriteMode = REWRITE_MODES[mode];
   if (!rewriteMode) throw new Error(`Unknown rewrite mode: ${mode}`);
-  const languageLine = lang && lang !== 'en'
-    ? `Answer in the same language as the text (${lang}).\n`
-    : '';
+  const languageLine = lang
+    ? `Answer in ${languageName(lang)}.`
+    : 'Answer in the same language as the text.';
   return [{
     role: 'user',
-    content: `Rewrite the following text.\nInstruction: ${rewriteMode.instruction}\n${languageLine}Text:\n"""${text}"""`,
+    content: `Rewrite the following text.\nInstruction: ${rewriteMode.instruction}\n${languageLine}\nText:\n"""${text}"""`,
   }];
+}
+
+function languageName(code) {
+  try {
+    return new Intl.DisplayNames(['en'], { type: 'language' }).of(code) || code;
+  } catch {
+    return code;
+  }
 }
 
 function cleanRewriteOutput(raw) {
@@ -486,6 +495,7 @@ function watchSettings() {
     if (!hostChange && !enabledChange && !modeChange && !countChange && !rateChange) return;
     if (countChange) rewriteCount = Number.isFinite(countChange.newValue) ? countChange.newValue : 0;
     if (rateChange) ratePromptState = rateChange.newValue || null;
+    if (!hostChange && !enabledChange && !modeChange) return;
     applySettings(
       hostChange ? hostChange.newValue : [...disabledHosts],
       enabledChange ? enabledChange.newValue : globallyEnabled,
@@ -1243,22 +1253,40 @@ function attachToInput(el) {
   const state = {
     badge, tooltip, debounceTimer: null, abortController: null, rewriteAbort: null,
     lastText: '', lastLang: null, lastResult: null, rewrites: new Map(),
-    undoText: null, applying: false, openOnResult: false, requestId: 0, skipCacheOnce: false,
+    actionPanelSource: null, undoText: null, applying: false, openOnResult: false,
+    requestId: 0, skipCacheOnce: false,
   };
   tracked.set(el, state);
   liveStates.add(state);
 
   const render = result => {
+    const panel = tooltip.querySelector('.cv-tooltip-action-rewrite');
+    const activeMode = tooltip.querySelector('.cv-tooltip-chip--active')?.dataset.mode;
     renderBadge(badge, tooltip, result, {
       ...ui,
       undoText: state.undoText,
       showRatePrompt: shouldShowRatePrompt(rewriteCount, ratePromptState),
     });
+    if (panel && state.actionPanelSource === state.lastText) {
+      const tools = tooltip.querySelector('.cv-tooltip-tools');
+      if (tools) {
+        tools.parentNode.insertBefore(panel, tools.nextSibling);
+        const activeChip = activeMode
+          ? tooltip.querySelector(`.cv-tooltip-chip[data-mode="${activeMode}"]`)
+          : null;
+        if (activeChip) activeChip.classList.add('cv-tooltip-chip--active');
+        if (state.rewriteAbort) {
+          tooltip.querySelectorAll('.cv-tooltip-chip').forEach(button => { button.disabled = true; });
+        }
+      }
+    }
     placeTooltip(tooltip, badge);
   };
 
   const renderActionRewrite = (mode, chip, chips) => {
     state.rewriteAbort?.abort();
+    const source = state.lastText;
+    state.actionPanelSource = source;
     chips.querySelectorAll('.cv-tooltip-chip').forEach(button => {
       button.disabled = true;
       button.classList.toggle('cv-tooltip-chip--active', button === chip);
@@ -1279,13 +1307,12 @@ function attachToInput(el) {
     const controller = new AbortController();
     state.rewriteAbort = controller;
     const timer = setTimeout(() => controller.abort(), ANALYSIS_TIMEOUT_MS);
-    const source = state.lastText;
     const cached = state.rewrites.get(mode);
     const finish = () => {
       clearTimeout(timer);
       if (state.rewriteAbort !== controller) return;
       state.rewriteAbort = null;
-      chips.querySelectorAll('.cv-tooltip-chip').forEach(button => { button.disabled = false; });
+      tooltip.querySelectorAll('.cv-tooltip-chip').forEach(button => { button.disabled = false; });
     };
     const showResult = text => {
       pending.replaceChildren();

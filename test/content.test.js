@@ -277,13 +277,14 @@ test('buildMessages includes few-shot examples and assistant prefill when constr
   assert.deepEqual(messages[messages.length - 1], { role: 'assistant', content: '{"sentiment":', prefix: true });
 });
 
-test('buildRewriteMessages includes instruction, triple-quoted text, and non-English language hint', () => {
+test('buildRewriteMessages includes instruction, triple-quoted text, and an explicit answer language', () => {
   const [message] = buildRewriteMessages('hello "world"', 'grammar', 'pl');
   assert.equal(message.role, 'user');
   assert.match(message.content, /Fix spelling, grammar and punctuation only/);
   assert.match(message.content, /Text:\n"""hello "world""""/);
-  assert.match(message.content, /Answer in the same language as the text \(pl\)\./);
-  assert.doesNotMatch(buildRewriteMessages('hello', 'friendly', 'en')[0].content, /same language/);
+  assert.match(message.content, /Answer in Polish\.\n/);
+  assert.match(buildRewriteMessages('hello', 'friendly', 'en')[0].content, /Answer in English\.\n/);
+  assert.match(buildRewriteMessages('hello', 'friendly', null)[0].content, /Answer in the same language as the text\.\n/);
   assert.throws(() => buildRewriteMessages('hello', 'unknown'), /Unknown rewrite mode/);
 });
 
