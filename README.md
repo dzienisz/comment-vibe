@@ -12,6 +12,10 @@ A browser extension that uses on-device AI (Chrome's Gemini Nano, or Firefox's A
 
 Type a comment on LinkedIn, Twitter/X, YouTube, or any other site. A small badge appears near your text box showing the detected tone. Click it to see why — and if your comment sounds harsh or toxic, get an instant kinder rewrite suggestion you can copy in one click.
 
+Choose focused writing actions to fix grammar, make a comment shorter, clearer,
+friendlier or more professional. Turn off automatic checks and use the
+**Alt+Shift+C** shortcut (or the idle badge) to analyze on demand.
+
 | Badge | Meaning |
 |---|---|
 | 😊 Positive | Constructive and friendly |

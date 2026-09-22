@@ -80,6 +80,7 @@
 
   function responseFor(messages) {
     const prompt = JSON.stringify(messages);
+    if (prompt.includes('Rewrite the following text.')) return '"Here is a rewritten version."';
     if (prompt.includes('malicious demo')) return RESPONSES.malicious;
     if (prompt.includes('malformed demo')) return RESPONSES.malformed;
     if (prompt.includes('negative demo')) return RESPONSES.negative;
@@ -94,6 +95,10 @@
 
   function makeModernSession() {
     return {
+      prompt: async messages => {
+        window.__stubStats.prompt++;
+        return responseFor(messages);
+      },
       promptStreaming: messages => (async function* () {
         window.__stubStats.stream++;
         const response = responseFor(messages);

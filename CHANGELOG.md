@@ -5,6 +5,24 @@ All notable changes to **Comment Vibe** are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+## [1.4.0] - 2026-09-22
+
+### Added
+
+- **Writing actions** (Chrome). Every tooltip gets an "Improve this text" row:
+  Fix grammar · More professional · Friendlier · Shorter · Clearer — preview,
+  "Use this", Copy, and Undo after applying. Rewrites always answer in the
+  detected language of your text.
+- **On-demand analysis.** New popup toggle "Check automatically while I type";
+  when off, the badge becomes "✎ Check tone" — click it or press Alt+Shift+C
+  to analyze on demand.
+- **Honest "AI not ready" notices** in the page when Gemini Nano is unavailable
+  or still downloading, with setup hints instead of a silently missing badge.
+- **Rate prompt** after three applied rewrites, plus a permanent "Rate ★" link
+  in the popup.
+
 ## [1.3.1] - 2026-09-21
 
 ### Changed
