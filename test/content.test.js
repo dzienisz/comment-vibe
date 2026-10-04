@@ -6,6 +6,8 @@ const assert = require('node:assert/strict');
 const {
   analyzeText,
   analyzeViaBackground,
+  analyzeViaJev,
+  applyJevSetting,
   applyRewrite,
   applyViaExecCommand,
   beginInputChange,
@@ -885,6 +887,72 @@ test('analyzeText delegates to the Firefox background service', async () => {
   assert.equal(result.emoji, '🚫');
   assert.equal(result.label, 'Toxic');
   assert.equal(result.reason, 'Insulting.');
+});
+
+test('analyzeText uses Jev in Fast mode and never touches the local model', async () => {
+  const calls = [];
+  global.browser = {
+    runtime: {
+      sendMessage: async message => {
+        calls.push(message.type);
+        return { ok: true, result: { sentiment: 'negative', reason: 'Jev reads this as critical.', rewrite: null } };
+      },
+    },
+  };
+  applyJevSetting(true);
+  try {
+    const result = await analyzeText('this is pointless and slow');
+    assert.deepEqual(calls, ['cv-jev-analyze']);
+    assert.equal(result.engine, 'jev');
+    assert.equal(result.sentiment, 'negative');
+    assert.equal(result.label, 'Negative');
+  } finally {
+    applyJevSetting(false);
+  }
+});
+
+test('analyzeText falls back to on-device AI when Jev fails', async () => {
+  const calls = [];
+  const warn = console.warn;
+  console.warn = () => {};
+  global.browser = {
+    runtime: {
+      sendMessage: async message => {
+        calls.push(message.type);
+        if (message.type === 'cv-jev-analyze') return { ok: false, error: 'TypeSafe rejected the API key' };
+        return { ok: true, result: { sentiment: 'positive', reason: 'Kind.', rewrite: null } };
+      },
+    },
+  };
+  applyJevSetting(true);
+  try {
+    const result = await analyzeText('thanks, this was really helpful');
+    assert.deepEqual(calls, ['cv-jev-analyze', 'cv-analyze']);
+    assert.equal(result.sentiment, 'positive');
+    assert.equal(result.engine, undefined);
+  } finally {
+    applyJevSetting(false);
+    console.warn = warn;
+  }
+});
+
+test('analyzeText does not call Jev while Fast mode is off', async () => {
+  const calls = [];
+  global.browser = {
+    runtime: {
+      sendMessage: async message => {
+        calls.push(message.type);
+        return { ok: true, result: { sentiment: 'neutral', reason: 'Calm.', rewrite: null } };
+      },
+    },
+  };
+  await analyzeText('what time does it start?');
+  assert.deepEqual(calls, ['cv-analyze']);
+});
+
+test('analyzeViaJev surfaces background errors', async () => {
+  global.browser = { runtime: { sendMessage: async () => ({ ok: false, error: 'Fast mode is off' }) } };
+  await assert.rejects(analyzeViaJev('long enough text'), /Fast mode is off/);
 });
 
 test('analyzeViaBackground surfaces background errors', async () => {

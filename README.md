@@ -25,7 +25,9 @@ friendlier or more professional. Turn off automatic checks and use the
 
 ## Privacy
 
-All analysis runs locally — Chrome's on-device Gemini Nano model, or Firefox's on-device AI runtime. Your comments are never sent to any server.
+By default all analysis runs locally — Chrome's on-device Gemini Nano model, or Firefox's on-device AI runtime. Your comments are never sent to any server.
+
+**Optional Fast mode (cloud).** If you turn on *Fast tone check with Jev* in the popup and paste your own [TypeSafe](https://typesafe.ai) API key, the text being checked is sent to `api.typesafe.ai` and classified by the Jev decision model (typically well under a second). It is off by default, the extension asks for access to `api.typesafe.ai` only when you enable it, and the key is kept in this browser's local storage (never synced). Jev only powers the tone badge — writing actions and rewrites still run on-device — and if a Jev call fails, Comment Vibe falls back to the on-device model.
 
 ## Firefox support
 

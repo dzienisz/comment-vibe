@@ -25,8 +25,9 @@
   },
   "permissions": ["storage", "activeTab"],
   "optional_permissions": ["trialML"],
+  "optional_host_permissions": ["https://api.typesafe.ai/*"],
   "background": {
-    "scripts": ["background.js"]
+    "scripts": ["jev.js", "background.js"]
   },
   "content_scripts": [
     {

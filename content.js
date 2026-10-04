@@ -123,6 +123,7 @@ function supportsReducedOptionsRetry(error) {
 // download by themselves, so this can be polled before deciding whether to
 // show "Analyzing…" or an honest "model is still downloading" state.
 async function getModelStatus() {
+  if (jevEnabled) return 'available';
   if (typeof LanguageModel !== 'undefined') {
     const avail = await LanguageModel.availability();
     if (avail === 'unavailable') return 'unavailable';
@@ -534,6 +535,61 @@ async function analyzeViaBackground(text) {
   return normalize(response.result);
 }
 
+// ── Fast mode (TypeSafe Jev, opt-in cloud) ───────────────────────────────────
+//
+// When the user turns on Fast mode in the popup, tone checks go to jev.js in
+// the background context, which holds the API key and calls TypeSafe. Any
+// failure falls back to the on-device path, so a bad key or an outage never
+// leaves the user worse off than before. The flag lives in storage.local
+// next to the key: it is a per-browser choice and is never synced.
+
+const JEV_ENABLED_KEY = 'cvJevEnabled';
+let jevEnabled = false;
+let onJevEnabled = null;
+
+function getExtRuntime() {
+  if (typeof browser !== 'undefined' && browser.runtime?.sendMessage) return browser.runtime;
+  if (typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) return chrome.runtime;
+  return null;
+}
+
+function getLocalStorageArea() {
+  if (typeof browser !== 'undefined' && browser.storage?.local) return browser.storage.local;
+  if (typeof chrome !== 'undefined' && chrome.storage?.local) return chrome.storage.local;
+  return null;
+}
+
+function applyJevSetting(value) {
+  const next = value === true;
+  if (next === jevEnabled) return;
+  jevEnabled = next;
+  resultCache.clear(); // cached verdicts came from the other engine
+  if (jevEnabled) onJevEnabled?.();
+}
+
+function loadJevSetting() {
+  const area = getLocalStorageArea();
+  if (!area) return Promise.resolve();
+  return Promise.resolve(area.get({ [JEV_ENABLED_KEY]: false }))
+    .then(data => applyJevSetting(data?.[JEV_ENABLED_KEY]))
+    .catch(() => {});
+}
+
+function watchJevSetting() {
+  getStorageOnChanged()?.addListener((changes, areaName) => {
+    if (areaName !== 'local' || !changes[JEV_ENABLED_KEY]) return;
+    applyJevSetting(changes[JEV_ENABLED_KEY].newValue);
+  });
+}
+
+async function analyzeViaJev(text) {
+  const runtime = getExtRuntime();
+  if (!runtime) throw new Error('Fast mode needs the extension runtime');
+  const response = await runtime.sendMessage({ type: 'cv-jev-analyze', text });
+  if (!response?.ok) throw new Error(response?.error || 'Jev request failed');
+  return { ...normalize(response.result), engine: 'jev' };
+}
+
 // ── Localisation (Language Detector + Translator) ─────────────────────────────
 //
 // The model always reasons in English (reliable structured JSON). When the
@@ -664,6 +720,14 @@ function parseAnalysisResponse(raw, usesConstraint) {
 }
 
 async function analyzeText(text, onEarlySentiment, signal) {
+  if (jevEnabled) {
+    try {
+      return await analyzeViaJev(text);
+    } catch (error) {
+      if (signal?.aborted) throw error;
+      console.warn('[CommentVibe] Fast mode failed, using on-device AI:', error?.message || error);
+    }
+  }
   if (isFirefoxMLContext()) return analyzeViaBackground(text);
   const acquired = await getSession();
   const base = acquired.session;
@@ -1552,7 +1616,7 @@ function attachToInput(el) {
     // Pre-warm the model as soon as the user focuses a comment field — this is
     // the moment their intent to use the AI feature is clear, so we can load
     // the session in the background instead of waiting for the first keystroke.
-    if (!isFirefoxMLContext()) getSession().catch(() => {});
+    if (!isFirefoxMLContext() && !jevEnabled) getSession().catch(() => {});
     if (state.lastText.length >= MIN_LENGTH) {
       placeBadge(badge, el);
       sp(badge, 'display', 'inline-flex');
@@ -1678,13 +1742,27 @@ function watchDOM() {
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 
+let trackingStarted = false;
+
+async function startTracking() {
+  if (trackingStarted) return;
+  trackingStarted = true;
+  await loadSettings();
+  watchSettings();
+  scanPage();
+  watchDOM();
+}
+
 async function init() {
+  // Fast mode works without any on-device model, so a page that started
+  // dormant wakes up as soon as the user turns it on in the popup.
+  onJevEnabled = startTracking;
+  await loadJevSetting();
+  watchJevSetting();
   const hasChromeAI = typeof LanguageModel !== 'undefined' || !!window.ai?.languageModel;
-  if (hasChromeAI) {
-    await loadSettings();
-    watchSettings();
-    scanPage();
-    watchDOM();
+  if (hasChromeAI || jevEnabled) {
+    if (isFirefoxMLContext()) initFirefox();
+    startTracking();
     return;
   }
   if (isFirefoxMLContext()) {
@@ -1698,20 +1776,11 @@ async function init() {
 // unavailable until the user enables it from the popup. Stay dormant and wait
 // for the background's cv-ml-ready broadcast instead of giving up.
 function initFirefox() {
-  let started = false;
-  const start = async () => {
-    if (started) return;
-    started = true;
-    await loadSettings();
-    watchSettings();
-    scanPage();
-    watchDOM();
-  };
   browser.runtime.onMessage.addListener(message => {
-    if (message?.type === 'cv-ml-ready') start();
+    if (message?.type === 'cv-ml-ready') startTracking();
   });
   browser.runtime.sendMessage({ type: 'cv-status' })
-    .then(status => { if (status?.available) start(); })
+    .then(status => { if (status?.available) startTracking(); })
     .catch(() => {});
 }
 
@@ -1727,6 +1796,8 @@ if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     analyzeText,
     analyzeViaBackground,
+    analyzeViaJev,
+    applyJevSetting,
     applyRewrite,
     applyViaExecCommand,
     beginInputChange,
