@@ -338,3 +338,6 @@ pre code { background: none; padding: 0; color: inherit; font-size: inherit; }
 
 .res-group { font-size: 14px; margin: 16px 0 6px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
 .resources { margin: 0; padding-left: 18px; line-height: 1.8; }
+
+.tips { margin: 0; padding-left: 18px; line-height: 1.7; }
+.tips li + li { margin-top: 6px; }
