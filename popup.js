@@ -37,8 +37,14 @@ function hasChromeAI() {
   return typeof LanguageModel !== 'undefined' || !!window.ai?.languageModel;
 }
 
+// Chrome now exposes `browser` as well; only the Chrome manifest has a service worker.
 function isFirefox() {
-  return typeof browser !== 'undefined' && !!browser.permissions;
+  if (typeof browser === 'undefined' || !browser.permissions) return false;
+  try {
+    return !browser.runtime?.getManifest?.()?.background?.service_worker;
+  } catch {
+    return true;
+  }
 }
 
 // Real extension context (not a plain page preview): chrome.runtime exists on
