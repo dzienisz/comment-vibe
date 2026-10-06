@@ -28,6 +28,8 @@ test('release snapshot distinguishes stable from planned releases', () => {
   assert.equal(RELEASE_INFO.beta, 154);
   assert.equal(RELEASE_INFO.nextStableDate, '2026-09-22');
   assert.equal(APIS.find(api => api.id === 'proofreader').status, 'dev-trial');
+  assert.equal(APIS.find(api => api.id === 'writer').status, 'deprecating');
+  assert.equal(APIS.find(api => api.id === 'rewriter').status, 'deprecating');
   assert.equal(APIS.find(api => api.id === 'webmcp').status, 'origin-trial');
   assert.equal(APIS.find(api => api.id === 'webmcp').versions.find(v => v.v === 'Chrome 153').state, 'now');
 });
@@ -167,6 +169,14 @@ test('demo calls create synchronously to preserve user activation and retries cr
   await assert.rejects(first, /download interrupted/);
   assert.equal(await APIS[0].demo.run({ text: 'Hello' }, report), 'Recovered');
   assert.equal(attempts, 2);
+});
+
+test('every API has at least three tips', () => {
+  const { APIS } = loadPlayground();
+  for (const api of APIS) {
+    assert.ok(api.tips.length >= 3, `${api.id} needs tips`);
+    for (const tip of api.tips) assert.equal(typeof tip, 'string');
+  }
 });
 
 test('Decisions API passes the tone schema to availability and formats the decision', async () => {

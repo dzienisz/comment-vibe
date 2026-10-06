@@ -298,20 +298,26 @@ console.log(best.detectedLanguage, best.confidence);`,
     id: 'writer',
     name: 'Writer API',
     globalName: 'Writer',
-    status: 'dev-trial',
+    status: 'deprecating',
     tagline: 'Generowanie nowych treści wg zadania.',
     description: `Tworzy nowy tekst zgodny z opisanym zadaniem — np. opis produktu, e-mail,
-      post. Pozwala sterować tonem, formatem i długością. <strong>Wciąż eksperymentalne
-      (developer trial)</strong> — może nie być dostępne bez flagi lub udziału w Early
-      Preview Program, dlatego w Comment Vibe go nie używam.
-      <br><br>Origin trial Chrome 137–148 zakończył się; aktualna tabela Google podaje
-      developer trial, bez potwierdzonej wersji stable. Wygaśnięcie trial nie oznacza porzucenia API.
-      Przed użyciem w produkcji sprawdzaj dostępność i zapewnij alternatywną ścieżkę.`,
+      post. Pozwala sterować tonem, formatem i długością.
+      <br><br><strong>Chrome proponuje wycofanie i usunięcie Writer API</strong> (razem z Rewriter API).
+      Origin trial Chrome 137–148 pokazał, że deweloperzy wolą pisać prompty bezpośrednio w Prompt API —
+      Writer był w praktyce szablonem system promptu nad tym samym modelem Gemini Nano.
+      Google udostępnia <a target="_blank" rel="noopener" href="https://github.com/GoogleChromeLabs/web-ai-demos/tree/main/writer-rewriter-polyfills">polyfill</a>, który
+      odtwarza <code>window.Writer</code> na <code>LanguageModel</code> z tymi samymi szablonami promptów.
+      Propozycja nie jest ostateczna — konsultacja trwa do 23 października 2026.
+      Comment Vibe nie używa Writer API, więc wycofanie go nie dotyczy.`,
     versions: [
-      { v: 'Origin trial 137–148', label: 'Trial zakończony; nadal brak stabilnego wydania (developer trial / EPP)', state: 'trial' },
+      { v: 'Origin trial 137–148', label: 'Trial zakończony bez stabilnego wydania', state: 'past' },
+      { v: 'Październik 2026', label: 'Propozycja wycofania i usunięcia; polyfill na Prompt API; konsultacja do 23.10.2026', state: 'now' },
+      { v: 'Kolejne wersje', label: 'Usunięcie z Chrome — data niepotwierdzona', state: 'future' },
     ],
     links: [
       { label: 'Dokumentacja: Writer API', url: 'https://developer.chrome.com/docs/ai/writer-api' },
+      { label: 'Polyfill Writer/Rewriter na Prompt API (Google)', url: 'https://github.com/GoogleChromeLabs/web-ai-demos/tree/main/writer-rewriter-polyfills' },
+      { label: 'Formularz konsultacji wycofania', url: 'https://docs.google.com/forms/d/e/1FAIpQLSeyCU1PmpB6t5JtNN0qR1xDVB2iPOKxZ9Tjh4bQwOKz5JsBJw/viewform' },
     ],
     usage: `const writer = await Writer.create({
   tone: 'neutral',       // 'formal' | 'neutral' | 'casual'
@@ -343,19 +349,25 @@ const text = await writer.write('A short product description for a coffee mug.')
     id: 'rewriter',
     name: 'Rewriter API',
     globalName: 'Rewriter',
-    status: 'dev-trial',
+    status: 'deprecating',
     tagline: 'Przepisywanie i zmiana tonu istniejącego tekstu.',
     description: `Przeredagowuje istniejący tekst — zmienia ton, długość lub formę.
-      To naturalny kandydat, by zastąpić „ręczne" przepisywanie przez Prompt API w Comment Vibe.
-      <strong>Na razie developer trial</strong>, więc czekam aż się ustabilizuje, zanim na nim oprę produkcyjną funkcję.
-      <br><br>Origin trial Chrome 137–148 zakończył się; aktualny status to developer trial.
-      Nie ma potwierdzonej daty stabilnego wydania. Prompt API pozostaje alternatywą,
-      ale dostępność i jakość obu rozwiązań trzeba oceniać osobno.`,
+      <br><br><strong>Chrome proponuje wycofanie i usunięcie Rewriter API</strong> (razem z Writer API).
+      Powód: przepisywanie daje te same lub lepsze wyniki przez własny prompt w Prompt API.
+      Dokładnie tak działa Comment Vibe od początku — przyciski „Friendlier", „Shorter" itd. to prompty
+      do <code>LanguageModel</code>, więc wycofanie nas nie dotyczy.
+      Dla istniejącego kodu Google udostępnia <a target="_blank" rel="noopener" href="https://github.com/GoogleChromeLabs/web-ai-demos/tree/main/writer-rewriter-polyfills">polyfill</a>
+      <code>window.Rewriter</code> na Prompt API. Propozycja nie jest ostateczna — konsultacja trwa
+      do 23 października 2026.`,
     versions: [
-      { v: 'Origin trial 137–148', label: 'Trial zakończony; nadal brak stabilnego wydania (developer trial / EPP)', state: 'trial' },
+      { v: 'Origin trial 137–148', label: 'Trial zakończony bez stabilnego wydania', state: 'past' },
+      { v: 'Październik 2026', label: 'Propozycja wycofania i usunięcia; polyfill na Prompt API; konsultacja do 23.10.2026', state: 'now' },
+      { v: 'Kolejne wersje', label: 'Usunięcie z Chrome — data niepotwierdzona', state: 'future' },
     ],
     links: [
       { label: 'Dokumentacja: Rewriter API', url: 'https://developer.chrome.com/docs/ai/rewriter-api' },
+      { label: 'Polyfill Writer/Rewriter na Prompt API (Google)', url: 'https://github.com/GoogleChromeLabs/web-ai-demos/tree/main/writer-rewriter-polyfills' },
+      { label: 'Formularz konsultacji wycofania', url: 'https://docs.google.com/forms/d/e/1FAIpQLSeyCU1PmpB6t5JtNN0qR1xDVB2iPOKxZ9Tjh4bQwOKz5JsBJw/viewform' },
     ],
     usage: `const rewriter = await Rewriter.create({
   tone: 'more-casual',   // 'as-is' | 'more-formal' | 'more-casual'
@@ -605,6 +617,67 @@ await context.registerTool({
   },
 ];
 
+// Krótkie wskazówki produkcyjne dla każdego API (zakładka API → „Wskazówki").
+const TIPS = {
+  prompt: [
+    'Wywołuj <code>availability()</code> z tymi samymi opcjami (<code>expectedInputs</code>, języki), których użyjesz w <code>create()</code> — inaczej wynik może się nie zgadzać.',
+    'Przygotuj sesję w dobrym momencie, np. gdy użytkownik wejdzie w pole tekstowe, a nie przy ładowaniu strony. Pobranie modelu wymaga gestu użytkownika.',
+    'Instrukcje systemowe podaj w <code>initialPrompts</code> przy <code>create()</code>; przy wielu podobnych zapytaniach używaj <code>session.clone()</code> zamiast budować sesję od zera.',
+    'Gdy potrzebujesz JSON-a, przekaż <code>responseConstraint</code> (JSON Schema) zamiast prosić o format w treści promptu.',
+    'Długie odpowiedzi strumieniuj przez <code>promptStreaming()</code> i wstawiaj jako tekst (<code>textContent</code>), nie przez <code>innerHTML</code>.',
+    'Przerywaj nieaktualne zapytania przez <code>AbortController</code> (<code>{ signal }</code>) i zwalniaj nieużywane sesje <code>destroy()</code>. Comment Vibe anuluje poprzednią analizę przy każdej zmianie tekstu.',
+  ],
+  summarizer: [
+    'Wspólny kontekst (np. „artykuł techniczny dla programistów") podaj raz w <code>sharedContext</code>, a szczegóły per wywołanie w <code>context</code>.',
+    '<code>type</code> (<code>key-points</code>, <code>tldr</code>, <code>teaser</code>, <code>headline</code>), <code>format</code> i <code>length</code> ustawiasz przy <code>create()</code> — zmiana wymaga nowej instancji.',
+    'Długie dokumenty dziel na fragmenty i streszczaj streszczenia; rozmiar wejścia sprawdzisz <code>measureInputUsage()</code>.',
+    'Przy dłuższych tekstach użyj <code>summarizeStreaming()</code>, żeby użytkownik od razu widział postęp.',
+  ],
+  translator: [
+    'Dostępność i pobranie modelu zależą od <strong>pary języków</strong> — sprawdzaj <code>availability()</code> dla konkretnej pary, którą chcesz tłumaczyć.',
+    'Gdy nie znasz języka źródłowego, najpierw użyj Language Detector API.',
+    'Tłumacz akapitami albo przez <code>translateStreaming()</code> — krótsze fragmenty to szybsza pierwsza odpowiedź.',
+  ],
+  detector: [
+    'Bardzo krótkie teksty (kilka słów) dają niską pewność — porównuj <code>confidence</code> z progiem, zamiast ślepo brać pierwszy wynik.',
+    'Wynik to lista kandydatów posortowana od najbardziej prawdopodobnego; <code>und</code> oznacza język nieokreślony.',
+    'Jeśli spodziewasz się konkretnych języków, podaj <code>expectedInputLanguages</code> przy <code>create()</code>.',
+  ],
+  writer: [
+    'Chrome proponuje usunięcie Writer API — nowy kod pisz od razu na Prompt API albo na polyfillu Google.',
+    'Wspólne tło zadania podaj w <code>sharedContext</code>, a szczegóły w <code>context</code> konkretnego wywołania.',
+    'Pokazuj wygenerowany tekst jako propozycję, którą użytkownik może edytować lub odrzucić.',
+  ],
+  rewriter: [
+    'Chrome proponuje usunięcie Rewriter API — przepisywanie zrób własnym promptem w Prompt API (jak Comment Vibe) albo polyfillem.',
+    'Pokaż wersję przed i po oraz daj łatwe „cofnij" — przepisywanie zmienia tekst użytkownika.',
+    'Przy dłuższych tekstach używaj <code>rewriteStreaming()</code>.',
+  ],
+  proofreader: [
+    'Pokazuj <code>corrections</code> jako sugestie do zaakceptowania, zamiast od razu nadpisywać tekst użytkownika.',
+    'Uruchamiaj korektę z opóźnieniem (debounce) po przerwie w pisaniu, a nie po każdym znaku.',
+    'Podaj <code>expectedInputLanguages</code> i sprawdzaj <code>availability()</code> — obsługa języków może być ograniczona.',
+  ],
+  decisions: [
+    'Patrz na <code>confidence</code>, nie tylko na <code>label</code>: przy niskiej pewności albo małej różnicy między dwiema pierwszymi opcjami pokaż stan neutralny zamiast pewnego werdyktu.',
+    'Opisy opcji (<code>description</code>) to cała instrukcja dla modelu — pisz je krótko, konkretnie i tak, żeby się nie nakładały.',
+    'Zadawaj kilka pytań w jednym schemacie: jedno <code>decide()</code> odpowiada na wszystkie (np. ton i dane wrażliwe naraz).',
+    'API jest prototypem — zawsze rób feature detection i miej fallback (Prompt API albo prostsze reguły).',
+  ],
+  embedder: [
+    'Wektory z różnych modeli (albo wersji modelu) nie są porównywalne — zapisuj, czym je policzono, i przelicz bazę po zmianie modelu.',
+    'Wiele tekstów przekazuj jako tablicę w jednym <code>embed()</code>; batch jest szybszy niż osobne wywołania.',
+    'API nie dzieli tekstu samo — długie dokumenty podziel na fragmenty (explainer podaje limit ok. 2048 tokenów).',
+    'Próg podobieństwa dobierz na własnych danych. W naszym teście parafraza dała 0,80, inny temat 0,25, a polskie tłumaczenie tylko 0,51.',
+  ],
+  webmcp: [
+    'Nazwa, opis i <code>inputSchema</code> narzędzia to jedyne, co widzi agent — opisuj je precyzyjnie i konkretnie.',
+    'Przekazuj <code>signal</code> z <code>execute(input, { signal })</code> do <code>fetch()</code>, żeby anulowanie przerywało pracę w toku.',
+    'Akcje nieodwracalne (zakup, usunięcie) potwierdzaj z użytkownikiem, zamiast wykonywać je od razu.',
+  ],
+};
+for (const api of APIS) api.tips = TIPS[api.id] ?? [];
+
 // Metadane statusów (z dokumentacji) i wyników live-check (z Twojej przeglądarki).
 const STATUS_META = {
   'stable':       { label: 'Stabilne', cls: 'st-stable' },
@@ -612,6 +685,7 @@ const STATUS_META = {
   'origin-trial': { label: 'Origin Trial', cls: 'st-ot' },
   'dev-trial':    { label: 'Developer Trial', cls: 'st-dev' },
   'epp':          { label: 'Early Preview Program', cls: 'st-epp' },
+  'deprecating':  { label: 'Planowane wycofanie', cls: 'st-dev' },
   'prototype':    { label: 'Prototyp (Intent to Prototype)', cls: 'st-neutral' },
 };
 

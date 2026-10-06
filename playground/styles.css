@@ -335,3 +335,6 @@ pre code { background: none; padding: 0; color: inherit; font-size: inherit; }
   .sidebar { width: 100%; height: auto; position: static; }
   .content { height: auto; padding: 24px; }
 }
+
+.tips { margin: 0; padding-left: 18px; line-height: 1.7; }
+.tips li + li { margin-top: 6px; }

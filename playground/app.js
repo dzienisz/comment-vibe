@@ -273,6 +273,16 @@ function renderApi(api) {
   code.appendChild(el('div', { class: 'code-wrap' }, [copy, pre]));
   main.appendChild(code);
 
+  // Wskazówki
+  if (api.tips?.length) {
+    const tips = el('div', { class: 'card' });
+    tips.appendChild(el('h2', { text: 'Wskazówki' }));
+    const list = el('ul', { class: 'tips' });
+    for (const tip of api.tips) list.appendChild(el('li', { html: tip }));
+    tips.appendChild(list);
+    main.appendChild(tips);
+  }
+
   // Linki
   const links = el('div', { class: 'card' });
   links.appendChild(el('h2', { text: 'Linki' }));
