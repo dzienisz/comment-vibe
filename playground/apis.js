@@ -576,6 +576,12 @@ const TIPS = {
     'Zadawaj kilka pytań w jednym schemacie: jedno <code>decide()</code> odpowiada na wszystkie (np. ton i dane wrażliwe naraz).',
     'API jest prototypem — zawsze rób feature detection i miej fallback (Prompt API albo prostsze reguły).',
   ],
+  embedder: [
+    'Wektory z różnych modeli (albo wersji modelu) nie są porównywalne — zapisuj, czym je policzono, i przelicz bazę po zmianie modelu.',
+    'Wiele tekstów przekazuj jako tablicę w jednym <code>embed()</code>; batch jest szybszy niż osobne wywołania.',
+    'API nie dzieli tekstu samo — długie dokumenty podziel na fragmenty (explainer podaje limit ok. 2048 tokenów).',
+    'Próg podobieństwa dobierz na własnych danych. W naszym teście parafraza dała 0,80, inny temat 0,25, a polskie tłumaczenie tylko 0,51.',
+  ],
   webmcp: [
     'Nazwa, opis i <code>inputSchema</code> narzędzia to jedyne, co widzi agent — opisuj je precyzyjnie i konkretnie.',
     'Przekazuj <code>signal</code> z <code>execute(input, { signal })</code> do <code>fetch()</code>, żeby anulowanie przerywało pracę w toku.',
