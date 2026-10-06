@@ -126,6 +126,111 @@ async function initPrefs(api) {
   });
 }
 
+// Fast mode (TypeSafe Jev). The key and the on/off flag live in storage.local
+// — never synced. Enabling needs the api.typesafe.ai host permission, which
+// must be requested straight from the click (user gesture), and a key that
+// passes a live test call; jev.js in the background does the actual requests.
+const JEV_ORIGINS = ['https://api.typesafe.ai/*'];
+let onFastModeChange = null;
+
+function setCloudBadge(on) {
+  const mark = document.getElementById('private-mark');
+  mark.textContent = on ? 'Fast mode' : 'On-device';
+  mark.title = on
+    ? 'Tone checks use TypeSafe Jev (cloud); writing actions stay on this device'
+    : 'Your comments stay on this device';
+  mark.classList.toggle('private-mark--cloud', on);
+  onFastModeChange?.(on);
+  const line = document.getElementById('privacy-line');
+  if (!line) return;
+  line.dataset.local ??= line.textContent;
+  line.textContent = on
+    ? line.dataset.cloud || 'Fast mode sends the text being checked to TypeSafe; writing actions stay on this device.'
+    : line.dataset.local;
+}
+
+async function initCloud(api) {
+  const local = api.storage?.local;
+  if (!local || !api.permissions?.request) return null;
+  const section = document.getElementById('cloud');
+  const toggle  = document.getElementById('jev-enabled');
+  const config  = document.getElementById('jev-config');
+  const keyBox  = document.getElementById('jev-key');
+  const save    = document.getElementById('jev-save');
+  const status  = document.getElementById('jev-status');
+  section.hidden = false;
+
+  const data = await Promise.resolve(local.get({ cvJevEnabled: false, cvJevKey: '' })).catch(() => null);
+  const permitted = await Promise.resolve(api.permissions.contains({ origins: JEV_ORIGINS })).catch(() => false);
+  const enabled = data?.cvJevEnabled === true && permitted;
+  toggle.checked = enabled;
+  config.hidden = !enabled;
+  if (data?.cvJevKey) keyBox.placeholder = 'Key saved — paste to replace';
+  setCloudBadge(enabled);
+
+  const say = (kind, text) => {
+    status.className = `cloud-status${kind ? ` cloud-status--${kind}` : ''}`;
+    status.textContent = text;
+  };
+
+  const test = async apiKey => {
+    save.disabled = true;
+    say('', 'Testing…');
+    const result = await Promise.resolve(api.runtime.sendMessage({ type: 'cv-jev-test', apiKey }))
+      .catch(error => ({ ok: false, error: error?.message }));
+    save.disabled = false;
+    if (!result?.ok) {
+      say('err', result?.error || 'Test failed');
+      return false;
+    }
+    say('ok', `Connected · answered in ${result.ms} ms`);
+    return true;
+  };
+
+  toggle.addEventListener('change', async () => {
+    if (!toggle.checked) {
+      config.hidden = true;
+      Promise.resolve(local.set({ cvJevEnabled: false })).catch(() => {});
+      setCloudBadge(false);
+      return;
+    }
+    const granted = await Promise.resolve(api.permissions.request({ origins: JEV_ORIGINS })).catch(() => false);
+    if (!granted) {
+      toggle.checked = false;
+      return;
+    }
+    config.hidden = false;
+    const saved = await Promise.resolve(local.get({ cvJevKey: '' })).catch(() => null);
+    if (!saved?.cvJevKey) {
+      say('', 'Paste your TypeSafe API key to finish.');
+      keyBox.focus();
+      return;
+    }
+    if (await test('')) {
+      await Promise.resolve(local.set({ cvJevEnabled: true })).catch(() => {});
+      setCloudBadge(true);
+    }
+  });
+
+  save.addEventListener('click', async () => {
+    const apiKey = keyBox.value.trim();
+    if (!apiKey && keyBox.placeholder.startsWith('Paste your')) {
+      say('err', 'Paste a key first.');
+      return;
+    }
+    if (!await test(apiKey)) return;
+    const update = { cvJevEnabled: true };
+    if (apiKey) update.cvJevKey = apiKey;
+    await Promise.resolve(local.set(update)).catch(() => {});
+    keyBox.value = '';
+    keyBox.placeholder = 'Key saved — paste to replace';
+    toggle.checked = true;
+    setCloudBadge(true);
+  });
+
+  return enabled;
+}
+
 // The download state gets a real action instead of instructions: create() is
 // what triggers the model fetch, and monitor() reports progress on builds that
 // support it.
@@ -157,10 +262,12 @@ function wireDownload(els) {
   });
 }
 
-async function initFirefoxPopup(els) {
+async function initFirefoxPopup(els, fastMode) {
   document.getElementById('info').innerHTML =
     "Comment Vibe uses <strong>Firefox's on-device AI runtime</strong> to classify " +
-    'the tone of your comments in real time — completely on-device, no data sent anywhere. ' +
+    'the tone of your comments in real time — <span id="privacy-line" ' +
+    'data-cloud="except in Fast mode, which sends the text being checked to TypeSafe.">' +
+    'completely on-device, no data sent anywhere.</span> ' +
     "Unlike Chrome's generative Gemini Nano, Firefox's AI API is a <em>classifier</em>: " +
     'it judges tone in ~100 languages but cannot write rewrite suggestions — those are ' +
     'Chrome-only for now. ' +
@@ -170,12 +277,14 @@ async function initFirefoxPopup(els) {
     .contains({ permissions: ['trialML'] })
     .catch(() => false);
 
+  setCloudBadge(fastMode);
   if (granted) {
     setStatus(els, 'ok', 'Firefox AI ready ✓');
     return;
   }
 
-  setStatus(els, 'err', 'On-device AI not enabled');
+  onFastModeChange = on => setStatus(els, on ? 'ok' : 'err', on ? 'Fast mode ready ✓' : 'On-device AI not enabled');
+  onFastModeChange(fastMode);
   const setupFf  = document.getElementById('setup-firefox');
   const enable   = document.getElementById('ff-enable');
   const progress = document.getElementById('ff-progress');
@@ -203,6 +312,7 @@ async function initFirefoxPopup(els) {
 
     if (result?.ok) {
       setupFf.classList.remove('visible');
+      onFastModeChange = null;
       setStatus(els, 'ok', 'Firefox AI ready ✓');
     } else {
       enable.disabled = false;
@@ -221,8 +331,10 @@ async function initFirefoxPopup(els) {
 
   const api = getExtApi();
   document.getElementById('rate-link').href = storeUrl();
+  let fastMode = false;
   if (api) {
     initPrefs(api);
+    fastMode = await initCloud(api).catch(() => null);
     const version = api.runtime.getManifest?.().version;
     if (version) document.getElementById('version').textContent = ` · v${version}`;
   }
@@ -236,17 +348,19 @@ async function initFirefoxPopup(els) {
       document.getElementById('setup-download').classList.add('visible');
       wireDownload(els);
     } else {
-      setStatus(els, 'err', 'Chrome AI not available');
+      onFastModeChange = on => setStatus(els, on ? 'ok' : 'err', on ? 'Fast mode ready ✓' : 'Chrome AI not available');
+      onFastModeChange(fastMode);
       document.getElementById('setup').classList.add('visible');
     }
     return;
   }
 
   if (isFirefox()) {
-    await initFirefoxPopup(els);
+    await initFirefoxPopup(els, fastMode === true);
     return;
   }
 
-  setStatus(els, 'err', 'Chrome AI not available');
+  onFastModeChange = on => setStatus(els, on ? 'ok' : 'err', on ? 'Fast mode ready ✓' : 'Chrome AI not available');
+  onFastModeChange(fastMode);
   document.getElementById('setup').classList.add('visible');
 })();

@@ -47,7 +47,7 @@ zip -rq "$CHROME_ZIP" . \
 # manifest.json (zip can't rename, so stage in a temp dir).
 tmp="$(mktemp -d)"
 mkdir "$tmp/icons"
-cp content.js content.css popup.html popup.css popup.js background.js LICENSE "$tmp/"
+cp content.js content.css popup.html popup.css popup.js background.js jev.js LICENSE "$tmp/"
 cp icons/icon16.png icons/icon48.png icons/icon128.png "$tmp/icons/"
 cp manifest.firefox.json "$tmp/manifest.json"
 ( cd "$tmp" && zip -rq - . ) > "$ROOT/$FF_ZIP"
@@ -71,6 +71,7 @@ echo "Verifying $CHROME_ZIP:"
 listing_has "$chrome_list" "manifest.json"         && ok "manifest.json"           || bad "missing manifest.json"
 listing_has "$chrome_list" "content.js"            && ok "content.js"              || bad "missing content.js"
 listing_has "$chrome_list" "LICENSE"               && ok "LICENSE"                 || bad "missing LICENSE"
+listing_has "$chrome_list" "jev.js"                && ok "jev.js"                  || bad "missing jev.js"
 listing_has "$chrome_list" "background.js"         && bad "background.js must be Firefox-only" || ok "no background.js"
 listing_has "$chrome_list" "manifest.firefox.json" && bad "manifest.firefox.json leaked in"    || ok "no manifest.firefox.json"
 grep -q minimum_chrome_version <<<"$chrome_manifest" \
@@ -80,6 +81,7 @@ echo "Verifying $FF_ZIP:"
 listing_has "$ff_list" "manifest.json" && ok "manifest.json"  || bad "missing manifest.json"
 listing_has "$ff_list" "background.js" && ok "background.js"  || bad "missing background.js"
 listing_has "$ff_list" "LICENSE"       && ok "LICENSE"        || bad "missing LICENSE"
+listing_has "$ff_list" "jev.js"        && ok "jev.js"         || bad "missing jev.js"
 grep -q '"gecko"' <<<"$ff_manifest" \
   && ok "Firefox gecko variant" || bad "Firefox manifest missing gecko settings"
 grep -q data_collection_permissions <<<"$ff_manifest" \

@@ -3,7 +3,7 @@
   "name": "Comment Vibe — Private AI Tone Checker",
   "short_name": "Comment Vibe",
   "description": "Write with more clarity. Private, on-device AI shows how your comment may land and suggests a kinder rewrite before you post.",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "minimum_chrome_version": "127",
   "icons": {
     "16": "icons/icon16.png",
@@ -11,6 +11,7 @@
     "128": "icons/icon128.png"
   },
   "permissions": ["storage", "activeTab"],
+  "optional_host_permissions": ["https://api.typesafe.ai/*"],
   "action": {
     "default_popup": "popup.html",
     "default_title": "Comment Vibe",
@@ -18,6 +19,9 @@
       "16": "icons/icon16.png",
       "48": "icons/icon48.png"
     }
+  },
+  "background": {
+    "service_worker": "jev.js"
   },
   "content_scripts": [
     {

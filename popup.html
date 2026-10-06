@@ -16,7 +16,7 @@
         <h1>Comment Vibe</h1>
         <p>A little clarity before you post.</p>
       </div>
-      <span class="private-mark" title="Your comments stay on this device">On-device</span>
+      <span class="private-mark" id="private-mark" title="Your comments stay on this device">On-device</span>
     </header>
 
     <section id="status" class="status status--checking" aria-live="polite">
@@ -25,7 +25,7 @@
     </section>
 
     <section id="info" class="info">
-      Comment Vibe reads the tone of what you're writing, then fixes grammar or makes it shorter, clearer, friendlier or more professional in one click. Your text never leaves this device.
+      Comment Vibe reads the tone of what you're writing, then fixes grammar or makes it shorter, clearer, friendlier or more professional in one click. <span id="privacy-line">Your text never leaves this device.</span>
     </section>
 
     <section id="prefs" class="prefs" hidden aria-label="Comment Vibe preferences">
@@ -57,6 +57,30 @@
         <input type="checkbox" id="auto-mode" checked>
         <span class="switch" aria-hidden="true"></span>
       </label>
+    </section>
+
+    <section id="cloud" class="cloud" hidden aria-label="Fast mode">
+      <div class="section-heading">
+        <span>Fast mode</span>
+        <small>Optional · cloud</small>
+      </div>
+      <label class="toggle">
+        <span class="toggle-copy">
+          <strong>Fast tone check with Jev</strong>
+          <small>Sends the text being checked to TypeSafe AI</small>
+        </span>
+        <input type="checkbox" id="jev-enabled">
+        <span class="switch" aria-hidden="true"></span>
+      </label>
+      <div id="jev-config" class="cloud-config" hidden>
+        <label class="cloud-label" for="jev-key">TypeSafe API key</label>
+        <div class="cloud-row">
+          <input id="jev-key" class="cloud-input" type="password" autocomplete="off" spellcheck="false" placeholder="Paste your key">
+          <button id="jev-save" class="setup-button cloud-button" type="button">Save &amp; test</button>
+        </div>
+        <p id="jev-status" class="cloud-status" aria-live="polite"></p>
+        <p class="cloud-note">Only the text being checked goes to <code>api.typesafe.ai</code>, with your key. Writing actions stay on-device and the key stays in this browser. <a href="https://console.typesafe.ai/keys" target="_blank" rel="noopener">Get a key ↗</a></p>
+      </div>
     </section>
 
     <section id="setup-download" class="setup setup--info">
