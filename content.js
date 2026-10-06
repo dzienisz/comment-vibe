@@ -1150,7 +1150,9 @@ function renderBadge(badge, tooltip, result, actions = {}) {
     footer.className = 'cv-tooltip-footer';
     const note = document.createElement('span');
     note.className = 'cv-tooltip-footer-note';
-    note.textContent = 'Private, on-device guidance';
+    note.textContent = result.engine === 'jev'
+      ? 'Tone by Jev (cloud) · writing on-device'
+      : 'Private, on-device guidance';
     const mute = document.createElement('button');
     mute.className = 'cv-tooltip-mute';
     mute.type = 'button';

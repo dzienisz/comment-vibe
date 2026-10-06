@@ -131,6 +131,7 @@ async function initPrefs(api) {
 // must be requested straight from the click (user gesture), and a key that
 // passes a live test call; jev.js in the background does the actual requests.
 const JEV_ORIGINS = ['https://api.typesafe.ai/*'];
+let onFastModeChange = null;
 
 function setCloudBadge(on) {
   const mark = document.getElementById('private-mark');
@@ -139,6 +140,7 @@ function setCloudBadge(on) {
     ? 'Tone checks use TypeSafe Jev (cloud); writing actions stay on this device'
     : 'Your comments stay on this device';
   mark.classList.toggle('private-mark--cloud', on);
+  onFastModeChange?.(on);
   document.getElementById('privacy-line').textContent = on
     ? 'Fast mode sends the text being checked to TypeSafe; writing actions stay on this device.'
     : 'Your text never leaves this device.';
@@ -338,7 +340,8 @@ async function initFirefoxPopup(els) {
       document.getElementById('setup-download').classList.add('visible');
       wireDownload(els);
     } else {
-      setStatus(els, fastMode ? 'ok' : 'err', fastMode ? 'Fast mode ready ✓' : 'Chrome AI not available');
+      onFastModeChange = on => setStatus(els, on ? 'ok' : 'err', on ? 'Fast mode ready ✓' : 'Chrome AI not available');
+      onFastModeChange(fastMode);
       document.getElementById('setup').classList.add('visible');
     }
     return;
@@ -349,6 +352,7 @@ async function initFirefoxPopup(els) {
     return;
   }
 
-  setStatus(els, fastMode ? 'ok' : 'err', fastMode ? 'Fast mode ready ✓' : 'Chrome AI not available');
+  onFastModeChange = on => setStatus(els, on ? 'ok' : 'err', on ? 'Fast mode ready ✓' : 'Chrome AI not available');
+  onFastModeChange(fastMode);
   document.getElementById('setup').classList.add('visible');
 })();
