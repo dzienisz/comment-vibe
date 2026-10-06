@@ -10,6 +10,9 @@
 //   report.progress(0..1)   – postęp pobierania modelu
 // i zwraca tekst do wyświetlenia (lub rzuca błąd, który zostanie pokazany).
 
+// Błąd w danych z formularza — demo pokazuje go bez listy typowych przyczyn.
+const inputError = message => Object.assign(new Error(message), { name: 'InputError' });
+
 // Helper: podpina podgląd pobierania modelu do opcji create({ monitor }).
 const dl = report => m =>
   m.addEventListener('downloadprogress', e => {
@@ -244,7 +247,7 @@ console.log(pl);`,
       ],
       options: v => ({ sourceLanguage: v.source, targetLanguage: v.target }),
       run: async (v, report) => {
-        if (v.source === v.target) throw new Error('Wybierz dwa różne języki.');
+        if (v.source === v.target) throw inputError('Wybierz dwa różne języki.');
         report.status('Tworzę tłumacza…');
         return runWithSession('translator', v, report, t => {
           report.status('Tłumaczę…');
@@ -552,7 +555,7 @@ if (await SemanticEmbedder.availability() !== 'unavailable') {
       ],
       run: async (v, report) => {
         const others = String(v.others ?? '').split('\n').map(line => line.trim()).filter(Boolean);
-        if (!String(v.base ?? '').trim() || !others.length) throw new Error('Podaj zdanie bazowe i co najmniej jedno do porównania.');
+        if (!String(v.base ?? '').trim() || !others.length) throw inputError('Podaj zdanie bazowe i co najmniej jedno do porównania.');
         report.status('Tworzę embedder…');
         return runWithSession('embedder', v, report, async embedder => {
           report.status('Liczę wektory…');
