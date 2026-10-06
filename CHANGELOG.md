@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-10-06
+
 ### Added
 
 - Optional **Fast mode** (cloud, off by default): turn on *Fast tone check with Jev* in the popup and paste your own TypeSafe API key to get the tone badge from TypeSafe's Jev decision model instead of the on-device model. The extension asks for `api.typesafe.ai` access only when you enable it, keeps the key in local (never synced) storage, sends only the text being checked, keeps writing actions on-device, and falls back to on-device AI if a Jev call fails.
