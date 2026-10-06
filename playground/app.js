@@ -314,7 +314,13 @@ function renderApi(api) {
 
   // Demo na żywo (wpisy informacyjne, np. WebMCP, nie mają dema)
   if (api.demo) {
-    main.appendChild(buildDemo(api, values => { demoValues = values; runCheck(); }));
+    const onDownload = state => {
+      if (!state) return runCheck();
+      ++checkId;
+      result.innerHTML = '';
+      result.appendChild(availPill(state));
+    };
+    main.appendChild(buildDemo(api, values => { demoValues = values; runCheck(); }, onDownload));
   } else {
     const note = el('div', { class: 'card' });
     note.appendChild(el('h2', { text: 'Demo' }));
@@ -327,7 +333,13 @@ function renderApi(api) {
 
 // ── Demo runner ────────────────────────────────────────────────────────────────
 
-function buildDemo(api, onOptionsChange = () => {}) {
+// Czas w polskim formacie: „840 ms”, „12,3 s”.
+function formatElapsed(ms) {
+  return ms < 1000 ? `${Math.round(ms)} ms` : `${(ms / 1000).toFixed(1).replace('.', ',')} s`;
+}
+
+// onDownload('downloading') przy starcie pobierania, onDownload(null) po zakończeniu.
+function buildDemo(api, onOptionsChange = () => {}, onDownload = () => {}) {
   const card = el('div', { class: 'card demo' });
   card.appendChild(el('h2', { text: 'Demo na żywo' }));
 
@@ -355,7 +367,11 @@ function buildDemo(api, onOptionsChange = () => {}) {
   }
 
   const status = el('div', { class: 'demo-status' });
-  const bar = el('div', { class: 'progress' }, el('div', { class: 'progress-fill' }));
+  const fill = el('div', { class: 'progress-fill' });
+  const meter = el('div', { class: 'progress', role: 'progressbar', 'aria-label': 'Pobieranie modelu',
+    'aria-valuemin': '0', 'aria-valuemax': '100' }, fill);
+  const pctLabel = el('span', { class: 'progress-pct', text: '0%' });
+  const bar = el('div', { class: 'progress-row' }, [meter, pctLabel]);
   bar.style.display = 'none';
   const output = el('pre', { class: 'demo-output', text: '' });
 
@@ -369,31 +385,46 @@ function buildDemo(api, onOptionsChange = () => {}) {
     output.removeAttribute('role');
     status.textContent = '';
     bar.style.display = 'none';
-    bar.querySelector('.progress-fill').style.width = '0%';
+    fill.style.width = '0%';
+    pctLabel.textContent = '0%';
+    meter.setAttribute('aria-valuenow', '0');
 
     console.group(`%c Built-in AI %c ${api.name} · ${api.globalName}`, LOG_BADGE, 'color:#3b6ef5;font-weight:600');
     aiLog('wywołuję demo — dane wejściowe:', values);
 
+    // Licznik na żywo — tworzenie sesji i pobieranie potrafią trwać sekundy.
+    const t0 = performance.now();
+    let phase = 'Uruchamiam…';
+    let downloading = false;
+    const tick = () => { status.textContent = `${phase} · ${formatElapsed(performance.now() - t0)}`; };
+    const timer = setInterval(tick, 100);
+    tick();
+
     const report = {
-      status: msg => { status.textContent = msg; aiLog(msg); },
+      status: msg => { phase = msg; tick(); aiLog(msg); },
       progress: frac => {
         const pct = Math.round(frac * 100);
-        bar.style.display = 'block';
-        bar.querySelector('.progress-fill').style.width = `${pct}%`;
-        status.textContent = `Pobieram model… ${pct}%`;
+        bar.style.display = 'flex';
+        fill.style.width = `${pct}%`;
+        pctLabel.textContent = `${pct}%`;
+        meter.setAttribute('aria-valuenow', String(pct));
+        if (!downloading && frac < 1) { downloading = true; onDownload('downloading'); }
+        phase = frac < 1 ? 'Pobieram model — nie zamykaj karty' : 'Model pobrany, uruchamiam…';
+        tick();
         aiLog(`pobieranie modelu: ${pct}%`);
       },
     };
 
-    const t0 = performance.now();
     try {
       const out = await api.demo.run(values, report);
+      clearInterval(timer);
       const ms = Math.round(performance.now() - t0);
       status.textContent = `Gotowe w ${ms} ms`;
       bar.style.display = 'none';
       output.textContent = out;
       aiLog(`✅ gotowe w ${ms} ms — wynik:`, out);
     } catch (e) {
+      clearInterval(timer);
       bar.style.display = 'none';
       status.textContent = '';
       output.classList.add('error');
@@ -406,6 +437,8 @@ function buildDemo(api, onOptionsChange = () => {}) {
       aiLog(`❌ błąd: ${e?.message || e}`);
       console.error('[Built-in AI] pełny błąd:', e);
     } finally {
+      clearInterval(timer);
+      if (downloading) onDownload(null);
       runBtn.disabled = false;
       console.groupEnd();
     }
