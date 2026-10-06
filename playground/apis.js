@@ -50,6 +50,35 @@ async function runWithSession(id, values, report, run) {
   }
 }
 
+const DECISION_SCHEMA = {
+  context: 'Comment box tone check: how will other readers perceive the comment the user is about to post?',
+  questions: [
+    { id: 'tone', type: 'choice', prompt: 'How will other readers perceive the tone of this comment?',
+      options: [
+        { label: 'positive', description: 'Friendly, appreciative, encouraging or supportive.' },
+        { label: 'neutral', description: 'Factual, informational, or a calm question, with no strong emotion.' },
+        { label: 'negative', description: 'Critical, dismissive, sarcastic, complaining or harsh, but without insults or slurs.' },
+        { label: 'toxic', description: 'Contains insults, name-calling, slurs, threats, harassment or hateful language aimed at people.' },
+      ] },
+    { id: 'contains_pii', type: 'boolean',
+      prompt: 'Does the comment contain personal contact info (email, phone, address), API keys or passwords?' },
+  ],
+};
+
+const pct = value => typeof value === 'number' ? `${Math.round(value * 100)}%` : '?';
+
+function formatDecision(result) {
+  const { tone, contains_pii: pii } = result ?? {};
+  // Explainer zwraca mapę { label: p }; polyfill WebAI — tablicę [{ label, probability }].
+  const raw = tone?.probabilities ?? {};
+  const entries = Array.isArray(raw) ? raw.map(item => [item?.label, item?.probability]) : Object.entries(raw);
+  const probs = entries.map(([label, p]) => `${label} ${pct(p)}`).join(' · ');
+  const lines = [`Ton: ${tone?.label ?? '?'} (pewność ${pct(tone?.confidence)})`];
+  if (probs) lines.push(`  ${probs}`);
+  lines.push(`Dane wrażliwe: ${pii?.label === 'true' ? 'tak' : pii?.label === 'false' ? 'nie' : '?'} (pewność ${pct(pii?.confidence)})`);
+  return lines.join('\n');
+}
+
 const APIS = [
   // ── Prompt API ──────────────────────────────────────────────────────────────
   {
@@ -378,6 +407,73 @@ console.log(result.corrections); // lista poprawek`,
     },
   },
 
+  // ── Decisions API (prototyp) ───────────────────────────────────────────────────
+  {
+    id: 'decisions',
+    name: 'Decisions API',
+    globalName: 'DecisionModel',
+    status: 'prototype',
+    tagline: '„Semantyczny if": szybkie decyzje i klasyfikacja bez generowania tekstu.',
+    description: `Lokalny model „System One" (w stylu Jev i Laya): dostaje tekst i z góry
+      zdefiniowane pytania (<code>boolean</code>, <code>choice</code>, <code>score</code>), a w jednym
+      przebiegu zwraca wybraną opcję, <strong>prawdopodobieństwa i pewność</strong>. Nie generuje tekstu,
+      więc nie może zwrócić etykiety spoza listy. Google celuje w dziesiątki–setki milisekund na zwykłym
+      laptopie. Dla Comment Vibe to naturalny kandydat na sam badge tonu: pytanie z trybu Fast mode
+      (Jev) przenosi się 1:1.
+      <br><br><strong>Na razie tylko Intent to Prototype</strong> — w Chrome nie ma jeszcze implementacji.
+      DevTrial ma się pojawić w Canary za flagą <code>chrome://flags/#ai-decisions-api</code>.
+      Demo zadziała dziś z <a target="_blank" rel="noopener" href="https://web-ai.studio/extension">rozszerzeniem
+      WebAI</a>, które dodaje <code>DecisionModel</code> na stronach z lokalnym modelem Laya (~690 MB).
+      W naszym teście na 10 komentarzach (EN+PL) Laya trafiła 8/10 (pomyliła sarkazm i polską obelgę),
+      a Jev w chmurze 10/10. Kształt API może się jeszcze zmienić.`,
+    versions: [
+      { v: 'Październik 2026', label: 'Intent to Prototype na blink-dev + explainer WICG', state: 'now' },
+      { v: 'Chrome Canary', label: 'Planowany DevTrial za flagą #ai-decisions-api — bez potwierdzonej wersji', state: 'future' },
+    ],
+    links: [
+      { label: 'Explainer: Decisions API', url: 'https://github.com/explainers-by-googlers/decisions-api' },
+      { label: 'Intent to Prototype (blink-dev)', url: 'https://groups.google.com/a/chromium.org/g/blink-dev/c/X_S9ryF9VYA' },
+      { label: 'Playground Decisions w Web AI Studio', url: 'https://web-ai.studio/playgrounds/decisions' },
+      { label: 'Rozszerzenie WebAI (polyfill z modelem Laya)', url: 'https://web-ai.studio/extension' },
+    ],
+    usage: `// Szkic z explainera — API jest na etapie prototypu i może się zmienić.
+const schema = {
+  context: 'Comment box tone check',
+  questions: [
+    { id: 'tone', type: 'choice', prompt: 'How will readers perceive the tone?',
+      options: [
+        { label: 'positive', description: 'Friendly or supportive' },
+        { label: 'neutral',  description: 'Factual, no strong emotion' },
+        { label: 'negative', description: 'Critical, sarcastic or harsh' },
+        { label: 'toxic',    description: 'Insults, slurs or threats' },
+      ] },
+    { id: 'contains_pii', type: 'boolean',
+      prompt: 'Does it contain an email, phone number, API key or password?' },
+  ],
+};
+
+if (await DecisionModel.availability(schema) !== 'unavailable') {
+  const model = await DecisionModel.create(schema);
+  const { tone, contains_pii } = await model.decide(commentText);
+  // tone → { label: 'negative', confidence: 0.76, probabilities: { … } }
+  if (contains_pii.label === 'true' && contains_pii.confidence > 0.8) warn();
+  model.destroy();
+}`,
+    demo: {
+      fields: [
+        { type: 'textarea', id: 'text', label: 'Komentarz do oceny', value: 'Oh great, another meeting that could have been an email.' },
+      ],
+      options: () => DECISION_SCHEMA,
+      run: async (v, report) => {
+        report.status('Tworzę model decyzji…');
+        return runWithSession('decisions', v, report, async model => {
+          report.status('Decyduję…');
+          return formatDecision(await model.decide(v.text));
+        });
+      },
+    },
+  },
+
   // ── WebMCP (nowość w Chrome 149) ──────────────────────────────────────────────
   {
     id: 'webmcp',
@@ -464,6 +560,7 @@ const STATUS_META = {
   'origin-trial': { label: 'Origin Trial', cls: 'st-ot' },
   'dev-trial':    { label: 'Developer Trial', cls: 'st-dev' },
   'epp':          { label: 'Early Preview Program', cls: 'st-epp' },
+  'prototype':    { label: 'Prototyp (Intent to Prototype)', cls: 'st-neutral' },
 };
 
 const AVAIL_META = {
