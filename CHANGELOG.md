@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Firefox:** model download progress is sent to the popup at most every 200 ms instead of on every event, without losing the latest value.
+
 ## [1.5.0] - 2026-10-06
 
 ### Added

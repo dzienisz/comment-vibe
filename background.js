@@ -51,15 +51,31 @@ async function mlAvailable() {
   }
 }
 
+// onProgress can fire many times per second during a download; forward at most
+// one message per interval, always carrying the latest event.
+const PROGRESS_INTERVAL_MS = 200;
+let progressTimer = null;
+let pendingProgress = null;
+let lastProgressAt = 0;
+
+function forwardProgress(data) {
+  pendingProgress = data;
+  if (progressTimer) return;
+  const wait = Math.max(0, lastProgressAt + PROGRESS_INTERVAL_MS - Date.now());
+  progressTimer = setTimeout(() => {
+    progressTimer = null;
+    lastProgressAt = Date.now();
+    browser.runtime.sendMessage({ type: 'cv-progress', data: pendingProgress }).catch(() => {});
+  }, wait);
+}
+
 // Model download progress, forwarded to the popup (rejected when it's closed).
 // Wired lazily as well: browser.trial only appears once trialML is granted.
 function wireProgress() {
   if (progressWired || !hasML()) return;
   progressWired = true;
   try {
-    browser.trial.ml.onProgress.addListener(data => {
-      browser.runtime.sendMessage({ type: 'cv-progress', data }).catch(() => {});
-    });
+    browser.trial.ml.onProgress.addListener(forwardProgress);
   } catch {}
 }
 
@@ -153,6 +169,10 @@ function resetEngineState() {
   enginePromise = null;
   runQueue = Promise.resolve();
   progressWired = false;
+  clearTimeout(progressTimer);
+  progressTimer = null;
+  pendingProgress = null;
+  lastProgressAt = 0;
 }
 
 if (typeof browser !== 'undefined') {
