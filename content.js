@@ -522,11 +522,24 @@ function disableSite(host) {
 // delegated to background.js over runtime messaging. That path classifies
 // tone with a zero-shot model — no streaming and no rewrite suggestions.
 
+// Chrome now exposes the `browser` namespace too, so it can't identify Firefox.
+// Only the Chrome manifest declares a service worker.
+function isChromeBuild() {
+  const runtime = (typeof chrome !== 'undefined' && chrome.runtime)
+    || (typeof browser !== 'undefined' && browser.runtime);
+  try {
+    return !!runtime?.getManifest?.()?.background?.service_worker;
+  } catch {
+    return false;
+  }
+}
+
 function isFirefoxMLContext() {
   return typeof LanguageModel === 'undefined'
     && !(typeof window !== 'undefined' && window.ai?.languageModel)
     && typeof browser !== 'undefined'
-    && !!browser.runtime?.sendMessage;
+    && !!browser.runtime?.sendMessage
+    && !isChromeBuild();
 }
 
 async function analyzeViaBackground(text) {
@@ -1839,6 +1852,7 @@ if (typeof module !== 'undefined' && module.exports) {
     invalidateRequest,
     isCleanupEligible,
     isCurrentRequest,
+    isChromeBuild,
     isFirefoxMLContext,
     normalize,
     normalizeDetectedLanguage,

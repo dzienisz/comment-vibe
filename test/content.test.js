@@ -26,6 +26,7 @@ const {
   invalidateRequest,
   isCleanupEligible,
   isCurrentRequest,
+  isChromeBuild,
   isFirefoxMLContext,
   normalize,
   normalizeDetectedLanguage,
@@ -1059,6 +1060,22 @@ test('applyRewrite falls back to textContent when execCommand is unavailable', (
 test('applyViaExecCommand reports false when the document cannot run it', () => {
   assert.equal(applyViaExecCommand({ tagName: 'DIV', ownerDocument: {} }, 'x'), false);
   assert.equal(applyViaExecCommand({ tagName: 'DIV' }, 'x'), false);
+});
+
+test('Chrome exposing the browser namespace is not mistaken for Firefox', () => {
+  const saved = global.browser;
+  const runtime = manifest => ({ sendMessage: async () => ({}), getManifest: () => manifest });
+  try {
+    global.browser = { runtime: runtime({ background: { service_worker: 'jev.js' } }) };
+    assert.equal(isChromeBuild(), true);
+    assert.equal(isFirefoxMLContext(), false);
+
+    global.browser = { runtime: runtime({ background: { scripts: ['jev.js', 'background.js'] } }) };
+    assert.equal(isChromeBuild(), false);
+    assert.equal(isFirefoxMLContext(), true);
+  } finally {
+    global.browser = saved;
+  }
 });
 
 test('Chrome Prompt API wins over the Firefox path when both exist', async () => {
