@@ -23,7 +23,8 @@ The popup's model-download states can be checked the same way with
 `test/popup-harness.html` (serve the repo root): it loads the real
 `popup.html` with a stubbed Prompt API. Modes: `?state=downloadable`,
 `downloading`, `available`, `unavailable`; options `&start=0.4`,
-`&duration=6000`, `&activation=required`, `&fail=1`. Reload mid-download to
+`&duration=6000`, `&activation=required`, `&fail=1`; `?browser=firefox`
+(`&ffshape=bytes|unknown`) for the Firefox setup flow. Reload mid-download to
 simulate reopening the popup.
 
 Full manual testing on Chrome requires:
