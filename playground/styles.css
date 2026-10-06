@@ -136,6 +136,9 @@ body { display: flex; }
 .btn-primary-link:hover { filter: brightness(1.08); }
 .btn-ghost-link { color: #a7e0cd; text-decoration: none; font-size: 14px; white-space: nowrap; }
 .btn-ghost-link:hover { color: #fff; }
+.content .btn-primary-link { color: #fff; }
+.content .btn-ghost-link { color: #a7e0cd; }
+.content .btn-ghost-link:hover { color: #fff; }
 
 /* ── Content ───────────────────────────────────────────────── */
 

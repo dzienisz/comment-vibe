@@ -104,6 +104,7 @@ function navItem(id, label, dotCls) {
 function setActive(id) {
   document.querySelectorAll('.nav-item').forEach(a =>
     a.classList.toggle('active', a.dataset.id === id));
+  document.querySelector('.nav-item.active')?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
 }
 
 // ── Panel: Przegląd ─────────────────────────────────────────────────────────
