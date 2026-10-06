@@ -185,7 +185,7 @@ function renderOverview() {
     checkApi(api).then(state => { cell.innerHTML = ''; cell.appendChild(availPill(state)); });
   }
   table.appendChild(tbody);
-  card.appendChild(table);
+  card.appendChild(el('div', { class: 'table-wrap' }, table));
   main.appendChild(card);
 
   main.appendChild(renderResources());
@@ -449,6 +449,7 @@ function route() {
   }
   injectBanner(document.getElementById('main'));
   document.getElementById('main').scrollTop = 0;
+  window.scrollTo(0, 0);
 }
 
 if (typeof document !== 'undefined') {
