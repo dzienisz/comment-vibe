@@ -94,6 +94,7 @@ for (const [id, globalName, method, result] of [
   ['writer', 'Writer', 'write', 'Draft'],
   ['rewriter', 'Rewriter', 'rewrite', 'Revision'],
   ['proofreader', 'Proofreader', 'proofread', { correctedInput: 'Corrected', corrections: [] }],
+  ['embedder', 'SemanticEmbedder', 'embed', { embeddings: [{ values: [1, 0] }, { values: [1, 0] }, { values: [0, 1] }, { values: [1, 1] }] }],
   ['decisions', 'DecisionModel', 'decide', { tone: { label: 'negative', confidence: 0.76, probabilities: { negative: 0.76 } }, contains_pii: { label: 'false', confidence: 0.97 } }],
 ]) {
   for (const fail of [false, true]) {
@@ -229,4 +230,27 @@ test('Decisions API formats array-shaped probabilities from the WebAI polyfill',
   const out = await APIS.find(api => api.id === 'decisions').demo.run({ text: 'x' }, report);
   assert.match(out, /neutral 38% · negative 30%/);
   assert.match(out, /Dane wrażliwe: nie/);
+});
+
+test('Semantic Embedder demo embeds one batch and ranks sentences by cosine similarity', async () => {
+  let input;
+  const { APIS } = loadPlayground({ SemanticEmbedder: { create: async () => ({
+    embed: async texts => {
+      input = texts;
+      return { embeddings: [{ values: [1, 0] }, { values: [0, 1] }, { values: [1, 0.1] }] };
+    },
+    destroy() {},
+  }) } });
+  const api = APIS.find(api => api.id === 'embedder');
+  const out = await api.demo.run({ base: 'fox', others: 'tax\n\nhound' }, report);
+  assert.equal(JSON.stringify(input), '["fox","tax","hound"]');
+  assert.match(out, /Wektor: 2 wymiarów/);
+  assert.ok(out.indexOf('hound') < out.indexOf('tax'));
+  assert.match(out, /1\.00  hound/);
+  assert.match(out, /0\.00  tax/);
+});
+
+test('Semantic Embedder reports no-api without the flag', async () => {
+  const { APIS, checkApi } = loadPlayground();
+  assert.equal(await checkApi(APIS.find(api => api.id === 'embedder')), 'no-api');
 });

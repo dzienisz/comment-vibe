@@ -79,6 +79,27 @@ function formatDecision(result) {
   return lines.join('\n');
 }
 
+function cosineSimilarity(a, b) {
+  let dot = 0, na = 0, nb = 0;
+  for (let i = 0; i < a.length; i++) {
+    dot += a[i] * b[i];
+    na += a[i] * a[i];
+    nb += b[i] * b[i];
+  }
+  return na && nb ? dot / Math.sqrt(na * nb) : 0;
+}
+
+function formatSimilarity(base, others, result) {
+  const vectors = (result?.embeddings ?? []).map(e => e?.values);
+  const [baseVector, ...rest] = vectors;
+  if (!baseVector?.length) return 'Model nie zwrócił wektora.';
+  const rows = others
+    .map((text, i) => ({ text, score: rest[i]?.length ? cosineSimilarity(baseVector, rest[i]) : NaN }))
+    .sort((a, b) => (b.score || -2) - (a.score || -2))
+    .map(({ text, score }) => `  ${Number.isFinite(score) ? score.toFixed(2) : '?'}  ${text}`);
+  return [`Wektor: ${baseVector.length} wymiarów`, `Podobieństwo (cosinus) do: „${base}"`, ...rows].join('\n');
+}
+
 const APIS = [
   // ── Prompt API ──────────────────────────────────────────────────────────────
   {
@@ -481,6 +502,61 @@ if (await DecisionModel.availability(schema) !== 'unavailable') {
         return runWithSession('decisions', v, report, async model => {
           report.status('Decyduję…');
           return formatDecision(await model.decide(v.text));
+        });
+      },
+    },
+  },
+
+  // ── Semantic Embedder API (developer trial) ─────────────────────────────────────
+  {
+    id: 'embedder',
+    name: 'Semantic Embedder API',
+    globalName: 'SemanticEmbedder',
+    status: 'dev-trial',
+    tagline: 'Wektory znaczenia (embeddingi) tekstu, liczone lokalnie.',
+    description: `Zamienia tekst na wektor liczb (<code>Float32Array</code>), który opisuje jego
+      <strong>znaczenie</strong>. Teksty o podobnym sensie dają podobne wektory, nawet gdy nie mają
+      wspólnych słów — to podstawa wyszukiwania semantycznego, grupowania, wykrywania duplikatów
+      i lokalnego RAG. Nie generuje tekstu. Jedno wywołanie <code>embed()</code> przyjmuje tekst albo
+      tablicę tekstów (batch); długie dokumenty trzeba samemu podzielić na fragmenty.
+      <br><br><strong>Wczesna propozycja Google</strong> (explainer, bez zgody na wydanie). W Chrome 155
+      Stable działa już za flagą <code>chrome://flags/#semantic-embedder-api</code> — sprawdziliśmy:
+      model pobrał się w ~10 s, wektor ma 768 wymiarów, a <code>embed()</code> trwa ~130–300 ms na CPU.
+      Kształt wyniku i opcje mogą się jeszcze zmienić.`,
+    versions: [
+      { v: 'Explainer', label: 'Wczesny szkic zespołu Chrome Built-in AI — bez zgody na wydanie', state: 'past' },
+      { v: 'Chrome 155', label: 'Developer trial za flagą #semantic-embedder-api', state: 'now' },
+      { v: 'Kolejne wersje', label: 'Origin trial / stable — brak potwierdzonej daty', state: 'future' },
+    ],
+    links: [
+      { label: 'Explainer: Semantic Embedder API', url: 'https://github.com/explainers-by-googlers/semantic-embedder-api' },
+      { label: 'Dyskusja i zgłoszenia (GitHub issues)', url: 'https://github.com/explainers-by-googlers/semantic-embedder-api/issues' },
+      { label: 'Playground Semantic Embedder w Web AI Studio', url: 'https://web-ai.studio/playgrounds/semantic-embedder' },
+    ],
+    usage: `// Wymaga chrome://flags/#semantic-embedder-api — API może się zmienić.
+if (await SemanticEmbedder.availability() !== 'unavailable') {
+  const embedder = await SemanticEmbedder.create();
+  const { embeddings } = await embedder.embed([
+    'The quick brown fox jumps over the lazy dog.',
+    'A fast, dark-colored fox leaps over a resting hound.',
+  ]);
+  const [a, b] = embeddings.map(e => e.values); // Float32Array(768)
+  console.log(cosineSimilarity(a, b));         // ~0.8 — podobny sens
+  embedder.destroy();
+}`,
+    demo: {
+      fields: [
+        { type: 'textarea', rows: 2, id: 'base', label: 'Zdanie bazowe', value: 'The quick brown fox jumps over the lazy dog.' },
+        { type: 'textarea', id: 'others', label: 'Zdania do porównania (jedno w wierszu)', rows: 4,
+          value: 'A fast, dark-colored fox leaps over a resting hound.\nSzybki lis przeskakuje nad leniwym psem.\nQuarterly tax filing deadlines are approaching.' },
+      ],
+      run: async (v, report) => {
+        const others = String(v.others ?? '').split('\n').map(line => line.trim()).filter(Boolean);
+        if (!String(v.base ?? '').trim() || !others.length) throw new Error('Podaj zdanie bazowe i co najmniej jedno do porównania.');
+        report.status('Tworzę embedder…');
+        return runWithSession('embedder', v, report, async embedder => {
+          report.status('Liczę wektory…');
+          return formatSimilarity(v.base, others, await embedder.embed([v.base, ...others]));
         });
       },
     },
