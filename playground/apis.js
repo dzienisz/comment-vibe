@@ -541,6 +541,30 @@ await context.registerTool({
   },
 ];
 
+// Zewnętrzne zasoby pokazywane w zakładce „Przegląd" (sekcja „Zasoby").
+const RESOURCES = [
+  { group: 'Google — dokumentacja', items: [
+    { label: 'Built-in AI: status wszystkich API', url: 'https://developer.chrome.com/docs/ai/built-in-apis',
+      note: 'Oficjalna tabela statusów i wersji.' },
+    { label: 'Pierwsze kroki i wymagania sprzętowe', url: 'https://developer.chrome.com/docs/ai/get-started',
+      note: 'Wymagania, pobieranie modeli, chrome://on-device-internals.' },
+    { label: 'Polyfille Writer/Rewriter', url: 'https://github.com/GoogleChromeLabs/web-ai-demos/tree/main/writer-rewriter-polyfills',
+      note: 'Writer i Rewriter zbudowane na Prompt API.' },
+  ] },
+  { group: 'Web AI Studio — Étienne Noël (zespół Chrome)', items: [
+    { label: 'Web AI Studio', url: 'https://web-ai.studio/',
+      note: 'Większy „brat" tego playgroundu: czat, tłumaczenia, pomoc w pisaniu, dema.' },
+    { label: 'Playgroundy API', url: 'https://web-ai.studio/playgrounds/prompt',
+      note: 'Wszystkie API, w tym Decisions, Semantic Embedder i Web Speech.' },
+    { label: 'Analiza sprzętu konsumenckiego', url: 'https://web-ai.studio/dashboards/consumer-hardware-analysis',
+      note: 'Jaki sprzęt uciągnie jaki rozmiar modelu i z jaką szybkością.' },
+    { label: 'Best practices', url: 'https://web-ai.studio/best-practices',
+      note: 'Sesje, streaming, structured output, wydajność, UX.' },
+    { label: 'Rozszerzenie WebAI', url: 'https://web-ai.studio/extension',
+      note: 'Panel DevTools i polyfill DecisionModel z lokalnym modelem Laya.' },
+  ] },
+];
+
 // Krótkie wskazówki produkcyjne dla każdego API (zakładka API → „Wskazówki").
 const TIPS = {
   prompt: [

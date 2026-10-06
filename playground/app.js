@@ -188,10 +188,29 @@ function renderOverview() {
   card.appendChild(table);
   main.appendChild(card);
 
+  main.appendChild(renderResources());
+
   main.appendChild(el('p', { class: 'muted', html:
     'Źródła: ' +
     '<a target="_blank" rel="noopener" href="https://developer.chrome.com/docs/ai/built-in-apis">Built-in AI APIs</a> · ' +
     '<a target="_blank" rel="noopener" href="https://developer.chrome.com/docs/ai/get-started">Get started</a>' }));
+}
+
+function renderResources() {
+  const card = el('div', { class: 'card' });
+  card.appendChild(el('h2', { text: 'Zasoby' }));
+  for (const { group, items } of RESOURCES) {
+    card.appendChild(el('h3', { class: 'res-group', text: group }));
+    const list = el('ul', { class: 'resources' });
+    for (const r of items) {
+      list.appendChild(el('li', {}, [
+        el('a', { href: r.url, target: '_blank', rel: 'noopener', text: r.label }),
+        el('span', { class: 'muted', text: ` — ${r.note}` }),
+      ]));
+    }
+    card.appendChild(list);
+  }
+  return card;
 }
 
 function infoRow(label, value) {
