@@ -37,6 +37,9 @@ Możesz użyć dowolnego istniejącego serwera statycznego — nie instaluj zale
   Sprawdzenie dostępności nie pobiera modelu, ale pierwsze uruchomienie demo może to zrobić.
 - **Writer, Rewriter i Proofreader** pozostają w developer trial. Mogą wymagać flag
   lub udziału w Early Preview Program. Nie zakładamy, że wygasły origin trial oznacza wydanie stable.
+- **Decisions API** (`DecisionModel`) jest dopiero na etapie Intent to Prototype — Chrome go jeszcze
+  nie ma. Demo działa z [rozszerzeniem WebAI](https://web-ai.studio/extension), które dodaje
+  `DecisionModel` z lokalnym modelem Laya, albo po pojawieniu się flagi `#ai-decisions-api` w Canary.
 - **WebMCP** pozostaje w origin trial. Lokalnie Google udostępnia flagę
   `chrome://flags/#enable-webmcp-testing`. Wykrycie `registerTool` nie potwierdza obecności agenta.
 - Dema Prompt i Summarizer startują z angielskim tekstem. Obsługiwane języki zależą od API;
