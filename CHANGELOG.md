@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Popup:** reopening the popup while Chrome is still downloading Gemini Nano now shows the download progress again instead of a fresh *Download model* button. The download button also works on Chrome builds that expose only the legacy `window.ai.languageModel` namespace.
+
 ## [1.5.0] - 2026-10-06
 
 ### Added

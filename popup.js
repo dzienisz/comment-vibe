@@ -11,9 +11,10 @@ function storeUrl() {
     : 'https://chromewebstore.google.com/detail/comment-vibe/kibcnjcipaofjlbbnjdjaobbkoajiejp';
 }
 
-// 'available' | 'downloading' | 'unavailable' — the middle state matters:
-// telling a user whose model is still downloading that the AI is "not
-// available" sends them chasing flags that no longer exist on Chrome 138+.
+// 'available' | 'downloadable' | 'downloading' | 'unavailable' — the middle
+// states matter: telling a user whose model is still downloading that the AI is
+// "not available" sends them chasing flags that no longer exist on Chrome 138+,
+// and a download already in progress should show its progress, not a button.
 async function chromeAIStatus() {
   try {
     if (typeof LanguageModel !== 'undefined') {
@@ -22,12 +23,12 @@ async function chromeAIStatus() {
       let avail = await LanguageModel.availability(LANG_OPTS);
       if (avail === 'unavailable') avail = await LanguageModel.availability();
       if (avail === 'unavailable') return 'unavailable';
-      return avail === 'available' ? 'available' : 'downloading';
+      return avail === 'available' || avail === 'downloading' ? avail : 'downloadable';
     }
     if (window.ai?.languageModel) {
       const { available } = await window.ai.languageModel.capabilities();
       if (available === 'no') return 'unavailable';
-      return available === 'readily' ? 'available' : 'downloading';
+      return available === 'readily' ? 'available' : 'downloadable';
     }
   } catch {}
   return 'unavailable';
@@ -239,33 +240,47 @@ async function initCloud(api) {
 
 // The download state gets a real action instead of instructions: create() is
 // what triggers the model fetch, and monitor() reports progress on builds that
-// support it.
-function wireDownload(els) {
+// support it. The popup closes on any outside click while Chrome keeps
+// downloading, so on reopen an in-progress download reattaches to its progress.
+function wireDownload(els, inProgress) {
   const button   = document.getElementById('dl-start');
   const progress = document.getElementById('dl-progress');
-  button.addEventListener('click', async () => {
+  const factory  = typeof LanguageModel !== 'undefined' ? LanguageModel : window.ai?.languageModel;
+
+  const start = async fromClick => {
     button.disabled = true;
     progress.hidden = false;
-    progress.textContent = 'Starting download…';
+    progress.textContent = fromClick ? 'Starting download…' : 'Download in progress…';
     const monitor = m => m.addEventListener('downloadprogress', e => {
       progress.textContent = `Downloading model… ${Math.round((e.loaded || 0) * 100)}%`;
     });
     try {
       let session;
       try {
-        session = await LanguageModel.create({ ...LANG_OPTS, monitor });
+        session = await factory.create({ ...LANG_OPTS, monitor });
       } catch (error) {
         if (!(error instanceof TypeError)) throw error;
-        session = await LanguageModel.create(LANG_OPTS);
+        session = await factory.create(LANG_OPTS);
       }
       session.destroy?.();
       document.getElementById('setup-download').classList.remove('visible');
       setStatus(els, 'ok', 'Chrome AI ready ✓');
     } catch (error) {
       button.disabled = false;
+      // Without a click Chrome may refuse create() (user activation).
+      if (!fromClick && error?.name === 'NotAllowedError') {
+        progress.textContent = 'Chrome is downloading the model in the background. You can close this popup.';
+        return;
+      }
       progress.textContent = `Download failed: ${error?.message || 'unknown error'}. Try again later.`;
     }
-  });
+  };
+
+  button.addEventListener('click', () => start(true));
+  if (inProgress) {
+    button.textContent = 'Show progress';
+    start(false);
+  }
 }
 
 async function initFirefoxPopup(els, fastMode) {
@@ -349,10 +364,11 @@ async function initFirefoxPopup(els, fastMode) {
     const status = await chromeAIStatus();
     if (status === 'available') {
       setStatus(els, 'ok', 'Chrome AI ready ✓');
-    } else if (status === 'downloading') {
-      setStatus(els, 'checking', 'AI model not downloaded yet');
+    } else if (status === 'downloadable' || status === 'downloading') {
+      const inProgress = status === 'downloading';
+      setStatus(els, 'checking', inProgress ? 'AI model downloading…' : 'AI model not downloaded yet');
       document.getElementById('setup-download').classList.add('visible');
-      wireDownload(els);
+      wireDownload(els, inProgress);
     } else {
       onFastModeChange = on => setStatus(els, on ? 'ok' : 'err', on ? 'Fast mode ready ✓' : 'Chrome AI not available');
       onFastModeChange(fastMode);
