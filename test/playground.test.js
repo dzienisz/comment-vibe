@@ -170,6 +170,14 @@ test('demo calls create synchronously to preserve user activation and retries cr
   assert.equal(attempts, 2);
 });
 
+test('every API has at least three tips', () => {
+  const { APIS } = loadPlayground();
+  for (const api of APIS) {
+    assert.ok(api.tips.length >= 3, `${api.id} needs tips`);
+    for (const tip of api.tips) assert.equal(typeof tip, 'string');
+  }
+});
+
 test('Decisions API passes the tone schema to availability and formats the decision', async () => {
   let schema;
   const { APIS, checkApi } = loadPlayground({ DecisionModel: {
