@@ -936,6 +936,26 @@ test('analyzeText falls back to on-device AI when Jev fails', async () => {
   }
 });
 
+test('analyzeText keeps the Jev error when the on-device fallback also fails', async () => {
+  global.browser = {
+    runtime: {
+      sendMessage: async message => (message.type === 'cv-jev-analyze'
+        ? { ok: false, error: 'TypeSafe rejected the API key' }
+        : { ok: false, error: 'trialML permission not granted' }),
+    },
+  };
+  applyJevSetting(true);
+  try {
+    await assert.rejects(analyzeText('long enough text'), error => {
+      assert.match(error.message, /trialML/);
+      assert.match(error.jevError.message, /rejected the API key/);
+      return true;
+    });
+  } finally {
+    applyJevSetting(false);
+  }
+});
+
 test('analyzeText does not call Jev while Fast mode is off', async () => {
   const calls = [];
   global.browser = {

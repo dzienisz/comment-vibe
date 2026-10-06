@@ -720,14 +720,25 @@ function parseAnalysisResponse(raw, usesConstraint) {
 }
 
 async function analyzeText(text, onEarlySentiment, signal) {
-  if (jevEnabled) {
-    try {
-      return await analyzeViaJev(text);
-    } catch (error) {
-      if (signal?.aborted) throw error;
-      console.warn('[CommentVibe] Fast mode failed, using on-device AI:', error?.message || error);
-    }
+  if (!jevEnabled) return analyzeLocally(text, onEarlySentiment, signal);
+  let jevError;
+  try {
+    return await analyzeViaJev(text);
+  } catch (error) {
+    if (signal?.aborted) throw error;
+    jevError = error;
+    console.warn('[CommentVibe] Fast mode failed, using on-device AI:', error?.message || error);
   }
+  try {
+    return await analyzeLocally(text, onEarlySentiment, signal);
+  } catch (error) {
+    // Neither engine answered: keep the Jev reason so the badge can say why.
+    if (error && typeof error === 'object') error.jevError = jevError;
+    throw error;
+  }
+}
+
+async function analyzeLocally(text, onEarlySentiment, signal) {
   if (isFirefoxMLContext()) return analyzeViaBackground(text);
   const acquired = await getSession();
   const base = acquired.session;
@@ -1601,7 +1612,17 @@ function attachToInput(el) {
         }
       } catch (error) {
         if (error?.name !== 'AbortError' && isCurrentRequest(state, requestId)) {
-          sp(badge, 'display', 'none');
+          if (error?.jevError) {
+            renderNotice(badge, tooltip, {
+              emoji: '⚠️',
+              label: 'Fast mode failed',
+              body: `Jev couldn't check this comment (${error.jevError.message || 'request failed'}), and on-device AI isn't available to take over. Check your TypeSafe key in the Comment Vibe popup, or turn Fast mode off.`,
+              onHideSite: ui.onHideSite,
+            });
+            placeBadge(badge, el);
+          } else {
+            sp(badge, 'display', 'none');
+          }
         }
       } finally {
         clearTimeout(slowTimer);
