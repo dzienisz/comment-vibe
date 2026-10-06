@@ -94,6 +94,7 @@ for (const [id, globalName, method, result] of [
   ['writer', 'Writer', 'write', 'Draft'],
   ['rewriter', 'Rewriter', 'rewrite', 'Revision'],
   ['proofreader', 'Proofreader', 'proofread', { correctedInput: 'Corrected', corrections: [] }],
+  ['decisions', 'DecisionModel', 'decide', { tone: { label: 'negative', confidence: 0.76, probabilities: { negative: 0.76 } }, contains_pii: { label: 'false', confidence: 0.97 } }],
 ]) {
   for (const fail of [false, true]) {
     test(`${id} releases the session after ${fail ? 'failure' : 'success'}`, async () => {
@@ -167,4 +168,46 @@ test('demo calls create synchronously to preserve user activation and retries cr
   await assert.rejects(first, /download interrupted/);
   assert.equal(await APIS[0].demo.run({ text: 'Hello' }, report), 'Recovered');
   assert.equal(attempts, 2);
+});
+
+test('Decisions API passes the tone schema to availability and formats the decision', async () => {
+  let schema;
+  const { APIS, checkApi } = loadPlayground({ DecisionModel: {
+    availability: async options => { schema = options; return 'downloadable'; },
+  } });
+  const api = APIS.find(api => api.id === 'decisions');
+  assert.equal(api.status, 'prototype');
+  assert.equal(await checkApi(api), 'downloadable');
+  assert.equal(JSON.stringify(schema.questions.map(q => q.id)), '["tone","contains_pii"]');
+  assert.equal(schema.questions[0].options.map(o => o.label).join(), 'positive,neutral,negative,toxic');
+
+  const { APIS: withModel } = loadPlayground({ DecisionModel: { create: async () => ({
+    decide: async () => ({
+      tone: { label: 'toxic', confidence: 0.68, probabilities: { positive: 0.02, neutral: 0.1, negative: 0.2, toxic: 0.68 } },
+      contains_pii: { label: 'true', confidence: 0.91 },
+    }),
+    destroy() {},
+  }) } });
+  const out = await withModel.find(api => api.id === 'decisions').demo.run({ text: 'x' }, report);
+  assert.match(out, /Ton: toxic \(pewność 68%\)/);
+  assert.match(out, /toxic 68%/);
+  assert.match(out, /Dane wrażliwe: tak \(pewność 91%\)/);
+});
+
+test('Decisions API reports no-api when DecisionModel is missing', async () => {
+  const { APIS, checkApi } = loadPlayground();
+  assert.equal(await checkApi(APIS.find(api => api.id === 'decisions')), 'no-api');
+});
+
+test('Decisions API formats array-shaped probabilities from the WebAI polyfill', async () => {
+  const { APIS } = loadPlayground({ DecisionModel: { create: async () => ({
+    decide: async () => ({
+      tone: { label: 'neutral', confidence: 0.38, probabilities: [{ label: 'neutral', probability: 0.38 }, { label: 'negative', probability: 0.3 }] },
+      contains_pii: { label: 'false', confidence: 0.67 },
+    }),
+    destroy() {},
+  }) } });
+  const out = await APIS.find(api => api.id === 'decisions').demo.run({ text: 'x' }, report);
+  assert.match(out, /neutral 38% · negative 30%/);
+  assert.match(out, /Dane wrażliwe: nie/);
 });
