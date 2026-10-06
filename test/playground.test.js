@@ -166,3 +166,11 @@ test('demo calls create synchronously to preserve user activation and retries cr
   assert.equal(await APIS[0].demo.run({ text: 'Hello' }, report), 'Recovered');
   assert.equal(attempts, 2);
 });
+
+test('every API has at least three tips', () => {
+  const { APIS } = loadPlayground();
+  for (const api of APIS) {
+    assert.ok(api.tips.length >= 3, `${api.id} needs tips`);
+    for (const tip of api.tips) assert.equal(typeof tip, 'string');
+  }
+});

@@ -433,6 +433,55 @@ await context.registerTool({
   },
 ];
 
+// Krótkie wskazówki produkcyjne dla każdego API (zakładka API → „Wskazówki").
+const TIPS = {
+  prompt: [
+    'Wywołuj <code>availability()</code> z tymi samymi opcjami (<code>expectedInputs</code>, języki), których użyjesz w <code>create()</code> — inaczej wynik może się nie zgadzać.',
+    'Przygotuj sesję w dobrym momencie, np. gdy użytkownik wejdzie w pole tekstowe, a nie przy ładowaniu strony. Pobranie modelu wymaga gestu użytkownika.',
+    'Instrukcje systemowe podaj w <code>initialPrompts</code> przy <code>create()</code>; przy wielu podobnych zapytaniach używaj <code>session.clone()</code> zamiast budować sesję od zera.',
+    'Gdy potrzebujesz JSON-a, przekaż <code>responseConstraint</code> (JSON Schema) zamiast prosić o format w treści promptu.',
+    'Długie odpowiedzi strumieniuj przez <code>promptStreaming()</code> i wstawiaj jako tekst (<code>textContent</code>), nie przez <code>innerHTML</code>.',
+    'Przerywaj nieaktualne zapytania przez <code>AbortController</code> (<code>{ signal }</code>) i zwalniaj nieużywane sesje <code>destroy()</code>. Comment Vibe anuluje poprzednią analizę przy każdej zmianie tekstu.',
+  ],
+  summarizer: [
+    'Wspólny kontekst (np. „artykuł techniczny dla programistów") podaj raz w <code>sharedContext</code>, a szczegóły per wywołanie w <code>context</code>.',
+    '<code>type</code> (<code>key-points</code>, <code>tldr</code>, <code>teaser</code>, <code>headline</code>), <code>format</code> i <code>length</code> ustawiasz przy <code>create()</code> — zmiana wymaga nowej instancji.',
+    'Długie dokumenty dziel na fragmenty i streszczaj streszczenia; rozmiar wejścia sprawdzisz <code>measureInputUsage()</code>.',
+    'Przy dłuższych tekstach użyj <code>summarizeStreaming()</code>, żeby użytkownik od razu widział postęp.',
+  ],
+  translator: [
+    'Dostępność i pobranie modelu zależą od <strong>pary języków</strong> — sprawdzaj <code>availability()</code> dla konkretnej pary, którą chcesz tłumaczyć.',
+    'Gdy nie znasz języka źródłowego, najpierw użyj Language Detector API.',
+    'Tłumacz akapitami albo przez <code>translateStreaming()</code> — krótsze fragmenty to szybsza pierwsza odpowiedź.',
+  ],
+  detector: [
+    'Bardzo krótkie teksty (kilka słów) dają niską pewność — porównuj <code>confidence</code> z progiem, zamiast ślepo brać pierwszy wynik.',
+    'Wynik to lista kandydatów posortowana od najbardziej prawdopodobnego; <code>und</code> oznacza język nieokreślony.',
+    'Jeśli spodziewasz się konkretnych języków, podaj <code>expectedInputLanguages</code> przy <code>create()</code>.',
+  ],
+  writer: [
+    'Chrome proponuje usunięcie Writer API — nowy kod pisz od razu na Prompt API albo na polyfillu Google.',
+    'Wspólne tło zadania podaj w <code>sharedContext</code>, a szczegóły w <code>context</code> konkretnego wywołania.',
+    'Pokazuj wygenerowany tekst jako propozycję, którą użytkownik może edytować lub odrzucić.',
+  ],
+  rewriter: [
+    'Chrome proponuje usunięcie Rewriter API — przepisywanie zrób własnym promptem w Prompt API (jak Comment Vibe) albo polyfillem.',
+    'Pokaż wersję przed i po oraz daj łatwe „cofnij" — przepisywanie zmienia tekst użytkownika.',
+    'Przy dłuższych tekstach używaj <code>rewriteStreaming()</code>.',
+  ],
+  proofreader: [
+    'Pokazuj <code>corrections</code> jako sugestie do zaakceptowania, zamiast od razu nadpisywać tekst użytkownika.',
+    'Uruchamiaj korektę z opóźnieniem (debounce) po przerwie w pisaniu, a nie po każdym znaku.',
+    'Podaj <code>expectedInputLanguages</code> i sprawdzaj <code>availability()</code> — obsługa języków może być ograniczona.',
+  ],
+  webmcp: [
+    'Nazwa, opis i <code>inputSchema</code> narzędzia to jedyne, co widzi agent — opisuj je precyzyjnie i konkretnie.',
+    'Przekazuj <code>signal</code> z <code>execute(input, { signal })</code> do <code>fetch()</code>, żeby anulowanie przerywało pracę w toku.',
+    'Akcje nieodwracalne (zakup, usunięcie) potwierdzaj z użytkownikiem, zamiast wykonywać je od razu.',
+  ],
+};
+for (const api of APIS) api.tips = TIPS[api.id] ?? [];
+
 // Metadane statusów (z dokumentacji) i wyników live-check (z Twojej przeglądarki).
 const STATUS_META = {
   'stable':       { label: 'Stabilne', cls: 'st-stable' },
