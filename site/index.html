@@ -387,7 +387,8 @@
     <div class="privacy reveal">
       <span class="sec-eyebrow" style="color:#A79D90;">Privacy</span>
       <h2>Your drafts are <em>nobody's</em> business.<br>Not even ours.</h2>
-      <p>Every analysis runs locally — Chrome's built-in Gemini Nano model, or Firefox's on-device AI runtime. There is no server, no account, no analytics, and it keeps working offline once the model is downloaded. The code is open source (MIT).</p>
+      <p>By default every analysis runs locally — Chrome's built-in Gemini Nano model, or Firefox's on-device AI runtime. There is no server, no account, no analytics, and it keeps working offline once the model is downloaded. The code is open source (MIT).</p>
+      <p>Optional Fast mode, off unless you turn it on, sends only the text being checked to TypeSafe's Jev model with your own API key. Writing actions stay on your device.</p>
       <div class="pills">
         <span class="pill">no cloud</span><span class="pill">no account</span><span class="pill">no tracking</span><span class="pill">works offline</span><span class="pill">open source</span>
       </div>
@@ -403,11 +404,12 @@
         <tr><th>Feature</th><th>Chrome 138+</th><th>Firefox 134+</th></tr>
         <tr><td>Tone badge (positive / neutral / negative / toxic)</td><td class="yes">✓</td><td class="yes">✓</td></tr>
         <tr><td>“Why” explanation</td><td class="yes">✓ model-written</td><td class="yes">✓ classifier + confidence</td></tr>
+        <tr><td>Optional Fast mode (cloud, Jev)</td><td class="yes">✓</td><td class="yes">✓</td></tr>
         <tr><td>Kinder rewrite suggestion</td><td class="yes">✓</td><td class="no">—</td></tr>
         <tr><td>Streaming (badge colors in early)</td><td class="yes">✓</td><td class="no">—</td></tr>
         <tr><td>Understands non-English comments</td><td class="yes">✓</td><td class="yes">✓ ~100 languages</td></tr>
         <tr><td>Output in your comment's language</td><td class="yes">✓</td><td class="no">— (English)</td></tr>
-        <tr><td>Runs 100% on-device</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+        <tr><td>Runs on-device by default</td><td class="yes">✓</td><td class="yes">✓</td></tr>
       </table>
     </div>
   </section>
@@ -418,7 +420,8 @@
     <div class="faq reveal">
       <details>
         <summary>Is my comment text sent anywhere?</summary>
-        <p>No. Analysis happens inside your browser using its built-in on-device model. There is no backend, no telemetry, and the extension keeps working offline once the model is downloaded. You can audit the code — it ships as raw, unminified JavaScript.</p>
+        <p>Not by default. Analysis happens inside your browser using its built-in on-device model. There is no backend, no telemetry, and the extension keeps working offline once the model is downloaded. You can audit the code — it ships as raw, unminified JavaScript.</p>
+        <p>The only exception is the optional <strong>Fast mode</strong>: if you turn it on and paste your own TypeSafe API key, the text being checked is sent to TypeSafe's Jev model for a sub-second tone check. Rewrites still run on your device, and you can switch it off at any time.</p>
       </details>
       <details>
         <summary>What do I need on Chrome?</summary>
