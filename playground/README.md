@@ -35,8 +35,10 @@ Możesz użyć dowolnego istniejącego serwera statycznego — nie instaluj zale
 - Sprzęt, system i wolne miejsce zgodne z [aktualnymi wymaganiami Google](https://developer.chrome.com/docs/ai/get-started).
   Modele pobierają się osobno; rozmiar może się zmieniać. Status sprawdzisz w `chrome://on-device-internals`.
   Sprawdzenie dostępności nie pobiera modelu, ale pierwsze uruchomienie demo może to zrobić.
-- **Writer, Rewriter i Proofreader** pozostają w developer trial. Mogą wymagać flag
-  lub udziału w Early Preview Program. Nie zakładamy, że wygasły origin trial oznacza wydanie stable.
+- **Writer i Rewriter**: Chrome proponuje ich wycofanie i usunięcie (konsultacja do 23.10.2026).
+  Zamiennik to Prompt API albo [polyfill Google](https://github.com/GoogleChromeLabs/web-ai-demos/tree/main/writer-rewriter-polyfills).
+- **Proofreader** pozostaje w developer trial. Może wymagać flag lub udziału w Early Preview Program.
+  Nie zakładamy, że wygasły origin trial oznacza wydanie stable.
 - **WebMCP** pozostaje w origin trial. Lokalnie Google udostępnia flagę
   `chrome://flags/#enable-webmcp-testing`. Wykrycie `registerTool` nie potwierdza obecności agenta.
 - Dema Prompt i Summarizer startują z angielskim tekstem. Obsługiwane języki zależą od API;

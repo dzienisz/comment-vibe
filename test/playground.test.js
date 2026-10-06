@@ -28,6 +28,8 @@ test('release snapshot distinguishes stable from planned releases', () => {
   assert.equal(RELEASE_INFO.beta, 154);
   assert.equal(RELEASE_INFO.nextStableDate, '2026-09-22');
   assert.equal(APIS.find(api => api.id === 'proofreader').status, 'dev-trial');
+  assert.equal(APIS.find(api => api.id === 'writer').status, 'deprecating');
+  assert.equal(APIS.find(api => api.id === 'rewriter').status, 'deprecating');
   assert.equal(APIS.find(api => api.id === 'webmcp').status, 'origin-trial');
   assert.equal(APIS.find(api => api.id === 'webmcp').versions.find(v => v.v === 'Chrome 153').state, 'now');
 });
