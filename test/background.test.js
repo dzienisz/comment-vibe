@@ -156,3 +156,26 @@ test('warmup requires the trialML permission', async () => {
   stubBrowser({ granted: false });
   await assert.rejects(warmup(), /not enabled/);
 });
+
+test('model download progress is throttled to the popup, keeping the latest event', async () => {
+  let onProgress;
+  const sent = [];
+  stubBrowser();
+  global.browser.trial.ml.onProgress.addListener = fn => { onProgress = fn; };
+  global.browser.runtime.sendMessage = async message => { sent.push(message); };
+  await warmup();
+
+  for (let i = 1; i <= 50; i++) onProgress({ progress: i / 50 });
+  await new Promise(r => setTimeout(r, 20));
+  assert.equal(sent.length, 1);
+  assert.equal(sent[0].type, 'cv-progress');
+  assert.equal(sent[0].data.progress, 1);
+
+  onProgress({ progress: 0.5 });
+  onProgress({ progress: 0.6 });
+  await new Promise(r => setTimeout(r, 20));
+  assert.equal(sent.length, 1, 'second burst waits for the interval');
+  await new Promise(r => setTimeout(r, 250));
+  assert.equal(sent.length, 2);
+  assert.equal(sent[1].data.progress, 0.6);
+});

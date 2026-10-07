@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - **Popup:** the Gemini Nano (Chrome) and Firefox model downloads now show a progress bar next to the percentage, or an animated bar when Firefox doesn't report a percentage. Chrome also tells you the popup can be closed while the download continues.
+- **Firefox:** model download progress is sent to the popup at most every 200 ms instead of on every event, without losing the latest value.
 
 ### Fixed
 
