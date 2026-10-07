@@ -19,6 +19,13 @@ and the Firefox background service; open directly or serve the repo root).
 Harness modes: `?api=modern` (default), `?api=legacy`, `?api=firefox` —
 the firefox mode masks the real `LanguageModel` global that ships in current
 Chrome, so it works on any browser.
+The popup's model-download states can be checked the same way with
+`test/popup-harness.html` (serve the repo root): it loads the real
+`popup.html` with a stubbed Prompt API. Modes: `?state=downloadable`,
+`downloading`, `available`, `unavailable`; options `&start=0.4`,
+`&duration=6000`, `&activation=required`, `&fail=1`; `?browser=firefox`
+(`&ffshape=bytes|unknown`) for the Firefox setup flow. Reload mid-download to
+simulate reopening the popup.
 
 Full manual testing on Chrome requires:
 - Chrome 127+ (desktop only — no mobile support)

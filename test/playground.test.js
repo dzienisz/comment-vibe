@@ -255,6 +255,13 @@ test('Semantic Embedder reports no-api without the flag', async () => {
   assert.equal(await checkApi(APIS.find(api => api.id === 'embedder')), 'no-api');
 });
 
+test('demo timer formats elapsed time in Polish', () => {
+  const { context } = loadPlayground();
+  const formatElapsed = vm.runInContext('formatElapsed', context);
+  assert.equal(formatElapsed(840.4), '840 ms');
+  assert.equal(formatElapsed(12345), '12,3 s');
+});
+
 test('form validation errors are marked as input errors and create no session', async () => {
   const SemanticEmbedder = { create() { assert.fail('validation must run before create()'); } };
   const Translator = { create() { assert.fail('validation must run before create()'); } };

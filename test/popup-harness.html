@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Comment Vibe — popup harness</title>
+<style>
+  body { font: 14px system-ui, sans-serif; margin: 24px; display: flex; gap: 24px; align-items: flex-start; }
+  iframe { width: 360px; height: 820px; border: 1px solid #ccc; border-radius: 8px; }
+  aside { max-width: 360px; line-height: 1.6; }
+</style>
+</head>
+<body>
+<!-- Loads the real popup.html/popup.js with a stubbed Prompt API so the model
+     download states can be checked on any browser, with no Gemini Nano. -->
+<iframe id="popup" title="Comment Vibe popup"></iframe>
+<aside>
+  <strong>Popup harness</strong>
+  <p>Model state:
+    <a href="?state=downloadable">downloadable</a> ·
+    <a href="?state=downloading">downloading</a> ·
+    <a href="?state=available">available</a> ·
+    <a href="?state=unavailable">unavailable</a></p>
+  <p>Firefox popup:
+    <a href="?browser=firefox">fraction</a> ·
+    <a href="?browser=firefox&amp;ffshape=bytes">bytes</a> ·
+    <a href="?browser=firefox&amp;ffshape=unknown">unknown shape</a> ·
+    <a href="?browser=firefox&amp;fail=1">fails</a></p>
+  <p>Options: <code>&amp;start=0.4</code> (progress already done when reopened),
+    <code>&amp;duration=6000</code> (ms for the rest of the download),
+    <code>&amp;activation=required</code> (create() needs a click, like Chrome may require),
+    <code>&amp;fail=1</code> (download fails).</p>
+  <p>Reload the page mid-download to simulate closing and reopening the popup.</p>
+</aside>
+<script>
+  const q = new URLSearchParams(location.search);
+  const cfg = {
+    state: q.get('state') || 'downloadable',
+    start: Number(q.get('start') ?? (q.get('state') === 'downloading' ? 0.4 : 0)),
+    duration: Number(q.get('duration') || 6000),
+    activation: q.get('activation') === 'required',
+    fail: q.get('fail') === '1',
+    firefox: q.get('browser') === 'firefox',
+    ffshape: q.get('ffshape') || 'fraction',
+  };
+
+  function stub(cfg) {
+    let state = cfg.state;
+    window.LanguageModel = {
+      async availability() { return state; },
+      async create(opts = {}) {
+        if (state === 'unavailable') throw new DOMException('Model unavailable', 'NotSupportedError');
+        if (cfg.activation && state !== 'available' && !navigator.userActivation?.isActive) {
+          throw new DOMException('Requires user activation', 'NotAllowedError');
+        }
+        const monitor = new EventTarget();
+        opts.monitor?.(monitor);
+        if (state !== 'available') {
+          state = 'downloading';
+          const emit = loaded => {
+            const e = new Event('downloadprogress');
+            e.loaded = loaded;
+            monitor.dispatchEvent(e);
+          };
+          const steps = 20;
+          emit(cfg.start);
+          for (let i = 1; i <= steps; i++) {
+            await new Promise(r => setTimeout(r, cfg.duration / steps));
+            if (cfg.fail && i === steps / 2) throw new DOMException('Network error', 'NetworkError');
+            emit(cfg.start + (1 - cfg.start) * (i / steps));
+          }
+          state = 'available';
+        }
+        return { destroy() {} };
+      },
+    };
+  }
+
+  // Firefox build: no Chrome AI, trialML warmup runs in the background script
+  // and reports progress over runtime messages (shape varies by version).
+  function ffStub(cfg) {
+    Object.defineProperty(window, 'LanguageModel', { value: undefined, configurable: true });
+    const listeners = [];
+    const shapes = {
+      fraction: f => ({ progress: f }),
+      bytes: f => ({ totalLoaded: Math.round(f * 340e6), total: 340e6 }),
+      unknown: () => ({ status: 'downloading' }),
+    };
+    window.browser = {
+      permissions: { contains: async () => false, request: async () => true },
+      runtime: {
+        getManifest: () => ({ background: { scripts: ['jev.js', 'background.js'] } }),
+        onMessage: { addListener: fn => listeners.push(fn) },
+        async sendMessage(message) {
+          if (message?.type !== 'cv-warmup') return undefined;
+          const steps = 20;
+          for (let i = 1; i <= steps; i++) {
+            await new Promise(r => setTimeout(r, cfg.duration / steps));
+            if (cfg.fail && i === steps / 2) return { ok: false, error: 'Network error' };
+            const data = shapes[cfg.ffshape](i / steps);
+            listeners.forEach(fn => fn({ type: 'cv-progress', data }));
+          }
+          return { ok: true };
+        },
+      },
+    };
+  }
+
+  fetch('../popup.html').then(r => r.text()).then(html => {
+    const setup = `<script>(${cfg.firefox ? ffStub : stub})(${JSON.stringify(cfg)})<\/script>`;
+    document.getElementById('popup').srcdoc = html
+      .replace('href="popup.css"', 'href="../popup.css"')
+      .replace('<script src="popup.js">', `${setup}<script src="../popup.js">`);
+  });
+</script>
+</body>
+</html>
