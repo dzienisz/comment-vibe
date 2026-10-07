@@ -261,3 +261,14 @@ test('demo timer formats elapsed time in Polish', () => {
   assert.equal(formatElapsed(840.4), '840 ms');
   assert.equal(formatElapsed(12345), '12,3 s');
 });
+
+test('form validation errors are marked as input errors and create no session', async () => {
+  const SemanticEmbedder = { create() { assert.fail('validation must run before create()'); } };
+  const Translator = { create() { assert.fail('validation must run before create()'); } };
+  const { APIS } = loadPlayground({ SemanticEmbedder, Translator });
+  const embedder = APIS.find(api => api.id === 'embedder');
+  await assert.rejects(embedder.demo.run({ base: '  ', others: 'x' }, report), { name: 'InputError' });
+  await assert.rejects(embedder.demo.run({ base: 'x', others: '\n \n' }, report), { name: 'InputError' });
+  const translator = APIS.find(api => api.id === 'translator');
+  await assert.rejects(translator.demo.run({ source: 'en', target: 'en', text: 'hi' }, report), { name: 'InputError' });
+});

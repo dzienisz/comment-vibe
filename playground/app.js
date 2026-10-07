@@ -430,7 +430,7 @@ function buildDemo(api, onOptionsChange = () => {}, onDownload = () => {}) {
       status.textContent = '';
       output.classList.add('error');
       output.setAttribute('role', 'alert');
-      output.textContent = `Błąd: ${e?.message || e}\n\n` +
+      output.textContent = e?.name === 'InputError' ? `Błąd: ${e.message}` : `Błąd: ${e?.message || e}\n\n` +
         `Najczęstsze przyczyny:\n` +
         `• To API jest niedostępne w tej wersji Chrome (zobacz „Czy zadziała u Ciebie?")\n` +
         `• Model nie został jeszcze pobrany — uruchom ponownie\n` +
