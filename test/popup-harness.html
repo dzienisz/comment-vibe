@@ -20,6 +20,11 @@
     <a href="?state=downloading">downloading</a> ·
     <a href="?state=available">available</a> ·
     <a href="?state=unavailable">unavailable</a></p>
+  <p>Firefox popup:
+    <a href="?browser=firefox">fraction</a> ·
+    <a href="?browser=firefox&amp;ffshape=bytes">bytes</a> ·
+    <a href="?browser=firefox&amp;ffshape=unknown">unknown shape</a> ·
+    <a href="?browser=firefox&amp;fail=1">fails</a></p>
   <p>Options: <code>&amp;start=0.4</code> (progress already done when reopened),
     <code>&amp;duration=6000</code> (ms for the rest of the download),
     <code>&amp;activation=required</code> (create() needs a click, like Chrome may require),
@@ -34,6 +39,8 @@
     duration: Number(q.get('duration') || 6000),
     activation: q.get('activation') === 'required',
     fail: q.get('fail') === '1',
+    firefox: q.get('browser') === 'firefox',
+    ffshape: q.get('ffshape') || 'fraction',
   };
 
   function stub(cfg) {
@@ -68,8 +75,38 @@
     };
   }
 
+  // Firefox build: no Chrome AI, trialML warmup runs in the background script
+  // and reports progress over runtime messages (shape varies by version).
+  function ffStub(cfg) {
+    Object.defineProperty(window, 'LanguageModel', { value: undefined, configurable: true });
+    const listeners = [];
+    const shapes = {
+      fraction: f => ({ progress: f }),
+      bytes: f => ({ totalLoaded: Math.round(f * 340e6), total: 340e6 }),
+      unknown: () => ({ status: 'downloading' }),
+    };
+    window.browser = {
+      permissions: { contains: async () => false, request: async () => true },
+      runtime: {
+        getManifest: () => ({ background: { scripts: ['jev.js', 'background.js'] } }),
+        onMessage: { addListener: fn => listeners.push(fn) },
+        async sendMessage(message) {
+          if (message?.type !== 'cv-warmup') return undefined;
+          const steps = 20;
+          for (let i = 1; i <= steps; i++) {
+            await new Promise(r => setTimeout(r, cfg.duration / steps));
+            if (cfg.fail && i === steps / 2) return { ok: false, error: 'Network error' };
+            const data = shapes[cfg.ffshape](i / steps);
+            listeners.forEach(fn => fn({ type: 'cv-progress', data }));
+          }
+          return { ok: true };
+        },
+      },
+    };
+  }
+
   fetch('../popup.html').then(r => r.text()).then(html => {
-    const setup = `<script>(${stub})(${JSON.stringify(cfg)})<\/script>`;
+    const setup = `<script>(${cfg.firefox ? ffStub : stub})(${JSON.stringify(cfg)})<\/script>`;
     document.getElementById('popup').srcdoc = html
       .replace('href="popup.css"', 'href="../popup.css"')
       .replace('<script src="popup.js">', `${setup}<script src="../popup.js">`);
