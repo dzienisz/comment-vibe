@@ -28,7 +28,8 @@
   <p>Options: <code>&amp;start=0.4</code> (progress already done when reopened),
     <code>&amp;duration=6000</code> (ms for the rest of the download),
     <code>&amp;activation=required</code> (create() needs a click, like Chrome may require),
-    <code>&amp;fail=1</code> (download fails).</p>
+    <code>&amp;fail=1</code> (download fails),
+    <code>&amp;reattach=0.2</code> (first event after reopening is lower, like real Chrome).</p>
   <p>Reload the page mid-download to simulate closing and reopening the popup.</p>
 </aside>
 <script>
@@ -39,6 +40,7 @@
     duration: Number(q.get('duration') || 6000),
     activation: q.get('activation') === 'required',
     fail: q.get('fail') === '1',
+    reattach: q.has('reattach') ? Number(q.get('reattach')) : null,
     firefox: q.get('browser') === 'firefox',
     ffshape: q.get('ffshape') || 'fraction',
   };
@@ -62,7 +64,7 @@
             monitor.dispatchEvent(e);
           };
           const steps = 20;
-          emit(cfg.start);
+          emit(cfg.state === 'downloading' && cfg.reattach !== null ? cfg.reattach : cfg.start);
           for (let i = 1; i <= steps; i++) {
             await new Promise(r => setTimeout(r, cfg.duration / steps));
             if (cfg.fail && i === steps / 2) throw new DOMException('Network error', 'NetworkError');

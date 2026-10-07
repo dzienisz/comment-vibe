@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Popup:** the Chrome download bar no longer jumps back (e.g. 66% → 22%) when you reopen the popup mid-download; it holds the highest percentage until Chrome passes it.
+
 ## [1.5.1] - 2026-10-07
 
 ### Changed

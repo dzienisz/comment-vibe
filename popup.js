@@ -70,6 +70,20 @@ function showBar(bar, pct) {
   bar.firstElementChild.style.width = pct === null ? '' : `${pct}%`;
 }
 
+// After the popup reattaches, Chrome's first downloadprogress event can be
+// lower than what was shown before it closed. Remember the highest % across
+// popup opens so the bar never moves backwards.
+const DL_PCT_KEY = 'cvDownloadPct';
+function storedPct() {
+  try { return Number(localStorage.getItem(DL_PCT_KEY)) || 0; } catch { return 0; }
+}
+function storePct(pct) {
+  try {
+    if (pct === null) localStorage.removeItem(DL_PCT_KEY);
+    else localStorage.setItem(DL_PCT_KEY, String(pct));
+  } catch {}
+}
+
 // Progress event shapes differ between Firefox versions — extract a
 // percentage from whichever fields are present, or give up (null).
 function progressPercent(data) {
@@ -260,12 +274,21 @@ function wireDownload(els, inProgress) {
   const start = async fromClick => {
     button.disabled = true;
     progress.hidden = false;
-    progress.textContent = fromClick ? 'Starting download…' : 'Download in progress…';
-    showBar(bar, null);
-    const monitor = m => m.addEventListener('downloadprogress', e => {
-      const pct = Math.round((e.loaded || 0) * 100);
+    if (fromClick) storePct(null);
+    let best = storedPct();
+    const render = pct => {
       showBar(bar, pct);
       progress.textContent = `Downloading model… ${pct}% · you can close this popup`;
+    };
+    if (best) render(best);
+    else {
+      progress.textContent = fromClick ? 'Starting download…' : 'Download in progress…';
+      showBar(bar, null);
+    }
+    const monitor = m => m.addEventListener('downloadprogress', e => {
+      best = Math.max(best, Math.round((e.loaded || 0) * 100));
+      storePct(best);
+      render(best);
     });
     try {
       let session;
@@ -276,6 +299,7 @@ function wireDownload(els, inProgress) {
         session = await factory.create(LANG_OPTS);
       }
       session.destroy?.();
+      storePct(null);
       document.getElementById('setup-download').classList.remove('visible');
       setStatus(els, 'ok', 'Chrome AI ready ✓');
     } catch (error) {
@@ -286,6 +310,7 @@ function wireDownload(els, inProgress) {
         progress.textContent = 'Chrome is downloading the model in the background. You can close this popup.';
         return;
       }
+      storePct(null);
       progress.textContent = `Download failed: ${error?.message || 'unknown error'}. Try again later.`;
     }
   };
