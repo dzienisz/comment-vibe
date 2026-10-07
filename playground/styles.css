@@ -136,6 +136,9 @@ body { display: flex; }
 .btn-primary-link:hover { filter: brightness(1.08); }
 .btn-ghost-link { color: #a7e0cd; text-decoration: none; font-size: 14px; white-space: nowrap; }
 .btn-ghost-link:hover { color: #fff; }
+.content .btn-primary-link { color: #fff; }
+.content .btn-ghost-link { color: #a7e0cd; }
+.content .btn-ghost-link:hover { color: #fff; }
 
 /* ── Content ───────────────────────────────────────────────── */
 
@@ -293,6 +296,7 @@ pre code { background: none; padding: 0; color: inherit; font-size: inherit; }
 
 /* ── Misc ───────────────────────────────────────────────── */
 
+.table-wrap { overflow-x: auto; }
 .matrix { width: 100%; border-collapse: collapse; }
 .matrix th, .matrix td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--border); font-size: 14px; }
 .matrix th { color: var(--muted); font-weight: 600; font-size: 12.5px; text-transform: uppercase; letter-spacing: 0.04em; }
@@ -333,9 +337,17 @@ pre code { background: none; padding: 0; color: inherit; font-size: inherit; }
 .muted { color: var(--muted); font-size: 13.5px; }
 
 @media (max-width: 720px) {
+  html, body { height: auto; }
   body { flex-direction: column; }
   .sidebar { width: 100%; height: auto; position: static; }
-  .content { height: auto; padding: 24px; }
+  .brand { padding: 14px 16px; }
+  #nav { display: flex; gap: 6px; overflow-x: auto; padding: 10px; flex: none; }
+  .nav-item { flex: none; margin-bottom: 0; white-space: nowrap; }
+  .sidebar-foot { padding: 10px 16px; }
+  .content { height: auto; overflow: visible; max-width: none; padding: 20px 16px 60px; }
+  .cta-card { padding: 16px; }
+  .cta-card-text { min-width: 0; }
+  .cta-actions { flex-wrap: wrap; flex-shrink: 1; }
 }
 
 .res-group { font-size: 14px; margin: 16px 0 6px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
