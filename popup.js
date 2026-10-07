@@ -271,10 +271,13 @@ function wireDownload(els, inProgress) {
   const bar      = document.getElementById('dl-bar');
   const factory  = typeof LanguageModel !== 'undefined' ? LanguageModel : window.ai?.languageModel;
 
+  // Closing the popup rejects the pending create(), so only a fresh download
+  // (or success) resets the stored %, never the failure path.
+  if (!inProgress) storePct(null);
+
   const start = async fromClick => {
     button.disabled = true;
     progress.hidden = false;
-    if (fromClick) storePct(null);
     let best = storedPct();
     const render = pct => {
       showBar(bar, pct);
@@ -310,7 +313,6 @@ function wireDownload(els, inProgress) {
         progress.textContent = 'Chrome is downloading the model in the background. You can close this popup.';
         return;
       }
-      storePct(null);
       progress.textContent = `Download failed: ${error?.message || 'unknown error'}. Try again later.`;
     }
   };
