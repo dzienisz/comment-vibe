@@ -61,6 +61,15 @@ function setStatus(els, kind, text) {
   els.statusTxt.textContent = text;
 }
 
+// pct === null: progress unknown, show an indeterminate bar.
+function showBar(bar, pct) {
+  bar.hidden = false;
+  bar.classList.toggle('setup-bar--busy', pct === null);
+  if (pct === null) bar.removeAttribute('aria-valuenow');
+  else bar.setAttribute('aria-valuenow', String(pct));
+  bar.firstElementChild.style.width = pct === null ? '' : `${pct}%`;
+}
+
 // Progress event shapes differ between Firefox versions — extract a
 // percentage from whichever fields are present, or give up (null).
 function progressPercent(data) {
@@ -245,14 +254,18 @@ async function initCloud(api) {
 function wireDownload(els, inProgress) {
   const button   = document.getElementById('dl-start');
   const progress = document.getElementById('dl-progress');
+  const bar      = document.getElementById('dl-bar');
   const factory  = typeof LanguageModel !== 'undefined' ? LanguageModel : window.ai?.languageModel;
 
   const start = async fromClick => {
     button.disabled = true;
     progress.hidden = false;
     progress.textContent = fromClick ? 'Starting download…' : 'Download in progress…';
+    showBar(bar, null);
     const monitor = m => m.addEventListener('downloadprogress', e => {
-      progress.textContent = `Downloading model… ${Math.round((e.loaded || 0) * 100)}%`;
+      const pct = Math.round((e.loaded || 0) * 100);
+      showBar(bar, pct);
+      progress.textContent = `Downloading model… ${pct}% · you can close this popup`;
     });
     try {
       let session;
@@ -267,6 +280,7 @@ function wireDownload(els, inProgress) {
       setStatus(els, 'ok', 'Chrome AI ready ✓');
     } catch (error) {
       button.disabled = false;
+      bar.hidden = true;
       // Without a click Chrome may refuse create() (user activation).
       if (!fromClick && error?.name === 'NotAllowedError') {
         progress.textContent = 'Chrome is downloading the model in the background. You can close this popup.';
@@ -309,11 +323,13 @@ async function initFirefoxPopup(els, fastMode) {
   const setupFf  = document.getElementById('setup-firefox');
   const enable   = document.getElementById('ff-enable');
   const progress = document.getElementById('ff-progress');
+  const bar      = document.getElementById('ff-bar');
   setupFf.classList.add('visible');
 
   browser.runtime.onMessage.addListener(message => {
     if (message?.type !== 'cv-progress') return;
     const pct = progressPercent(message.data);
+    showBar(bar, pct);
     progress.textContent = pct === null ? 'Downloading model…' : `Downloading model… ${pct}%`;
   });
 
@@ -325,6 +341,7 @@ async function initFirefoxPopup(els, fastMode) {
     enable.disabled = true;
     progress.hidden = false;
     progress.textContent = 'Preparing model…';
+    showBar(bar, null);
     setStatus(els, 'checking', 'Setting up on-device AI…');
 
     const result = await browser.runtime
@@ -337,6 +354,7 @@ async function initFirefoxPopup(els, fastMode) {
       setStatus(els, 'ok', 'Firefox AI ready ✓');
     } else {
       enable.disabled = false;
+      bar.hidden = true;
       progress.textContent = `Setup failed: ${result?.error || 'unknown error'}. ` +
         'Check the about:config flags below and try again.';
       setStatus(els, 'err', 'On-device AI not available');

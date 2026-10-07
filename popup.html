@@ -87,6 +87,7 @@
       <strong>AI is getting ready</strong>
       <p>Chrome needs to download its local Gemini Nano model once. It is a few GB and normally happens in the background.</p>
       <button id="dl-start" class="setup-button" type="button">Download model</button>
+      <div id="dl-bar" class="setup-bar" role="progressbar" aria-label="Model download" aria-valuemin="0" aria-valuemax="100" hidden><span></span></div>
       <p id="dl-progress" class="setup-progress" hidden></p>
     </section>
 
@@ -105,6 +106,7 @@
       <strong>Enable Firefox on-device AI</strong>
       <p>Comment Vibe can classify tone with Firefox’s local AI runtime. The small model downloads once and your comments stay on your device.</p>
       <button id="ff-enable" class="setup-button" type="button">Enable on-device AI</button>
+      <div id="ff-bar" class="setup-bar" role="progressbar" aria-label="Model download" aria-valuemin="0" aria-valuemax="100" hidden><span></span></div>
       <p id="ff-progress" class="setup-progress" hidden></p>
       <p>On non-Nightly builds, also set <code>browser.ml.enable</code> and <code>extensions.ml.enabled</code> to <em>true</em> in <code>about:config</code>.</p>
     </section>
