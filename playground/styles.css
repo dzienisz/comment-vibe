@@ -276,8 +276,10 @@ pre code { background: none; padding: 0; color: inherit; font-size: inherit; }
 .btn.ghost { background: transparent; border-color: var(--border); color: var(--text); }
 .btn.ghost:hover { background: rgba(0,0,0,0.04); }
 
-.progress { height: 6px; background: var(--border); border-radius: 999px; margin: 12px 0; overflow: hidden; }
-.progress-fill { height: 100%; width: 0; background: var(--accent); transition: width 0.2s; }
+.progress-row { display: flex; align-items: center; gap: 10px; margin: 12px 0; }
+.progress { flex: 1; height: 8px; background: var(--border); border-radius: 999px; overflow: hidden; }
+.progress-pct { font: 600 12.5px ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--accent); min-width: 4ch; text-align: right; }
+.progress-fill { height: 100%; width: 0; background: var(--accent); border-radius: inherit; transition: width 0.3s ease-out; }
 
 .demo-output {
   margin-top: 14px;
