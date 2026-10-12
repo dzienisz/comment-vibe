@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Fast mode** can now use [SubQ](https://subq.ai) (`subq-snap-preview` on `api.subq.ai`) as the cloud provider, next to TypeSafe Jev. New installs default to SubQ; saved TypeSafe keys keep working — pick the provider in the popup.
+
 ### Fixed
 
 - **Popup:** the Chrome download bar no longer jumps back (e.g. 66% → 22%) when you reopen the popup mid-download; it holds the highest percentage until Chrome passes it.

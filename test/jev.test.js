@@ -9,8 +9,10 @@ const {
   jevAnalyze,
   jevErrorMessage,
   parseJevResponse,
+  resolveJevProvider,
   JEV_ENDPOINT,
   JEV_ORIGIN,
+  JEV_PROVIDERS,
 } = require('../jev.js');
 
 function answer(choice, probabilities) {
@@ -28,12 +30,14 @@ function fakeFetch(respond) {
 
 const okResponse = body => ({ ok: true, status: 200, json: async () => body });
 
-function stubChrome({ enabled = true, apiKey = 'tsk_test', granted = true } = {}) {
+function stubChrome({ enabled = true, apiKey = 'tsk_test', granted = true, store = {}, origins = null } = {}) {
   const asked = [];
+  const storage = { cvJevEnabled: enabled, cvJevKey: apiKey, ...store };
+  const isGranted = query => origins ? query.origins.some(o => origins.includes(o)) : granted;
   global.chrome = {
     runtime: { id: 'test-extension' },
-    storage: { local: { get: async defaults => ({ ...defaults, cvJevEnabled: enabled, cvJevKey: apiKey }) } },
-    permissions: { contains: async query => { asked.push(query); return granted; } },
+    storage: { local: { get: async defaults => ({ ...defaults, ...storage }) } },
+    permissions: { contains: async query => { asked.push(query); return isGranted(query); } },
   };
   return asked;
 }
@@ -145,4 +149,79 @@ test('cv-jev-test surfaces a rejected key', async () => {
   stubChrome();
   const { fetchImpl } = fakeFetch(() => ({ ok: false, status: 401, json: async () => ({}) }));
   assert.deepEqual(await handleJevMessage({ type: 'cv-jev-test', apiKey: 'bad' }, fetchImpl), { ok: false, error: 'TypeSafe rejected the API key' });
+});
+
+test('buildJevRequest picks the provider model', () => {
+  assert.equal(buildJevRequest('hi', 'subq').model, 'subq-snap-preview');
+  assert.equal(buildJevRequest('hi').model, 'jev-latest');
+  assert.equal(buildJevRequest('hi', 'typesafe').model, 'jev-latest');
+});
+
+test('jevAnalyze with provider subq posts to SubQ and labels the result', async () => {
+  const { calls, fetchImpl } = fakeFetch(() => okResponse(answer('toxic', { toxic: 0.9 })));
+  const result = await jevAnalyze('you are the worst', 'sq_abc', fetchImpl, 'subq');
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].url, 'https://api.subq.ai/v1/systemone');
+  assert.equal(calls[0].init.headers.Authorization, 'Bearer sq_abc');
+  assert.equal(result.provider, 'subq');
+  assert.match(result.reason, /^SubQ reads this as/);
+});
+
+test('jevErrorMessage names the provider vendor', () => {
+  assert.equal(jevErrorMessage(402, 'subq'), 'SubQ account is out of credits');
+  assert.equal(jevErrorMessage(401, 'typesafe'), 'TypeSafe rejected the API key');
+  assert.equal(jevErrorMessage(401, 'subq'), 'SubQ rejected the API key');
+});
+
+test('resolveJevProvider defaults to SubQ for new users, TypeSafe for existing keys', () => {
+  assert.equal(resolveJevProvider('subq', 'k'), 'subq');
+  assert.equal(resolveJevProvider(undefined, 'k'), 'typesafe');
+  assert.equal(resolveJevProvider(undefined, ''), 'subq');
+  assert.equal(resolveJevProvider('bogus', ''), 'subq');
+});
+
+test('cv-jev-analyze with subq settings calls SubQ with the SubQ key', async () => {
+  stubChrome({
+    store: { cvJevProvider: 'subq', cvSubqKey: 's1', cvJevKey: 't1' },
+    origins: [JEV_PROVIDERS.subq.origin],
+  });
+  const { calls, fetchImpl } = fakeFetch(() => okResponse(answer('neutral', { neutral: 0.8 })));
+  const response = await handleJevMessage({ type: 'cv-jev-analyze', text: 'hi' }, fetchImpl);
+  assert.equal(response.ok, true);
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].url, 'https://api.subq.ai/v1/systemone');
+  assert.equal(calls[0].init.headers.Authorization, 'Bearer s1');
+});
+
+test('cv-jev-analyze refuses without the subq host permission', async () => {
+  stubChrome({
+    store: { cvJevProvider: 'subq', cvSubqKey: 's1', cvJevKey: 't1' },
+    origins: [JEV_PROVIDERS.typesafe.origin],
+  });
+  const { calls, fetchImpl } = fakeFetch(() => okResponse(answer('neutral', {})));
+  const response = await handleJevMessage({ type: 'cv-jev-analyze', text: 'hi' }, fetchImpl);
+  assert.equal(response.ok, false);
+  assert.match(response.error, /api\.subq\.ai/);
+  assert.equal(calls.length, 0);
+});
+
+test('cv-jev-analyze for an existing TypeSafe user hits TypeSafe', async () => {
+  stubChrome({ origins: [JEV_PROVIDERS.typesafe.origin], apiKey: 't1' });
+  const { calls, fetchImpl } = fakeFetch(() => okResponse(answer('positive', { positive: 0.9 })));
+  const response = await handleJevMessage({ type: 'cv-jev-analyze', text: 'hi' }, fetchImpl);
+  assert.equal(response.ok, true);
+  assert.equal(calls[0].url, 'https://api.typesafe.ai/v1/systemone');
+  assert.equal(calls[0].init.headers.Authorization, 'Bearer t1');
+});
+
+test('cv-jev-test with provider subq uses the stored SubQ key', async () => {
+  stubChrome({
+    store: { cvJevProvider: 'subq', cvSubqKey: 's1', cvJevKey: 't1' },
+    origins: [JEV_PROVIDERS.subq.origin, JEV_PROVIDERS.typesafe.origin],
+  });
+  const { calls, fetchImpl } = fakeFetch(() => okResponse(answer('positive', { positive: 0.9 })));
+  const response = await handleJevMessage({ type: 'cv-jev-test', provider: 'subq' }, fetchImpl);
+  assert.equal(response.ok, true);
+  assert.equal(calls[0].init.headers.Authorization, 'Bearer s1');
+  assert.equal(calls[0].url, 'https://api.subq.ai/v1/systemone');
 });

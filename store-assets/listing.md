@@ -54,7 +54,7 @@ PRIVATE BY DESIGN
 By default all analysis happens locally using Chrome's on-device Gemini Nano model, and your comments never leave your device. There is no account, tracking, or analytics — and it continues working offline once the model is downloaded.
 
 OPTIONAL FAST MODE (CLOUD, OFF BY DEFAULT)
-If you have a TypeSafe API key, you can turn on "Fast tone check with Jev" in the popup. The tone badge then comes from TypeSafe's Jev model in well under a second, even on computers that can't run Gemini Nano. Only the text being checked is sent to TypeSafe, together with your own key, which stays in your browser and is never synced. Rewrites and writing actions still run on your device. Turn it off at any time.
+If you have a SubQ or TypeSafe API key, you can turn on "Fast tone check in the cloud" in the popup. The tone badge then comes from the provider's decision model in well under a second, even on computers that can't run Gemini Nano. Only the text being checked is sent to the provider, together with your own key, which stays in your browser and is never synced. Rewrites and writing actions still run on your device. Turn it off at any time.
 
 REQUIREMENTS
 • Chrome 138 or later, on desktop (Windows, macOS or Linux)
@@ -67,8 +67,8 @@ TIP: The very first analysis can take a moment while Chrome loads the model — 
 
 **Single purpose:** unchanged (tone check and rewrite suggestions for text you type in comment boxes).
 
-**Permission justification — host permission `https://api.typesafe.ai/*` (optional):**
-> Requested only when the user turns on the optional "Fast tone check with Jev" setting in the popup. It lets the extension send the comment the user is checking to TypeSafe's Jev API to classify its tone (positive / neutral / negative / toxic). Off by default; never requested at install.
+**Permission justification — host permissions `https://api.subq.ai/*` and `https://api.typesafe.ai/*` (optional):**
+> Requested only when the user turns on the optional "Fast tone check in the cloud" setting in the popup. They let the extension send the comment the user is checking to the chosen provider's API to classify its tone (positive / neutral / negative / toxic). Off by default; never requested at install.
 
 **Data usage:** tick **Website content** (the comment text the user types), with a note that it is sent only when the user enables Fast mode and only to classify tone. Certify all three statements: not sold to third parties, not used for unrelated purposes, not used for creditworthiness or lending.
 

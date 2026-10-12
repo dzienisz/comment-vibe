@@ -548,15 +548,16 @@ async function analyzeViaBackground(text) {
   return normalize(response.result);
 }
 
-// ── Fast mode (TypeSafe Jev, opt-in cloud) ───────────────────────────────────
+// ── Fast mode (SubQ / TypeSafe Jev, opt-in cloud) ────────────────────────────
 //
 // When the user turns on Fast mode in the popup, tone checks go to jev.js in
-// the background context, which holds the API key and calls TypeSafe. Any
+// the background context, which holds the API key and calls the provider. Any
 // failure falls back to the on-device path, so a bad key or an outage never
 // leaves the user worse off than before. The flag lives in storage.local
 // next to the key: it is a per-browser choice and is never synced.
 
 const JEV_ENABLED_KEY = 'cvJevEnabled';
+const JEV_PROVIDER_KEY = 'cvJevProvider';
 let jevEnabled = false;
 let onJevEnabled = null;
 
@@ -588,11 +589,19 @@ function loadJevSetting() {
     .catch(() => {});
 }
 
+function handleJevStorageChange(changes, areaName) {
+  if (areaName !== 'local') return;
+  // A single change event can carry both keys: check the provider swap on its
+  // own so cached verdicts from the old provider never leak into the new one.
+  const providerChange = changes[JEV_PROVIDER_KEY];
+  if (providerChange && providerChange.newValue !== providerChange.oldValue) {
+    resultCache.clear();
+  }
+  if (changes[JEV_ENABLED_KEY]) applyJevSetting(changes[JEV_ENABLED_KEY].newValue);
+}
+
 function watchJevSetting() {
-  getStorageOnChanged()?.addListener((changes, areaName) => {
-    if (areaName !== 'local' || !changes[JEV_ENABLED_KEY]) return;
-    applyJevSetting(changes[JEV_ENABLED_KEY].newValue);
-  });
+  getStorageOnChanged()?.addListener(handleJevStorageChange);
 }
 
 async function analyzeViaJev(text) {
@@ -600,7 +609,8 @@ async function analyzeViaJev(text) {
   if (!runtime) throw new Error('Fast mode needs the extension runtime');
   const response = await runtime.sendMessage({ type: 'cv-jev-analyze', text });
   if (!response?.ok) throw new Error(response?.error || 'Jev request failed');
-  return { ...normalize(response.result), engine: 'jev' };
+  const providerLabel = response.result?.provider === 'subq' ? 'SubQ' : 'Jev';
+  return { ...normalize(response.result), engine: 'jev', providerLabel };
 }
 
 // ── Localisation (Language Detector + Translator) ─────────────────────────────
@@ -1175,7 +1185,7 @@ function renderBadge(badge, tooltip, result, actions = {}) {
     const note = document.createElement('span');
     note.className = 'cv-tooltip-footer-note';
     note.textContent = result.engine === 'jev'
-      ? 'Tone by Jev (cloud) · writing on-device'
+      ? `Tone by ${result.providerLabel || 'Jev'} (cloud) · writing on-device`
       : 'Private, on-device guidance';
     const mute = document.createElement('button');
     mute.className = 'cv-tooltip-mute';
@@ -1629,7 +1639,7 @@ function attachToInput(el) {
             renderNotice(badge, tooltip, {
               emoji: '⚠️',
               label: 'Fast mode failed',
-              body: `Jev couldn't check this comment (${error.jevError.message || 'request failed'}), and on-device AI isn't available to take over. Check your TypeSafe key in the Comment Vibe popup, or turn Fast mode off.`,
+              body: `Fast mode couldn't check this comment (${error.jevError.message || 'request failed'}), and on-device AI isn't available to take over. Check your API key in the Comment Vibe popup, or turn Fast mode off.`,
               onHideSite: ui.onHideSite,
             });
             placeBadge(badge, el);
@@ -1848,6 +1858,7 @@ if (typeof module !== 'undefined' && module.exports) {
     getCachedResult,
     getModelStatus,
     getSession,
+    handleJevStorageChange,
     hostDisabled,
     invalidateRequest,
     isCleanupEligible,

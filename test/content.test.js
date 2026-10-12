@@ -22,6 +22,7 @@ const {
   getCachedResult,
   getModelStatus,
   getSession,
+  handleJevStorageChange,
   hostDisabled,
   invalidateRequest,
   isCleanupEligible,
@@ -377,6 +378,24 @@ test('getCachedResult returns null after TTL expiry and cleanResultCache evicts 
   setCachedResult('hello world', result);
   cleanResultCache(Date.now() + RESULT_CACHE_TTL + 10_000);
   assert.equal(getCachedResult('hello world'), null);
+});
+
+test('handleJevStorageChange drops cached results when the provider changes', () => {
+  setCachedResult('hello world', { sentiment: 'positive', providerLabel: 'Jev' });
+  handleJevStorageChange({ cvJevProvider: { oldValue: 'typesafe', newValue: 'subq' } }, 'local');
+  assert.equal(getCachedResult('hello world'), null);
+});
+
+test('handleJevStorageChange ignores changes outside the local area', () => {
+  setCachedResult('hello world', { sentiment: 'positive' });
+  handleJevStorageChange({ cvJevProvider: { oldValue: 'typesafe', newValue: 'subq' } }, 'sync');
+  assert.ok(getCachedResult('hello world'));
+});
+
+test('handleJevStorageChange keeps the cache for unrelated keys', () => {
+  setCachedResult('hello world', { sentiment: 'positive' });
+  handleJevStorageChange({ cvSomethingElse: { oldValue: 1, newValue: 2 } }, 'local');
+  assert.ok(getCachedResult('hello world'));
 });
 
 test('cleanup eligibility rejects connected elements', () => {
