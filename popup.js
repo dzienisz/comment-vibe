@@ -281,6 +281,7 @@ async function initCloud(api) {
     applyProvider(next, saved?.[info.keyStorage]);
     if (!saved?.[info.keyStorage]) {
       await Promise.resolve(local.set({ cvJevEnabled: false })).catch(() => {});
+      toggle.checked = false; // keep config open: the status + key field explain what's missing
       setCloudBadge(false);
       say('', `Paste your ${info.vendor} API key to finish.`);
       keyBox.focus();
@@ -291,6 +292,7 @@ async function initCloud(api) {
       setCloudBadge(true);
     } else {
       await Promise.resolve(local.set({ cvJevEnabled: false })).catch(() => {});
+      toggle.checked = false;
       setCloudBadge(false);
     }
   });

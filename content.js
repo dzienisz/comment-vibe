@@ -557,6 +557,7 @@ async function analyzeViaBackground(text) {
 // next to the key: it is a per-browser choice and is never synced.
 
 const JEV_ENABLED_KEY = 'cvJevEnabled';
+const JEV_PROVIDER_KEY = 'cvJevProvider';
 let jevEnabled = false;
 let onJevEnabled = null;
 
@@ -588,11 +589,19 @@ function loadJevSetting() {
     .catch(() => {});
 }
 
+function handleJevStorageChange(changes, areaName) {
+  if (areaName !== 'local') return;
+  // A single change event can carry both keys: check the provider swap on its
+  // own so cached verdicts from the old provider never leak into the new one.
+  const providerChange = changes[JEV_PROVIDER_KEY];
+  if (providerChange && providerChange.newValue !== providerChange.oldValue) {
+    resultCache.clear();
+  }
+  if (changes[JEV_ENABLED_KEY]) applyJevSetting(changes[JEV_ENABLED_KEY].newValue);
+}
+
 function watchJevSetting() {
-  getStorageOnChanged()?.addListener((changes, areaName) => {
-    if (areaName !== 'local' || !changes[JEV_ENABLED_KEY]) return;
-    applyJevSetting(changes[JEV_ENABLED_KEY].newValue);
-  });
+  getStorageOnChanged()?.addListener(handleJevStorageChange);
 }
 
 async function analyzeViaJev(text) {
@@ -1849,6 +1858,7 @@ if (typeof module !== 'undefined' && module.exports) {
     getCachedResult,
     getModelStatus,
     getSession,
+    handleJevStorageChange,
     hostDisabled,
     invalidateRequest,
     isCleanupEligible,
