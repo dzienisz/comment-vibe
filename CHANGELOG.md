@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.6.0] - 2026-10-12
+
 ### Added
 
 - **Fast mode** can now use [SubQ](https://subq.ai) (`subq-snap-preview` on `api.subq.ai`) as the cloud provider, next to TypeSafe Jev. New installs default to SubQ; saved TypeSafe keys keep working — pick the provider in the popup.
