@@ -55,7 +55,7 @@ REQUIREMENTS
 
 GOOD TO KNOW
 OPTIONAL FAST MODE (CLOUD, OFF BY DEFAULT)
-Have a TypeSafe API key? Turn on "Fast tone check with Jev" in the popup to get the tone badge from TypeSafe's Jev model in well under a second, with no local model download. Only the text being checked is sent to TypeSafe, with your own key, which stays in your browser. Turn it off at any time.
+Have a SubQ or TypeSafe API key? Turn on "Fast tone check in the cloud" in the popup to get the tone badge from the provider's decision model in well under a second, with no local model download. Only the text being checked is sent to the provider, with your own key, which stays in your browser. Turn it off at any time.
 
 This Firefox build focuses on the tone badge and explanation. The kinder-rewrite suggestions and automatic translation available in the Chrome version rely on a generative on-device model that Firefox's AI API does not yet expose — so they are not part of the Firefox build. The tone check itself works the same way.
 
@@ -65,7 +65,7 @@ Comment Vibe is open source. The WebExtensions AI API it depends on is explicitl
 
 Comment Vibe does not collect or store any user data on its own servers (it has none). By default all text analysis runs locally in the browser via the on-device AI runtime and no comment text leaves the device. The optional "trialML" permission is used only to run the local model.
 
-Optional Fast mode (off by default): if the user turns on "Fast tone check with Jev" in the popup and pastes their own TypeSafe API key, the extension asks for the optional `https://api.typesafe.ai/*` permission and sends only the text being checked to TypeSafe's Jev API to classify its tone. The key is stored in the browser's local extension storage (never synced). Turning the setting off stops all requests.
+Optional Fast mode (off by default): if the user turns on "Fast tone check in the cloud" in the popup and pastes their own SubQ or TypeSafe API key, the extension asks for the optional `https://api.subq.ai/*` or `https://api.typesafe.ai/*` permission and sends only the text being checked to that provider's API to classify its tone. The key is stored in the browser's local extension storage (never synced). Turning the setting off stops all requests.
 
 ## Assets in this folder
 

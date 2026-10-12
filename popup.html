@@ -66,20 +66,25 @@
       </div>
       <label class="toggle">
         <span class="toggle-copy">
-          <strong>Fast tone check with Jev</strong>
-          <small>Sends the text being checked to TypeSafe AI</small>
+          <strong>Fast tone check in the cloud</strong>
+          <small id="jev-toggle-sub">Sends the text being checked to your cloud provider</small>
         </span>
         <input type="checkbox" id="jev-enabled">
         <span class="switch" aria-hidden="true"></span>
       </label>
       <div id="jev-config" class="cloud-config" hidden>
-        <label class="cloud-label" for="jev-key">TypeSafe API key</label>
+        <label class="cloud-label" for="jev-provider">Provider</label>
+        <select id="jev-provider" class="cloud-input">
+          <option value="subq">SubQ Snap (subq.ai)</option>
+          <option value="typesafe">TypeSafe Jev (typesafe.ai)</option>
+        </select>
+        <label class="cloud-label" for="jev-key" id="jev-key-label">API key</label>
         <div class="cloud-row">
           <input id="jev-key" class="cloud-input" type="password" autocomplete="off" spellcheck="false" placeholder="Paste your key">
           <button id="jev-save" class="setup-button cloud-button" type="button">Save &amp; test</button>
         </div>
         <p id="jev-status" class="cloud-status" aria-live="polite"></p>
-        <p class="cloud-note">Only the text being checked goes to <code>api.typesafe.ai</code>, with your key. Writing actions stay on-device and the key stays in this browser. <a href="https://console.typesafe.ai/keys" target="_blank" rel="noopener">Get a key ↗</a></p>
+        <p class="cloud-note">Only the text being checked goes to <code id="jev-host">api.subq.ai</code>, with your key. Writing actions stay on-device and the key stays in this browser. <a id="jev-key-link" href="https://console.subq.ai" target="_blank" rel="noopener">Get a key ↗</a></p>
       </div>
     </section>
 

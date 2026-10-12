@@ -156,18 +156,31 @@ async function initPrefs(api) {
   });
 }
 
-// Fast mode (TypeSafe Jev). The key and the on/off flag live in storage.local
-// — never synced. Enabling needs the api.typesafe.ai host permission, which
-// must be requested straight from the click (user gesture), and a key that
-// passes a live test call; jev.js in the background does the actual requests.
-const JEV_ORIGINS = ['https://api.typesafe.ai/*'];
+// Fast mode (SubQ or TypeSafe Jev — user picks the provider). The key and the
+// on/off flag live in storage.local — never synced. Enabling needs the chosen
+// provider's host permission, which must be requested straight from the click
+// (user gesture), and a key that passes a live test call; jev.js in the
+// background does the actual requests.
+const FAST_PROVIDERS = {
+  subq:     { vendor: 'SubQ',     sendsTo: 'SubQ',        host: 'api.subq.ai',     origin: 'https://api.subq.ai/*',     keyStorage: 'cvSubqKey', consoleUrl: 'https://console.subq.ai' },
+  typesafe: { vendor: 'TypeSafe', sendsTo: 'TypeSafe AI', host: 'api.typesafe.ai', origin: 'https://api.typesafe.ai/*', keyStorage: 'cvJevKey',  consoleUrl: 'https://console.typesafe.ai/keys' },
+};
+let fastProvider = 'typesafe';
 let onFastModeChange = null;
 
+// Same rule as resolveJevProvider in jev.js: a stored choice wins, then a
+// saved TypeSafe key marks an existing user, otherwise new installs get SubQ.
+function resolveFastProvider(stored, typesafeKey) {
+  if (FAST_PROVIDERS[stored]) return stored;
+  return typesafeKey ? 'typesafe' : 'subq';
+}
+
 function setCloudBadge(on) {
+  const vendor = FAST_PROVIDERS[fastProvider].vendor;
   const mark = document.getElementById('private-mark');
   mark.textContent = on ? 'Fast mode' : 'On-device';
   mark.title = on
-    ? 'Tone checks use TypeSafe Jev (cloud); writing actions stay on this device'
+    ? `Tone checks use ${vendor} (cloud); writing actions stay on this device`
     : 'Your comments stay on this device';
   mark.classList.toggle('private-mark--cloud', on);
   onFastModeChange?.(on);
@@ -175,27 +188,51 @@ function setCloudBadge(on) {
   if (!line) return;
   line.dataset.local ??= line.textContent;
   line.textContent = on
-    ? line.dataset.cloud || 'Fast mode sends the text being checked to TypeSafe; writing actions stay on this device.'
+    ? line.dataset.cloud || `Fast mode sends the text being checked to ${vendor}; writing actions stay on this device.`
     : line.dataset.local;
 }
 
 async function initCloud(api) {
   const local = api.storage?.local;
   if (!local || !api.permissions?.request) return null;
-  const section = document.getElementById('cloud');
-  const toggle  = document.getElementById('jev-enabled');
-  const config  = document.getElementById('jev-config');
-  const keyBox  = document.getElementById('jev-key');
-  const save    = document.getElementById('jev-save');
-  const status  = document.getElementById('jev-status');
+  const section     = document.getElementById('cloud');
+  const toggle      = document.getElementById('jev-enabled');
+  const config      = document.getElementById('jev-config');
+  const providerSel = document.getElementById('jev-provider');
+  const keyLabel    = document.getElementById('jev-key-label');
+  const hostCode    = document.getElementById('jev-host');
+  const keyLink     = document.getElementById('jev-key-link');
+  const toggleSub   = document.getElementById('jev-toggle-sub');
+  const keyBox      = document.getElementById('jev-key');
+  const save        = document.getElementById('jev-save');
+  const status      = document.getElementById('jev-status');
   section.hidden = false;
 
-  const data = await Promise.resolve(local.get({ cvJevEnabled: false, cvJevKey: '' })).catch(() => null);
-  const permitted = await Promise.resolve(api.permissions.contains({ origins: JEV_ORIGINS })).catch(() => false);
+  const data = await Promise.resolve(
+    local.get({ cvJevEnabled: false, cvJevProvider: '', cvJevKey: '', cvSubqKey: '' }),
+  ).catch(() => null);
+
+  // Swap every provider-dependent text in the Fast mode section at once.
+  const applyProvider = (provider, storedKey) => {
+    const info = FAST_PROVIDERS[provider];
+    fastProvider = provider;
+    providerSel.value = provider;
+    keyLabel.textContent = `${info.vendor} API key`;
+    hostCode.textContent = info.host;
+    keyLink.href = info.consoleUrl;
+    toggleSub.textContent = `Sends the text being checked to ${info.sendsTo}`;
+    keyBox.placeholder = storedKey ? 'Key saved — paste to replace' : 'Paste your key';
+  };
+
+  fastProvider = resolveFastProvider(data?.cvJevProvider, data?.cvJevKey);
+  const provider = () => providerSel.value;
+  const permitted = await Promise.resolve(
+    api.permissions.contains({ origins: [FAST_PROVIDERS[fastProvider].origin] }),
+  ).catch(() => false);
   const enabled = data?.cvJevEnabled === true && permitted;
   toggle.checked = enabled;
   config.hidden = !enabled;
-  if (data?.cvJevKey) keyBox.placeholder = 'Key saved — paste to replace';
+  applyProvider(fastProvider, data?.[FAST_PROVIDERS[fastProvider].keyStorage]);
   setCloudBadge(enabled);
 
   const say = (kind, text) => {
@@ -206,8 +243,9 @@ async function initCloud(api) {
   const test = async apiKey => {
     save.disabled = true;
     say('', 'Testing…');
-    const result = await Promise.resolve(api.runtime.sendMessage({ type: 'cv-jev-test', apiKey }))
-      .catch(error => ({ ok: false, error: error?.message }));
+    const result = await Promise.resolve(
+      api.runtime.sendMessage({ type: 'cv-jev-test', apiKey, provider: provider() }),
+    ).catch(error => ({ ok: false, error: error?.message }));
     save.disabled = false;
     if (!result?.ok) {
       say('err', result?.error || 'Test failed');
@@ -217,6 +255,46 @@ async function initCloud(api) {
     return true;
   };
 
+  providerSel.addEventListener('change', async () => {
+    const next = providerSel.value;
+    const info = FAST_PROVIDERS[next];
+    if (!toggle.checked) {
+      // Permission requests need a user gesture, so request must be the first
+      // await — nothing to request while Fast mode is off, just remember it.
+      applyProvider(next, (await Promise.resolve(
+        local.get({ [info.keyStorage]: '' }),
+      ).catch(() => null))?.[info.keyStorage]);
+      await Promise.resolve(local.set({ cvJevProvider: next })).catch(() => {});
+      return;
+    }
+    // Fast mode is on: ask for the new provider's host straight from the
+    // change event (it is a user gesture); on denial revert the select.
+    const granted = await Promise.resolve(
+      api.permissions.request({ origins: [info.origin] }),
+    ).catch(() => false);
+    if (!granted) {
+      providerSel.value = fastProvider;
+      return;
+    }
+    await Promise.resolve(local.set({ cvJevProvider: next })).catch(() => {});
+    const saved = await Promise.resolve(local.get({ [info.keyStorage]: '' })).catch(() => null);
+    applyProvider(next, saved?.[info.keyStorage]);
+    if (!saved?.[info.keyStorage]) {
+      await Promise.resolve(local.set({ cvJevEnabled: false })).catch(() => {});
+      setCloudBadge(false);
+      say('', `Paste your ${info.vendor} API key to finish.`);
+      keyBox.focus();
+      return;
+    }
+    if (await test('')) {
+      await Promise.resolve(local.set({ cvJevEnabled: true })).catch(() => {});
+      setCloudBadge(true);
+    } else {
+      await Promise.resolve(local.set({ cvJevEnabled: false })).catch(() => {});
+      setCloudBadge(false);
+    }
+  });
+
   toggle.addEventListener('change', async () => {
     if (!toggle.checked) {
       config.hidden = true;
@@ -224,20 +302,23 @@ async function initCloud(api) {
       setCloudBadge(false);
       return;
     }
-    const granted = await Promise.resolve(api.permissions.request({ origins: JEV_ORIGINS })).catch(() => false);
+    const info = FAST_PROVIDERS[provider()];
+    const granted = await Promise.resolve(
+      api.permissions.request({ origins: [info.origin] }),
+    ).catch(() => false);
     if (!granted) {
       toggle.checked = false;
       return;
     }
     config.hidden = false;
-    const saved = await Promise.resolve(local.get({ cvJevKey: '' })).catch(() => null);
-    if (!saved?.cvJevKey) {
-      say('', 'Paste your TypeSafe API key to finish.');
+    const saved = await Promise.resolve(local.get({ [info.keyStorage]: '' })).catch(() => null);
+    if (!saved?.[info.keyStorage]) {
+      say('', `Paste your ${info.vendor} API key to finish.`);
       keyBox.focus();
       return;
     }
     if (await test('')) {
-      await Promise.resolve(local.set({ cvJevEnabled: true })).catch(() => {});
+      await Promise.resolve(local.set({ cvJevEnabled: true, cvJevProvider: provider() })).catch(() => {});
       setCloudBadge(true);
     }
   });
@@ -248,13 +329,19 @@ async function initCloud(api) {
       say('err', 'Paste a key first.');
       return;
     }
+    const info = FAST_PROVIDERS[provider()];
+    const granted = await Promise.resolve(
+      api.permissions.request({ origins: [info.origin] }),
+    ).catch(() => false);
+    if (!granted) return;
     if (!await test(apiKey)) return;
-    const update = { cvJevEnabled: true };
-    if (apiKey) update.cvJevKey = apiKey;
+    const update = { cvJevEnabled: true, cvJevProvider: provider() };
+    if (apiKey) update[info.keyStorage] = apiKey;
     await Promise.resolve(local.set(update)).catch(() => {});
     keyBox.value = '';
     keyBox.placeholder = 'Key saved — paste to replace';
     toggle.checked = true;
+    config.hidden = false;
     setCloudBadge(true);
   });
 
@@ -328,7 +415,7 @@ async function initFirefoxPopup(els, fastMode) {
   document.getElementById('info').innerHTML =
     "Comment Vibe uses <strong>Firefox's on-device AI runtime</strong> to classify " +
     'the tone of your comments in real time — <span id="privacy-line" ' +
-    'data-cloud="except in Fast mode, which sends the text being checked to TypeSafe.">' +
+    'data-cloud="except in Fast mode, which sends the text being checked to your chosen cloud provider.">' +
     'completely on-device, no data sent anywhere.</span> ' +
     "Unlike Chrome's generative Gemini Nano, Firefox's AI API is a <em>classifier</em>: " +
     'it judges tone in ~100 languages but cannot write rewrite suggestions — those are ' +
