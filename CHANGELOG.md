@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.7.0] - 2026-10-13
+
 ### Changed
 
 - Applying a rewrite ("Use this rewrite" or a writing-tool chip's "Use this") no longer re-checks the applied text — the badge shows "✓ Rewritten" until you edit the text or press Refresh.
