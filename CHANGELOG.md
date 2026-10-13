@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Applying a rewrite ("Use this rewrite" or a writing-tool chip's "Use this") no longer re-checks the applied text — the badge shows "✓ Rewritten" until you edit the text or press Refresh.
 - **Tone criteria now judge delivery, not topic** — respectful criticism counts as neutral; the Nano checker asks for a `respectful` flag (a negative-but-polite verdict remaps to neutral) and the cloud Fast mode criteria match.
+- **Rewrite prompt treats the text as the user's draft for other readers** — the model is told never to reply to or answer the draft; "More professional" and "Friendlier" now explicitly replace insults, sarcasm and blame while keeping criticism.
 
 ## [1.6.0] - 2026-10-12
 
