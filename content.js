@@ -41,11 +41,17 @@ const COLOR_MAP = {
   toxic:    { bg: '#f3e8ff', color: '#6d28d9', border: '1px solid #c4b5fd' },
 };
 
-const SYSTEM_PROMPT = `You are a tone and sentiment analyzer for social media comments.
+const SYSTEM_PROMPT = `You judge how a social-media comment will land with other readers, before the user posts it.
+Judge how it is said, not what it is about: criticism, disagreement, complaints and disappointment are fine when stated respectfully.
 Respond with raw JSON only — no markdown, no explanation outside the JSON object.
 Use exactly this structure:
-{"sentiment":"positive|neutral|negative|toxic","emoji":"😊|😐|😕|🚫","label":"Positive|Neutral|Negative|Toxic","reason":"one sentence max 20 words","rewrite":"improved kinder version or null"}
-Set rewrite to a kinder rewritten version when sentiment is negative or toxic, otherwise null.`;
+{"sentiment":"positive|neutral|negative|toxic","emoji":"😊|😐|😕|🚫","label":"Positive|Neutral|Negative|Toxic","reason":"one sentence max 20 words","rewrite":"improved kinder version or null","respectful":true|false}
+positive: friendly, appreciative, encouraging or supportive.
+neutral: factual, a calm question, or criticism/disagreement/disappointment stated respectfully.
+negative: hostile delivery without insults: harsh, dismissive, sarcastic, mocking, condescending, passive-aggressive or blaming.
+toxic: insults, name-calling, slurs, threats, harassment or hateful language aimed at people.
+Set rewrite to a respectful version that keeps the point when sentiment is negative or toxic, otherwise null.
+respectful: true only if a reasonable reader would find it calm and polite, even when it criticizes or disagrees. false if it uses harsh or contemptuous words (terrible, worst, waste of time, ridiculous, embarrassing, useless, boring), sarcasm or irony, mockery, demands, blame, exasperation or insults.`;
 
 const REWRITE_SYSTEM_PROMPT = `You are a writing assistant that rewrites short social-media comments and posts.
 Return only the rewritten text — no quotes, no preamble, no explanation, no markdown.
@@ -79,8 +85,9 @@ const RESPONSE_SCHEMA = {
     label:       { type: 'string' },
     reason:      { type: 'string' },
     rewrite:     { type: ['string', 'null'] },
+    respectful:  { type: 'boolean' },
   },
-  required: ['sentiment'],
+  required: ['sentiment', 'respectful'],
 };
 
 const SELECTORS = [
@@ -704,7 +711,7 @@ const FEW_SHOT = [
   },
   {
     role: 'assistant',
-    content: '{"sentiment":"positive","emoji":"😊","label":"Positive","reason":"Expresses genuine appreciation and enthusiasm.","rewrite":null}',
+    content: '{"sentiment":"positive","emoji":"😊","label":"Positive","reason":"Expresses genuine appreciation and enthusiasm.","rewrite":null,"respectful":true}',
   },
   {
     role: 'user',
@@ -712,7 +719,23 @@ const FEW_SHOT = [
   },
   {
     role: 'assistant',
-    content: '{"sentiment":"toxic","emoji":"🚫","label":"Toxic","reason":"Contains personal insults and aggressive language.","rewrite":"I strongly disagree with this and think it can be much improved."}',
+    content: '{"sentiment":"toxic","emoji":"🚫","label":"Toxic","reason":"Contains personal insults and aggressive language.","rewrite":"I strongly disagree with this and think it can be much improved.","respectful":false}',
+  },
+  {
+    role: 'user',
+    content: 'Classify the tone of this comment:\n"I was hoping for more detail on the setup. The last step didn\'t work for me."',
+  },
+  {
+    role: 'assistant',
+    content: '{"sentiment":"neutral","emoji":"😐","label":"Neutral","reason":"Respectful criticism with a concrete problem, no hostility.","rewrite":null,"respectful":true}',
+  },
+  {
+    role: 'user',
+    content: 'Classify the tone of this comment:\n"Oh wonderful, another update that breaks everything. Great job."',
+  },
+  {
+    role: 'assistant',
+    content: '{"sentiment":"negative","emoji":"😕","label":"Negative","reason":"Sarcastic and mocking, though without direct insults.","rewrite":"This update broke a few things for me. Could you take a look?","respectful":false}',
   },
 ];
 
@@ -739,7 +762,15 @@ function buildMessages(text, fewShotBaked, usesConstraint) {
 }
 
 function parseAnalysisResponse(raw, usesConstraint) {
-  return normalize(parseResponse(usesConstraint ? raw : '{"sentiment":' + raw));
+  const parsed = parseResponse(usesConstraint ? raw : '{"sentiment":' + raw);
+  // The model judges delivery separately from topic via `respectful`: a
+  // negative verdict delivered calmly still reads as neutral to readers.
+  // Missing respectful (legacy path without responseConstraint) keeps the
+  // sentiment as-is; toxic is never remapped.
+  if (String(parsed?.sentiment ?? '').trim().toLowerCase() === 'negative' && parsed.respectful === true) {
+    return normalize({ ...parsed, sentiment: 'neutral', label: 'Neutral', emoji: '😐', rewrite: null });
+  }
+  return normalize(parsed);
 }
 
 async function analyzeText(text, onEarlySentiment, signal) {
@@ -807,7 +838,9 @@ async function streamPrompt(session, messages, onEarlySentiment, signal, usesCon
     raw = (chunk.length > raw.length && chunk.startsWith(raw)) ? chunk : raw + chunk;
     if (!signaled && onEarlySentiment) {
       const sentiment = extractEarlySentiment(raw, usesConstraint);
-      if (sentiment) { signaled = true; onEarlySentiment(sentiment); }
+      // `respectful` lands at the end of the JSON, so an early 'negative' may
+      // still settle as 'neutral' — never flash it.
+      if (sentiment && sentiment !== 'negative') { signaled = true; onEarlySentiment(sentiment); }
     }
   }
   return raw;
@@ -1925,6 +1958,7 @@ if (typeof module !== 'undefined' && module.exports) {
     constructSession,
     expireReusableSession,
     extractEarlySentiment,
+    FEW_SHOT,
     getCachedResult,
     getModelStatus,
     getSession,

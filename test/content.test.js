@@ -21,6 +21,7 @@ const {
   constructSession,
   expireReusableSession,
   extractEarlySentiment,
+  FEW_SHOT,
   getCachedResult,
   getModelStatus,
   getSession,
@@ -425,7 +426,7 @@ test('buildMessages omits the assistant prefill when responseConstraint is activ
 
 test('buildMessages includes few-shot examples and assistant prefill when constraint is inactive', () => {
   const messages = buildMessages('hello world', false, false);
-  assert.equal(messages.length, 6);
+  assert.equal(messages.length, 10);
   assert.equal(messages[0].role, 'user');
   assert.equal(messages[messages.length - 2].role, 'user');
   assert.deepEqual(messages[messages.length - 1], { role: 'assistant', content: '{"sentiment":', prefix: true });
@@ -457,6 +458,81 @@ test('parseAnalysisResponse parses constrained JSON directly', () => {
 
 test('parseAnalysisResponse prepends the prefill fragment for legacy streams', () => {
   assert.equal(parseAnalysisResponse('"positive","reason":"Kind."}', false).sentiment, 'positive');
+});
+
+test('parseAnalysisResponse remaps respectful negative to neutral without a rewrite', () => {
+  const result = parseAnalysisResponse(
+    '{"sentiment":"negative","emoji":"😕","label":"Negative","reason":"Calm complaint.","rewrite":"Kinder.","respectful":true}',
+    true,
+  );
+  assert.equal(result.sentiment, 'neutral');
+  assert.equal(result.label, 'Neutral');
+  assert.equal(result.emoji, '😐');
+  assert.equal(result.rewrite, null);
+});
+
+test('parseAnalysisResponse keeps disrespectful negative and its rewrite', () => {
+  const result = parseAnalysisResponse(
+    '{"sentiment":"negative","reason":"Sarcastic jab.","rewrite":"Kinder.","respectful":false}',
+    true,
+  );
+  assert.equal(result.sentiment, 'negative');
+  assert.equal(result.rewrite, 'Kinder.');
+});
+
+test('parseAnalysisResponse leaves negative alone when respectful is missing', () => {
+  const result = parseAnalysisResponse(
+    '{"sentiment":"negative","reason":"Harsh.","rewrite":"Kinder."}',
+    true,
+  );
+  assert.equal(result.sentiment, 'negative');
+  assert.equal(result.rewrite, 'Kinder.');
+});
+
+test('parseAnalysisResponse never remaps toxic even when respectful', () => {
+  const result = parseAnalysisResponse(
+    '{"sentiment":"toxic","reason":"Insults.","rewrite":"Calmer.","respectful":true}',
+    true,
+  );
+  assert.equal(result.sentiment, 'toxic');
+});
+
+test('streamPrompt does not emit a preliminary negative sentiment', async () => {
+  const sentiments = [];
+  const raw = await streamPrompt(
+    sessionFor(['{"sentiment":"negative"', ',"reason":"Sarcastic."', ',"respectful":true}']),
+    [{ role: 'user', content: 'message' }],
+    sentiment => sentiments.push(sentiment),
+    null,
+    true,
+  );
+  assert.equal(raw, '{"sentiment":"negative","reason":"Sarcastic.","respectful":true}');
+  assert.deepEqual(sentiments, []);
+});
+
+test('streamPrompt still emits other preliminary sentiments', async () => {
+  const sentiments = [];
+  await streamPrompt(
+    sessionFor(['{"sentiment":"positive"', ',"reason":"Kind.","respectful":true}']),
+    [{ role: 'user', content: 'message' }],
+    sentiment => sentiments.push(sentiment),
+    null,
+    true,
+  );
+  assert.deepEqual(sentiments, ['positive']);
+});
+
+test('RESPONSE_SCHEMA requires respectful and every few-shot answer matches its sentiment', () => {
+  assert.ok(RESPONSE_SCHEMA.required.includes('sentiment'));
+  assert.ok(RESPONSE_SCHEMA.required.includes('respectful'));
+  assert.equal(RESPONSE_SCHEMA.properties.respectful.type, 'boolean');
+  const assistants = FEW_SHOT.filter(m => m.role === 'assistant');
+  assert.ok(assistants.length >= 4);
+  for (const m of assistants) {
+    const parsed = JSON.parse(m.content);
+    assert.equal(typeof parsed.respectful, 'boolean', m.content);
+    assert.equal(parsed.respectful, !(parsed.sentiment === 'negative' || parsed.sentiment === 'toxic'), m.content);
+  }
 });
 
 test('invalidateRequest clears pending work and increments the request ID once', () => {
@@ -569,9 +645,9 @@ test('an aborted stream cannot produce a current final result', async () => {
     async * promptStreaming(messages, options) {
       assert.deepEqual(messages, [{ role: 'user', content: 'message' }]);
       assert.equal(options.signal, controller.signal);
-      yield '{"sentiment":"negative"';
+      yield '{"sentiment":"positive"';
       if (options.signal.aborted) throw new DOMException('Aborted', 'AbortError');
-      yield ',"reason":"Harsh."}';
+      yield ',"reason":"Kind."}';
     },
   };
 
@@ -617,7 +693,7 @@ test('constructSession prefers standard API with initial prompts, language optio
   assert.equal(metadata.responseConstraint, true);
   assert.equal(metadata.cloneCapable, true);
   assert.equal(optionsSeen.length, 1);
-  assert.equal(optionsSeen[0].initialPrompts.length, 5);
+  assert.equal(optionsSeen[0].initialPrompts.length, 9);
   assert.deepEqual(optionsSeen[0].expectedInputs, [{ type: 'text', languages: ['en'] }]);
   assert.deepEqual(optionsSeen[0].expectedOutputs, [{ type: 'text', languages: ['en'] }]);
   assert.equal(optionsSeen[0].responseConstraint, RESPONSE_SCHEMA);
@@ -649,7 +725,7 @@ test('constructSession retries through option reductions when response constrain
   assert.equal('responseConstraint' in optionsSeen[2], false);
   assert.deepEqual(optionsSeen[2].expectedInputs, [{ type: 'text', languages: ['en'] }]);
   // 4th: minimal initialPrompts
-  assert.equal(optionsSeen[3].initialPrompts.length, 5);
+  assert.equal(optionsSeen[3].initialPrompts.length, 9);
   assert.equal('expectedInputs' in optionsSeen[3], false);
   assert.equal('responseConstraint' in optionsSeen[3], false);
 });
@@ -930,7 +1006,7 @@ test('concurrent and sequential no-clone analyses each own a fresh session', asy
           return {
             async prompt(messages) {
               record.prompts++;
-              assert.equal(messages.length, 6);
+              assert.equal(messages.length, 10);
               return '"neutral","reason":"Measured."}';
             },
             destroy() { record.destroys++; },
