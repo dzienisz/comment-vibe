@@ -1006,6 +1006,115 @@ function createUI({ onIdleActivate } = {}) {
   return { badge, tooltip };
 }
 
+// Shared tooltip chrome for the result, applied and notice states.
+function buildTooltipHeader({ emoji, hideSignal = true, kicker, title, hasControls = false, onRefresh, tooltip }) {
+  const header = document.createElement('div');
+  header.className = 'cv-tooltip-header';
+  const signal = document.createElement('span');
+  signal.className = 'cv-tooltip-signal';
+  if (hideSignal) signal.setAttribute('aria-hidden', 'true');
+  signal.textContent = emoji;
+  const titleGroup = document.createElement('div');
+  titleGroup.className = 'cv-tooltip-title-group';
+  const kickerEl = document.createElement('span');
+  kickerEl.className = 'cv-tooltip-kicker';
+  kickerEl.textContent = kicker;
+  const titleEl = document.createElement('span');
+  titleEl.className = 'cv-tooltip-title';
+  titleEl.textContent = title;
+  titleGroup.append(kickerEl, titleEl);
+  const close = document.createElement('button');
+  close.className = 'cv-tooltip-icon';
+  close.type = 'button';
+  close.setAttribute('aria-label', 'Close');
+  close.textContent = '✕';
+  if (hasControls) {
+    const controls = document.createElement('div');
+    controls.className = 'cv-tooltip-controls';
+    const refresh = document.createElement('button');
+    refresh.className = 'cv-tooltip-icon';
+    refresh.type = 'button';
+    refresh.setAttribute('aria-label', 'Analyze again');
+    refresh.textContent = '↻';
+    refresh.title = 'Analyze again';
+    close.title = 'Close';
+    controls.append(refresh, close);
+    header.append(signal, titleGroup, controls);
+    if (onRefresh) {
+      refresh.addEventListener('click', e => {
+        e.stopPropagation();
+        onRefresh();
+      });
+    }
+  } else {
+    header.append(signal, titleGroup, close);
+  }
+  close.addEventListener('click', e => {
+    e.stopPropagation();
+    dismissTooltip(tooltip);
+  });
+  return header;
+}
+
+function buildTooltipTools(onRewrite) {
+  const tools = document.createElement('div');
+  tools.className = 'cv-tooltip-tools';
+  const toolsLabel = document.createElement('span');
+  toolsLabel.className = 'cv-tooltip-tools-label';
+  toolsLabel.textContent = 'Improve this text';
+  const chips = document.createElement('div');
+  chips.className = 'cv-tooltip-chips';
+  for (const [mode, config] of Object.entries(REWRITE_MODES)) {
+    const chip = document.createElement('button');
+    chip.className = 'cv-tooltip-chip';
+    chip.type = 'button';
+    chip.dataset.mode = mode;
+    chip.textContent = config.label;
+    chip.addEventListener('click', e => {
+      e.stopPropagation();
+      onRewrite(mode, chip, chips);
+    });
+    chips.appendChild(chip);
+  }
+  tools.append(toolsLabel, chips);
+  return tools;
+}
+
+function buildUndoRow(onUndo) {
+  const undoRow = document.createElement('div');
+  undoRow.className = 'cv-tooltip-undo';
+  const undoLabel = document.createElement('span');
+  undoLabel.textContent = 'Rewrite applied.';
+  const undoButton = document.createElement('button');
+  undoButton.className = 'cv-tooltip-copy';
+  undoButton.type = 'button';
+  undoButton.textContent = 'Undo';
+  undoButton.addEventListener('click', e => {
+    e.stopPropagation();
+    onUndo?.();
+  });
+  undoRow.append(undoLabel, undoButton);
+  return undoRow;
+}
+
+function buildTooltipFooter(noteText, onHideSite) {
+  const footer = document.createElement('div');
+  footer.className = 'cv-tooltip-footer';
+  const note = document.createElement('span');
+  note.className = 'cv-tooltip-footer-note';
+  note.textContent = noteText;
+  const mute = document.createElement('button');
+  mute.className = 'cv-tooltip-mute';
+  mute.type = 'button';
+  mute.textContent = 'Hide on this site';
+  mute.addEventListener('click', e => {
+    e.stopPropagation();
+    onHideSite();
+  });
+  footer.append(note, mute);
+  return footer;
+}
+
 function renderBadge(badge, tooltip, result, actions = {}) {
   const { sentiment, emoji, label, reason, rewrite } = result;
   const {
@@ -1024,54 +1133,13 @@ function renderBadge(badge, tooltip, result, actions = {}) {
 
   tooltip.className = `cv-tooltip cv-tooltip--${sentiment}`;
 
-  const header = document.createElement('div');
-  header.className = 'cv-tooltip-header';
-  const signal = document.createElement('span');
-  signal.className = 'cv-tooltip-signal';
-  signal.setAttribute('aria-hidden', 'true');
-  signal.textContent = emoji;
-  const titleGroup = document.createElement('div');
-  titleGroup.className = 'cv-tooltip-title-group';
-  const kicker = document.createElement('span');
-  kicker.className = 'cv-tooltip-kicker';
-  kicker.textContent = 'Comment tone';
-  const title = document.createElement('span');
-  title.className = 'cv-tooltip-title';
-  title.textContent = label;
-  titleGroup.append(kicker, title);
-  const controls = document.createElement('div');
-  controls.className = 'cv-tooltip-controls';
-  const refresh = document.createElement('button');
-  refresh.className = 'cv-tooltip-icon';
-  refresh.type = 'button';
-  refresh.setAttribute('aria-label', 'Analyze again');
-  refresh.textContent = '↻';
-  refresh.title = 'Analyze again';
-  const close = document.createElement('button');
-  close.className = 'cv-tooltip-icon';
-  close.type = 'button';
-  close.setAttribute('aria-label', 'Close');
-  close.textContent = '✕';
-  close.title = 'Close';
-  controls.append(refresh, close);
-  header.append(signal, titleGroup, controls);
-
   const reasonEl = document.createElement('div');
   reasonEl.className = 'cv-tooltip-reason';
   reasonEl.textContent = reason;
-  tooltip.replaceChildren(header, reasonEl);
-
-  close.addEventListener('click', e => {
-    e.stopPropagation();
-    dismissTooltip(tooltip);
-  });
-
-  if (onRefresh) {
-    refresh.addEventListener('click', e => {
-      e.stopPropagation();
-      onRefresh();
-    });
-  }
+  tooltip.replaceChildren(
+    buildTooltipHeader({ emoji, kicker: 'Comment tone', title: label, hasControls: true, onRefresh, tooltip }),
+    reasonEl,
+  );
 
   if (rewrite) {
     const rewriteContainer = document.createElement('div');
@@ -1109,44 +1177,11 @@ function renderBadge(badge, tooltip, result, actions = {}) {
   }
 
   if (!isFirefoxMLContext() && onRewrite) {
-    const tools = document.createElement('div');
-    tools.className = 'cv-tooltip-tools';
-    const toolsLabel = document.createElement('span');
-    toolsLabel.className = 'cv-tooltip-tools-label';
-    toolsLabel.textContent = 'Improve this text';
-    const chips = document.createElement('div');
-    chips.className = 'cv-tooltip-chips';
-    for (const [mode, config] of Object.entries(REWRITE_MODES)) {
-      const chip = document.createElement('button');
-      chip.className = 'cv-tooltip-chip';
-      chip.type = 'button';
-      chip.dataset.mode = mode;
-      chip.textContent = config.label;
-      chip.addEventListener('click', e => {
-        e.stopPropagation();
-        onRewrite(mode, chip, chips);
-      });
-      chips.appendChild(chip);
-    }
-    tools.append(toolsLabel, chips);
-    tooltip.appendChild(tools);
+    tooltip.appendChild(buildTooltipTools(onRewrite));
   }
 
   if (undoText) {
-    const undoRow = document.createElement('div');
-    undoRow.className = 'cv-tooltip-undo';
-    const undoLabel = document.createElement('span');
-    undoLabel.textContent = 'Rewrite applied.';
-    const undoButton = document.createElement('button');
-    undoButton.className = 'cv-tooltip-copy';
-    undoButton.type = 'button';
-    undoButton.textContent = 'Undo';
-    undoButton.addEventListener('click', e => {
-      e.stopPropagation();
-      onUndo?.();
-    });
-    undoRow.append(undoLabel, undoButton);
-    tooltip.appendChild(undoRow);
+    tooltip.appendChild(buildUndoRow(onUndo));
   }
 
   if (showRatePrompt) {
@@ -1180,23 +1215,12 @@ function renderBadge(badge, tooltip, result, actions = {}) {
   }
 
   if (onHideSite) {
-    const footer = document.createElement('div');
-    footer.className = 'cv-tooltip-footer';
-    const note = document.createElement('span');
-    note.className = 'cv-tooltip-footer-note';
-    note.textContent = result.engine === 'jev'
-      ? `Tone by ${result.providerLabel || 'Jev'} (cloud) · writing on-device`
-      : 'Private, on-device guidance';
-    const mute = document.createElement('button');
-    mute.className = 'cv-tooltip-mute';
-    mute.type = 'button';
-    mute.textContent = 'Hide on this site';
-    mute.addEventListener('click', e => {
-      e.stopPropagation();
-      onHideSite();
-    });
-    footer.append(note, mute);
-    tooltip.appendChild(footer);
+    tooltip.appendChild(buildTooltipFooter(
+      result.engine === 'jev'
+        ? `Tone by ${result.providerLabel || 'Jev'} (cloud) · writing on-device`
+        : 'Private, on-device guidance',
+      onHideSite,
+    ));
   }
 }
 
@@ -1219,50 +1243,9 @@ function renderApplied(badge, tooltip, actions = {}) {
   sp(badge, 'border', '1px solid #dfe4ee');
 
   tooltip.className = 'cv-tooltip cv-tooltip--applied';
-  const header = document.createElement('div');
-  header.className = 'cv-tooltip-header';
-  const signal = document.createElement('span');
-  signal.className = 'cv-tooltip-signal';
-  signal.setAttribute('aria-hidden', 'true');
-  signal.textContent = '✓';
-  const titleGroup = document.createElement('div');
-  titleGroup.className = 'cv-tooltip-title-group';
-  const kicker = document.createElement('span');
-  kicker.className = 'cv-tooltip-kicker';
-  kicker.textContent = 'Comment Vibe';
-  const title = document.createElement('span');
-  title.className = 'cv-tooltip-title';
-  title.textContent = 'Rewrite applied';
-  titleGroup.append(kicker, title);
-  const controls = document.createElement('div');
-  controls.className = 'cv-tooltip-controls';
-  const refresh = document.createElement('button');
-  refresh.className = 'cv-tooltip-icon';
-  refresh.type = 'button';
-  refresh.setAttribute('aria-label', 'Analyze again');
-  refresh.textContent = '↻';
-  refresh.title = 'Analyze again';
-  const close = document.createElement('button');
-  close.className = 'cv-tooltip-icon';
-  close.type = 'button';
-  close.setAttribute('aria-label', 'Close');
-  close.textContent = '✕';
-  close.title = 'Close';
-  controls.append(refresh, close);
-  header.append(signal, titleGroup, controls);
-  tooltip.replaceChildren(header);
-
-  close.addEventListener('click', e => {
-    e.stopPropagation();
-    dismissTooltip(tooltip);
-  });
-
-  if (onRefresh) {
-    refresh.addEventListener('click', e => {
-      e.stopPropagation();
-      onRefresh();
-    });
-  }
+  tooltip.replaceChildren(
+    buildTooltipHeader({ emoji: '✓', kicker: 'Comment Vibe', title: 'Rewrite applied', hasControls: true, onRefresh, tooltip }),
+  );
 
   const body = document.createElement('p');
   body.className = 'cv-tooltip-note';
@@ -1270,62 +1253,15 @@ function renderApplied(badge, tooltip, actions = {}) {
   tooltip.appendChild(body);
 
   if (!isFirefoxMLContext() && onRewrite) {
-    const tools = document.createElement('div');
-    tools.className = 'cv-tooltip-tools';
-    const toolsLabel = document.createElement('span');
-    toolsLabel.className = 'cv-tooltip-tools-label';
-    toolsLabel.textContent = 'Improve this text';
-    const chips = document.createElement('div');
-    chips.className = 'cv-tooltip-chips';
-    for (const [mode, config] of Object.entries(REWRITE_MODES)) {
-      const chip = document.createElement('button');
-      chip.className = 'cv-tooltip-chip';
-      chip.type = 'button';
-      chip.dataset.mode = mode;
-      chip.textContent = config.label;
-      chip.addEventListener('click', e => {
-        e.stopPropagation();
-        onRewrite(mode, chip, chips);
-      });
-      chips.appendChild(chip);
-    }
-    tools.append(toolsLabel, chips);
-    tooltip.appendChild(tools);
+    tooltip.appendChild(buildTooltipTools(onRewrite));
   }
 
   if (undoText) {
-    const undoRow = document.createElement('div');
-    undoRow.className = 'cv-tooltip-undo';
-    const undoLabel = document.createElement('span');
-    undoLabel.textContent = 'Rewrite applied.';
-    const undoButton = document.createElement('button');
-    undoButton.className = 'cv-tooltip-copy';
-    undoButton.type = 'button';
-    undoButton.textContent = 'Undo';
-    undoButton.addEventListener('click', e => {
-      e.stopPropagation();
-      onUndo?.();
-    });
-    undoRow.append(undoLabel, undoButton);
-    tooltip.appendChild(undoRow);
+    tooltip.appendChild(buildUndoRow(onUndo));
   }
 
   if (onHideSite) {
-    const footer = document.createElement('div');
-    footer.className = 'cv-tooltip-footer';
-    const note = document.createElement('span');
-    note.className = 'cv-tooltip-footer-note';
-    note.textContent = 'Private, on-device guidance';
-    const mute = document.createElement('button');
-    mute.className = 'cv-tooltip-mute';
-    mute.type = 'button';
-    mute.textContent = 'Hide on this site';
-    mute.addEventListener('click', e => {
-      e.stopPropagation();
-      onHideSite();
-    });
-    footer.append(note, mute);
-    tooltip.appendChild(footer);
+    tooltip.appendChild(buildTooltipFooter('Private, on-device guidance', onHideSite));
   }
 }
 
@@ -1347,31 +1283,9 @@ function renderNotice(badge, tooltip, {
   sp(badge, 'border', '1px solid #e1e5ed');
 
   tooltip.className = 'cv-tooltip cv-tooltip--notice';
-  const header = document.createElement('div');
-  header.className = 'cv-tooltip-header';
-  const signal = document.createElement('span');
-  signal.className = 'cv-tooltip-signal';
-  signal.textContent = emoji;
-  const titleGroup = document.createElement('div');
-  titleGroup.className = 'cv-tooltip-title-group';
-  const kicker = document.createElement('span');
-  kicker.className = 'cv-tooltip-kicker';
-  kicker.textContent = 'Comment Vibe';
-  const title = document.createElement('span');
-  title.className = 'cv-tooltip-title';
-  title.textContent = label;
-  titleGroup.append(kicker, title);
-  const close = document.createElement('button');
-  close.className = 'cv-tooltip-icon';
-  close.type = 'button';
-  close.setAttribute('aria-label', 'Close');
-  close.textContent = '✕';
-  close.addEventListener('click', e => {
-    e.stopPropagation();
-    dismissTooltip(tooltip);
-  });
-  header.append(signal, titleGroup, close);
-  tooltip.replaceChildren(header);
+  tooltip.replaceChildren(
+    buildTooltipHeader({ emoji, hideSignal: false, kicker: 'Comment Vibe', title: label, tooltip }),
+  );
   const bodyEl = document.createElement('p');
   bodyEl.className = 'cv-tooltip-note';
   bodyEl.textContent = body;
@@ -1386,21 +1300,7 @@ function renderNotice(badge, tooltip, {
     tooltip.appendChild(link);
   }
   if (onHideSite) {
-    const footer = document.createElement('div');
-    footer.className = 'cv-tooltip-footer';
-    const note = document.createElement('span');
-    note.className = 'cv-tooltip-footer-note';
-    note.textContent = 'Private, on-device guidance';
-    const mute = document.createElement('button');
-    mute.className = 'cv-tooltip-mute';
-    mute.type = 'button';
-    mute.textContent = 'Hide on this site';
-    mute.addEventListener('click', e => {
-      e.stopPropagation();
-      onHideSite();
-    });
-    footer.append(note, mute);
-    tooltip.appendChild(footer);
+    tooltip.appendChild(buildTooltipFooter('Private, on-device guidance', onHideSite));
   }
 }
 
