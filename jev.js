@@ -50,8 +50,8 @@ const JEV_QUESTIONS = {
     instructions: 'How will other readers perceive the tone of this comment the user is about to post? Judge how it is said, not what it is about: respectful criticism is fine.',
     criteria: {
       positive: 'Friendly, appreciative, encouraging or supportive.',
-      neutral: 'Factual or a calm question, or criticism, disagreement, a complaint or disappointment stated respectfully, without hostility.',
-      negative: 'Hostile delivery without insults: harsh, dismissive, sarcastic, mocking, condescending, passive-aggressive or blaming.',
+      neutral: 'Factual or a calm question, or criticism, disagreement, a complaint or disappointment stated calmly and politely, without harsh words or hostility.',
+      negative: 'Hostile delivery without insults: harsh or contemptuous wording (worst, terrible, useless, a waste of time), dismissive, sarcastic, mocking, condescending, passive-aggressive or blaming.',
       toxic: 'Contains insults, name-calling, slurs, threats, harassment or hateful language aimed at people.',
     },
   },
