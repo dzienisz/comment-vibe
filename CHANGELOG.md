@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Tone criteria now judge delivery, not topic** — respectful criticism counts as neutral; the Nano checker asks for a `respectful` flag (a negative-but-polite verdict remaps to neutral) and the cloud Fast mode criteria match.
+
 ## [1.6.0] - 2026-10-12
 
 ### Added
