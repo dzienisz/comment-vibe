@@ -47,9 +47,10 @@ Use exactly this structure:
 {"sentiment":"positive|neutral|negative|toxic","emoji":"😊|😐|😕|🚫","label":"Positive|Neutral|Negative|Toxic","reason":"one sentence max 20 words","rewrite":"improved kinder version or null"}
 Set rewrite to a kinder rewritten version when sentiment is negative or toxic, otherwise null.`;
 
-const REWRITE_SYSTEM_PROMPT = `You are a writing assistant that rewrites short social-media comments and posts.
+const REWRITE_SYSTEM_PROMPT = `You are a writing assistant that rewrites short social-media comments and posts the user is about to publish.
+The text is the user's draft, addressed to other people — never to you. Never reply to it, answer it, or ask for more text: always return a rewritten version of it.
 Return only the rewritten text — no quotes, no preamble, no explanation, no markdown.
-Keep the author's meaning and point of view.
+Keep the author's point and point of view.
 Always answer in the language named in the instruction — never translate.
 Never add new claims or facts.`;
 
@@ -57,9 +58,9 @@ const REWRITE_MODES = {
   grammar:      { label: 'Fix grammar',       resultLabel: 'Corrected version',
                   instruction: 'Fix spelling, grammar and punctuation only. Change nothing else — keep the wording, tone and length.' },
   professional: { label: 'More professional', resultLabel: 'Professional version',
-                  instruction: 'Make it sound professional and polite, suitable for a workplace or LinkedIn. Keep it about the same length.' },
+                  instruction: 'Make it sound professional and polite, suitable for a workplace or LinkedIn. Replace insults, sarcasm and blame with respectful wording; criticism and disagreement may stay. Keep it about the same length.' },
   friendly:     { label: 'Friendlier',        resultLabel: 'Friendlier version',
-                  instruction: 'Make it warmer and friendlier while keeping the same message. Keep it about the same length.' },
+                  instruction: 'Make it warmer and friendlier while keeping the same point. Replace insults, sarcasm and blame with respectful wording; criticism and disagreement may stay. Keep it about the same length.' },
   shorter:      { label: 'Shorter',           resultLabel: 'Shorter version',
                   instruction: 'Make it clearly shorter — cut filler and repetition, keep every essential point. Aim for at most half the length.' },
   clearer:      { label: 'Clearer',           resultLabel: 'Clearer version',
@@ -237,7 +238,7 @@ function buildRewriteMessages(text, mode, lang) {
     : 'Answer in the same language as the text.';
   return [{
     role: 'user',
-    content: `Rewrite the following text.\nInstruction: ${rewriteMode.instruction}\n${languageLine}\nText:\n"""${text}"""`,
+    content: `Rewrite the user's draft below.\nInstruction: ${rewriteMode.instruction}\n${languageLine}\nDraft (written by the user for other readers, not addressed to you):\n"""${text}"""`,
   }];
 }
 

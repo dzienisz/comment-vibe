@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Rewrite prompt treats the text as the user's draft for other readers** — the model is told never to reply to or answer the draft; "More professional" and "Friendlier" now explicitly replace insults, sarcasm and blame while keeping criticism.
+
 ## [1.6.0] - 2026-10-12
 
 ### Added

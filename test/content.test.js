@@ -285,11 +285,21 @@ test('buildRewriteMessages includes instruction, triple-quoted text, and an expl
   const [message] = buildRewriteMessages('hello "world"', 'grammar', 'pl');
   assert.equal(message.role, 'user');
   assert.match(message.content, /Fix spelling, grammar and punctuation only/);
-  assert.match(message.content, /Text:\n"""hello "world""""/);
+  assert.match(message.content, /Draft \(written by the user for other readers, not addressed to you\):\n"""hello "world""""/);
   assert.match(message.content, /Answer in Polish\.\n/);
   assert.match(buildRewriteMessages('hello', 'friendly', 'en')[0].content, /Answer in English\.\n/);
   assert.match(buildRewriteMessages('hello', 'friendly', null)[0].content, /Answer in the same language as the text\.\n/);
   assert.throws(() => buildRewriteMessages('hello', 'unknown'), /Unknown rewrite mode/);
+});
+
+test('buildRewriteMessages frames the text as a user draft, never a reply, and keeps other modes unchanged', () => {
+  const [message] = buildRewriteMessages('some text', 'professional', 'en');
+  assert.match(message.content, /^Rewrite the user's draft below\.\n/);
+  assert.match(message.content, /Draft \(written by the user for other readers, not addressed to you\):\n"""some text"""$/);
+  assert.match(message.content, /Answer in English\./);
+  assert.equal(REWRITE_MODES.grammar.instruction, 'Fix spelling, grammar and punctuation only. Change nothing else — keep the wording, tone and length.');
+  assert.equal(REWRITE_MODES.shorter.instruction, 'Make it clearly shorter — cut filler and repetition, keep every essential point. Aim for at most half the length.');
+  assert.equal(REWRITE_MODES.clearer.instruction, 'Make it clearer and easier to read: simpler words, shorter sentences, one idea per sentence. Keep the meaning and length roughly the same.');
 });
 
 test('cleanRewriteOutput removes fences and wrapping quotes without touching inner quotes', () => {
@@ -574,7 +584,7 @@ test('rewriteText uses a separate modern clone session without response constrai
       return {
         prompt: async messages => {
           assert.equal(messages[0].role, 'user');
-          assert.match(messages[0].content, /Rewrite the following text/);
+          assert.match(messages[0].content, /Rewrite the user's draft below/);
           return '"Rewritten text."';
         },
         destroy() { cloneDestroy++; },
