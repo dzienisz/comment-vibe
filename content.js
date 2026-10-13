@@ -1039,6 +1039,115 @@ function createUI({ onIdleActivate } = {}) {
   return { badge, tooltip };
 }
 
+// Shared tooltip chrome for the result, applied and notice states.
+function buildTooltipHeader({ emoji, hideSignal = true, kicker, title, hasControls = false, onRefresh, tooltip }) {
+  const header = document.createElement('div');
+  header.className = 'cv-tooltip-header';
+  const signal = document.createElement('span');
+  signal.className = 'cv-tooltip-signal';
+  if (hideSignal) signal.setAttribute('aria-hidden', 'true');
+  signal.textContent = emoji;
+  const titleGroup = document.createElement('div');
+  titleGroup.className = 'cv-tooltip-title-group';
+  const kickerEl = document.createElement('span');
+  kickerEl.className = 'cv-tooltip-kicker';
+  kickerEl.textContent = kicker;
+  const titleEl = document.createElement('span');
+  titleEl.className = 'cv-tooltip-title';
+  titleEl.textContent = title;
+  titleGroup.append(kickerEl, titleEl);
+  const close = document.createElement('button');
+  close.className = 'cv-tooltip-icon';
+  close.type = 'button';
+  close.setAttribute('aria-label', 'Close');
+  close.textContent = '✕';
+  if (hasControls) {
+    const controls = document.createElement('div');
+    controls.className = 'cv-tooltip-controls';
+    const refresh = document.createElement('button');
+    refresh.className = 'cv-tooltip-icon';
+    refresh.type = 'button';
+    refresh.setAttribute('aria-label', 'Analyze again');
+    refresh.textContent = '↻';
+    refresh.title = 'Analyze again';
+    close.title = 'Close';
+    controls.append(refresh, close);
+    header.append(signal, titleGroup, controls);
+    if (onRefresh) {
+      refresh.addEventListener('click', e => {
+        e.stopPropagation();
+        onRefresh();
+      });
+    }
+  } else {
+    header.append(signal, titleGroup, close);
+  }
+  close.addEventListener('click', e => {
+    e.stopPropagation();
+    dismissTooltip(tooltip);
+  });
+  return header;
+}
+
+function buildTooltipTools(onRewrite) {
+  const tools = document.createElement('div');
+  tools.className = 'cv-tooltip-tools';
+  const toolsLabel = document.createElement('span');
+  toolsLabel.className = 'cv-tooltip-tools-label';
+  toolsLabel.textContent = 'Improve this text';
+  const chips = document.createElement('div');
+  chips.className = 'cv-tooltip-chips';
+  for (const [mode, config] of Object.entries(REWRITE_MODES)) {
+    const chip = document.createElement('button');
+    chip.className = 'cv-tooltip-chip';
+    chip.type = 'button';
+    chip.dataset.mode = mode;
+    chip.textContent = config.label;
+    chip.addEventListener('click', e => {
+      e.stopPropagation();
+      onRewrite(mode, chip, chips);
+    });
+    chips.appendChild(chip);
+  }
+  tools.append(toolsLabel, chips);
+  return tools;
+}
+
+function buildUndoRow(onUndo) {
+  const undoRow = document.createElement('div');
+  undoRow.className = 'cv-tooltip-undo';
+  const undoLabel = document.createElement('span');
+  undoLabel.textContent = 'Rewrite applied.';
+  const undoButton = document.createElement('button');
+  undoButton.className = 'cv-tooltip-copy';
+  undoButton.type = 'button';
+  undoButton.textContent = 'Undo';
+  undoButton.addEventListener('click', e => {
+    e.stopPropagation();
+    onUndo?.();
+  });
+  undoRow.append(undoLabel, undoButton);
+  return undoRow;
+}
+
+function buildTooltipFooter(noteText, onHideSite) {
+  const footer = document.createElement('div');
+  footer.className = 'cv-tooltip-footer';
+  const note = document.createElement('span');
+  note.className = 'cv-tooltip-footer-note';
+  note.textContent = noteText;
+  const mute = document.createElement('button');
+  mute.className = 'cv-tooltip-mute';
+  mute.type = 'button';
+  mute.textContent = 'Hide on this site';
+  mute.addEventListener('click', e => {
+    e.stopPropagation();
+    onHideSite();
+  });
+  footer.append(note, mute);
+  return footer;
+}
+
 function renderBadge(badge, tooltip, result, actions = {}) {
   const { sentiment, emoji, label, reason, rewrite } = result;
   const {
@@ -1057,54 +1166,13 @@ function renderBadge(badge, tooltip, result, actions = {}) {
 
   tooltip.className = `cv-tooltip cv-tooltip--${sentiment}`;
 
-  const header = document.createElement('div');
-  header.className = 'cv-tooltip-header';
-  const signal = document.createElement('span');
-  signal.className = 'cv-tooltip-signal';
-  signal.setAttribute('aria-hidden', 'true');
-  signal.textContent = emoji;
-  const titleGroup = document.createElement('div');
-  titleGroup.className = 'cv-tooltip-title-group';
-  const kicker = document.createElement('span');
-  kicker.className = 'cv-tooltip-kicker';
-  kicker.textContent = 'Comment tone';
-  const title = document.createElement('span');
-  title.className = 'cv-tooltip-title';
-  title.textContent = label;
-  titleGroup.append(kicker, title);
-  const controls = document.createElement('div');
-  controls.className = 'cv-tooltip-controls';
-  const refresh = document.createElement('button');
-  refresh.className = 'cv-tooltip-icon';
-  refresh.type = 'button';
-  refresh.setAttribute('aria-label', 'Analyze again');
-  refresh.textContent = '↻';
-  refresh.title = 'Analyze again';
-  const close = document.createElement('button');
-  close.className = 'cv-tooltip-icon';
-  close.type = 'button';
-  close.setAttribute('aria-label', 'Close');
-  close.textContent = '✕';
-  close.title = 'Close';
-  controls.append(refresh, close);
-  header.append(signal, titleGroup, controls);
-
   const reasonEl = document.createElement('div');
   reasonEl.className = 'cv-tooltip-reason';
   reasonEl.textContent = reason;
-  tooltip.replaceChildren(header, reasonEl);
-
-  close.addEventListener('click', e => {
-    e.stopPropagation();
-    dismissTooltip(tooltip);
-  });
-
-  if (onRefresh) {
-    refresh.addEventListener('click', e => {
-      e.stopPropagation();
-      onRefresh();
-    });
-  }
+  tooltip.replaceChildren(
+    buildTooltipHeader({ emoji, kicker: 'Comment tone', title: label, hasControls: true, onRefresh, tooltip }),
+    reasonEl,
+  );
 
   if (rewrite) {
     const rewriteContainer = document.createElement('div');
@@ -1142,44 +1210,11 @@ function renderBadge(badge, tooltip, result, actions = {}) {
   }
 
   if (!isFirefoxMLContext() && onRewrite) {
-    const tools = document.createElement('div');
-    tools.className = 'cv-tooltip-tools';
-    const toolsLabel = document.createElement('span');
-    toolsLabel.className = 'cv-tooltip-tools-label';
-    toolsLabel.textContent = 'Improve this text';
-    const chips = document.createElement('div');
-    chips.className = 'cv-tooltip-chips';
-    for (const [mode, config] of Object.entries(REWRITE_MODES)) {
-      const chip = document.createElement('button');
-      chip.className = 'cv-tooltip-chip';
-      chip.type = 'button';
-      chip.dataset.mode = mode;
-      chip.textContent = config.label;
-      chip.addEventListener('click', e => {
-        e.stopPropagation();
-        onRewrite(mode, chip, chips);
-      });
-      chips.appendChild(chip);
-    }
-    tools.append(toolsLabel, chips);
-    tooltip.appendChild(tools);
+    tooltip.appendChild(buildTooltipTools(onRewrite));
   }
 
   if (undoText) {
-    const undoRow = document.createElement('div');
-    undoRow.className = 'cv-tooltip-undo';
-    const undoLabel = document.createElement('span');
-    undoLabel.textContent = 'Rewrite applied.';
-    const undoButton = document.createElement('button');
-    undoButton.className = 'cv-tooltip-copy';
-    undoButton.type = 'button';
-    undoButton.textContent = 'Undo';
-    undoButton.addEventListener('click', e => {
-      e.stopPropagation();
-      onUndo?.();
-    });
-    undoRow.append(undoLabel, undoButton);
-    tooltip.appendChild(undoRow);
+    tooltip.appendChild(buildUndoRow(onUndo));
   }
 
   if (showRatePrompt) {
@@ -1213,23 +1248,53 @@ function renderBadge(badge, tooltip, result, actions = {}) {
   }
 
   if (onHideSite) {
-    const footer = document.createElement('div');
-    footer.className = 'cv-tooltip-footer';
-    const note = document.createElement('span');
-    note.className = 'cv-tooltip-footer-note';
-    note.textContent = result.engine === 'jev'
-      ? `Tone by ${result.providerLabel || 'Jev'} (cloud) · writing on-device`
-      : 'Private, on-device guidance';
-    const mute = document.createElement('button');
-    mute.className = 'cv-tooltip-mute';
-    mute.type = 'button';
-    mute.textContent = 'Hide on this site';
-    mute.addEventListener('click', e => {
-      e.stopPropagation();
-      onHideSite();
-    });
-    footer.append(note, mute);
-    tooltip.appendChild(footer);
+    tooltip.appendChild(buildTooltipFooter(
+      result.engine === 'jev'
+        ? `Tone by ${result.providerLabel || 'Jev'} (cloud) · writing on-device`
+        : 'Private, on-device guidance',
+      onHideSite,
+    ));
+  }
+}
+
+// After the user applies a rewrite the new text is deliberately not re-checked
+// — they just approved this version. Editing the text or pressing Refresh
+// resumes normal analysis.
+function renderApplied(badge, tooltip, actions = {}) {
+  const { onRefresh, onHideSite, onRewrite, onUndo, undoText } = actions;
+
+  badge.className = 'cv-badge cv-badge--applied';
+  const badgeEmoji = document.createElement('span');
+  badgeEmoji.textContent = '✓ ';
+  const badgeLabel = document.createElement('span');
+  badgeLabel.textContent = 'Rewritten';
+  badge.replaceChildren(badgeEmoji, badgeLabel);
+  badge.setAttribute('aria-label', 'Rewrite applied, not re-checked');
+  sp(badge, 'display', 'inline-flex');
+  sp(badge, 'background', '#f4f6fa');
+  sp(badge, 'color', '#3d4760');
+  sp(badge, 'border', '1px solid #dfe4ee');
+
+  tooltip.className = 'cv-tooltip cv-tooltip--applied';
+  tooltip.replaceChildren(
+    buildTooltipHeader({ emoji: '✓', kicker: 'Comment Vibe', title: 'Rewrite applied', hasControls: true, onRefresh, tooltip }),
+  );
+
+  const body = document.createElement('p');
+  body.className = 'cv-tooltip-note';
+  body.textContent = "Not re-checked — you've already seen this version. Edit the text or press Refresh to check the tone again.";
+  tooltip.appendChild(body);
+
+  if (!isFirefoxMLContext() && onRewrite) {
+    tooltip.appendChild(buildTooltipTools(onRewrite));
+  }
+
+  if (undoText) {
+    tooltip.appendChild(buildUndoRow(onUndo));
+  }
+
+  if (onHideSite) {
+    tooltip.appendChild(buildTooltipFooter('Private, on-device guidance', onHideSite));
   }
 }
 
@@ -1251,31 +1316,9 @@ function renderNotice(badge, tooltip, {
   sp(badge, 'border', '1px solid #e1e5ed');
 
   tooltip.className = 'cv-tooltip cv-tooltip--notice';
-  const header = document.createElement('div');
-  header.className = 'cv-tooltip-header';
-  const signal = document.createElement('span');
-  signal.className = 'cv-tooltip-signal';
-  signal.textContent = emoji;
-  const titleGroup = document.createElement('div');
-  titleGroup.className = 'cv-tooltip-title-group';
-  const kicker = document.createElement('span');
-  kicker.className = 'cv-tooltip-kicker';
-  kicker.textContent = 'Comment Vibe';
-  const title = document.createElement('span');
-  title.className = 'cv-tooltip-title';
-  title.textContent = label;
-  titleGroup.append(kicker, title);
-  const close = document.createElement('button');
-  close.className = 'cv-tooltip-icon';
-  close.type = 'button';
-  close.setAttribute('aria-label', 'Close');
-  close.textContent = '✕';
-  close.addEventListener('click', e => {
-    e.stopPropagation();
-    dismissTooltip(tooltip);
-  });
-  header.append(signal, titleGroup, close);
-  tooltip.replaceChildren(header);
+  tooltip.replaceChildren(
+    buildTooltipHeader({ emoji, hideSignal: false, kicker: 'Comment Vibe', title: label, tooltip }),
+  );
   const bodyEl = document.createElement('p');
   bodyEl.className = 'cv-tooltip-note';
   bodyEl.textContent = body;
@@ -1290,27 +1333,20 @@ function renderNotice(badge, tooltip, {
     tooltip.appendChild(link);
   }
   if (onHideSite) {
-    const footer = document.createElement('div');
-    footer.className = 'cv-tooltip-footer';
-    const note = document.createElement('span');
-    note.className = 'cv-tooltip-footer-note';
-    note.textContent = 'Private, on-device guidance';
-    const mute = document.createElement('button');
-    mute.className = 'cv-tooltip-mute';
-    mute.type = 'button';
-    mute.textContent = 'Hide on this site';
-    mute.addEventListener('click', e => {
-      e.stopPropagation();
-      onHideSite();
-    });
-    footer.append(note, mute);
-    tooltip.appendChild(footer);
+    tooltip.appendChild(buildTooltipFooter('Private, on-device guidance', onHideSite));
   }
 }
 
 // ── Input tracking ────────────────────────────────────────────────────────────
 
 const tracked = new WeakMap();
+
+// Rich-text editors normalize whitespace differently from the rewrite text we
+// applied (e.g. spaces → NBSP), so "is this still the applied rewrite?" is
+// compared on whitespace-collapsed forms.
+function normalizeAppliedText(text) {
+  return String(text ?? '').trim().replace(/\s+/g, ' ');
+}
 
 function getText(el) {
   return (el.tagName === 'TEXTAREA' || el.tagName === 'INPUT')
@@ -1350,8 +1386,8 @@ function applyRewrite(el, text) {
   } else if (!applyViaExecCommand(el, text)) {
     el.textContent = text;
   }
-  // The synthetic input event re-triggers our own onInput — deduped or turned
-  // into a fresh analysis of the kinder text, either way it's intended.
+  // The synthetic input event re-triggers our own onInput — with appliedText
+  // set it lands on the "rewrite applied" state instead of a fresh analysis.
   el.dispatchEvent?.(new Event('input', { bubbles: true }));
   el.focus?.();
 }
@@ -1387,10 +1423,26 @@ function attachToInput(el) {
     badge, tooltip, debounceTimer: null, abortController: null, rewriteAbort: null,
     lastText: '', lastLang: null, lastResult: null, rewrites: new Map(),
     actionPanelSource: null, undoText: null, applying: false, openOnResult: false,
-    requestId: 0, skipCacheOnce: false,
+    appliedText: null, requestId: 0, skipCacheOnce: false,
   };
   tracked.set(el, state);
   liveStates.add(state);
+
+  // Keep an open writing-tool result panel across re-renders, but only while
+  // it still describes the current text.
+  const restoreActionPanel = (panel, activeMode) => {
+    if (!panel || state.actionPanelSource !== state.lastText) return;
+    const tools = tooltip.querySelector('.cv-tooltip-tools');
+    if (!tools) return;
+    tools.parentNode.insertBefore(panel, tools.nextSibling);
+    const activeChip = activeMode
+      ? tooltip.querySelector(`.cv-tooltip-chip[data-mode="${activeMode}"]`)
+      : null;
+    if (activeChip) activeChip.classList.add('cv-tooltip-chip--active');
+    if (state.rewriteAbort) {
+      tooltip.querySelectorAll('.cv-tooltip-chip').forEach(button => { button.disabled = true; });
+    }
+  };
 
   const render = result => {
     const panel = tooltip.querySelector('.cv-tooltip-action-rewrite');
@@ -1400,19 +1452,15 @@ function attachToInput(el) {
       undoText: state.undoText,
       showRatePrompt: shouldShowRatePrompt(rewriteCount, ratePromptState),
     });
-    if (panel && state.actionPanelSource === state.lastText) {
-      const tools = tooltip.querySelector('.cv-tooltip-tools');
-      if (tools) {
-        tools.parentNode.insertBefore(panel, tools.nextSibling);
-        const activeChip = activeMode
-          ? tooltip.querySelector(`.cv-tooltip-chip[data-mode="${activeMode}"]`)
-          : null;
-        if (activeChip) activeChip.classList.add('cv-tooltip-chip--active');
-        if (state.rewriteAbort) {
-          tooltip.querySelectorAll('.cv-tooltip-chip').forEach(button => { button.disabled = true; });
-        }
-      }
-    }
+    restoreActionPanel(panel, activeMode);
+    placeTooltip(tooltip, badge);
+  };
+
+  const renderAppliedState = () => {
+    const panel = tooltip.querySelector('.cv-tooltip-action-rewrite');
+    const activeMode = tooltip.querySelector('.cv-tooltip-chip--active')?.dataset.mode;
+    renderApplied(badge, tooltip, { ...ui, undoText: state.undoText });
+    restoreActionPanel(panel, activeMode);
     placeTooltip(tooltip, badge);
   };
 
@@ -1499,6 +1547,7 @@ function attachToInput(el) {
 
   const ui = {
     onRefresh: () => {
+      state.appliedText = null;
       state.skipCacheOnce = true;
       state.rewrites.clear();
       state.rewriteAbort?.abort();
@@ -1507,6 +1556,9 @@ function attachToInput(el) {
     onRewrite: renderActionRewrite,
     onApplyRewrite: text => {
       state.undoText = getText(el);
+      // Mark before the synthetic input event lands: the applied text is not
+      // re-checked until the user edits it or presses Refresh.
+      state.appliedText = normalizeAppliedText(text);
       state.applying = true;
       try {
         applyRewrite(el, text);
@@ -1514,10 +1566,10 @@ function attachToInput(el) {
       } finally {
         state.applying = false;
       }
-      if (state.lastResult) render(state.lastResult);
     },
     onUndo: () => {
       if (!state.undoText) return;
+      state.appliedText = null;
       state.applying = true;
       try {
         applyRewrite(el, state.undoText);
@@ -1538,6 +1590,22 @@ function attachToInput(el) {
     const text = getText(el).trim();
     const forceRefresh = state.skipCacheOnce;
     state.skipCacheOnce = false;
+    if (state.appliedText !== null) {
+      if (!force && !forceRefresh && normalizeAppliedText(text) === state.appliedText) {
+        // The applied rewrite itself must not be re-checked — the user already
+        // saw this version. Still cancel any pending pass and keep the field's
+        // bookkeeping in sync, exactly like a normal input change would.
+        invalidateRequest(state);
+        state.rewriteAbort?.abort();
+        state.rewriteAbort = null;
+        state.rewrites.clear();
+        state.lastText = text;
+        renderAppliedState();
+        placeBadge(badge, el);
+        return;
+      }
+      state.appliedText = null;
+    }
     const requestId = beginInputChange(state, text, force || forceRefresh);
     if (requestId === null) return;
     state.openOnResult = openTooltip ? requestId : null;
@@ -1877,7 +1945,9 @@ if (typeof module !== 'undefined' && module.exports) {
     analyzeViaBackground,
     analyzeViaJev,
     applyJevSetting,
+    applySettings,
     applyRewrite,
+    attachToInput,
     applyViaExecCommand,
     beginInputChange,
     buildMessages,
@@ -1911,6 +1981,7 @@ if (typeof module !== 'undefined' && module.exports) {
     RESULT_CACHE_TTL,
     shouldShowRatePrompt,
     analysisModeFrom,
+    tracked,
     RATE_AFTER_APPLIES,
     setCachedResult,
     streamPrompt,
