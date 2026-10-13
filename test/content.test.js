@@ -1292,6 +1292,8 @@ test('applying the suggested rewrite shows the applied state without re-analyzin
     assert.equal(el.value, 'Maybe there is a kinder way.');
     assert.equal(stats.analyses, 1);
     assert.match(state.badge.className, /cv-badge--applied/);
+    assert.doesNotMatch(state.badge.className, /cv-badge--positive/);
+    assert.equal(state.badge.style.getPropertyValue('background'), '#f4f6fa');
     assert.equal(state.badge.textContent, '✓ Rewritten');
     assert.match(state.tooltip.textContent, /Not re-checked/);
     await sleepUntilAnalyzed();

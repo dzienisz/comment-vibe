@@ -1214,9 +1214,9 @@ function renderApplied(badge, tooltip, actions = {}) {
   badge.replaceChildren(badgeEmoji, badgeLabel);
   badge.setAttribute('aria-label', 'Rewrite applied, not re-checked');
   sp(badge, 'display', 'inline-flex');
-  sp(badge, 'background', '#eaf9f4');
-  sp(badge, 'color', '#08755e');
-  sp(badge, 'border', '1px solid #bfeade');
+  sp(badge, 'background', '#f4f6fa');
+  sp(badge, 'color', '#3d4760');
+  sp(badge, 'border', '1px solid #dfe4ee');
 
   tooltip.className = 'cv-tooltip cv-tooltip--applied';
   const header = document.createElement('div');
