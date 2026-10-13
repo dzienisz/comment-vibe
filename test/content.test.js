@@ -8,8 +8,10 @@ const {
   analyzeViaBackground,
   analyzeViaJev,
   applyJevSetting,
+  applySettings,
   applyRewrite,
   applyViaExecCommand,
+  attachToInput,
   beginInputChange,
   buildMessages,
   buildRewriteMessages,
@@ -19,6 +21,7 @@ const {
   constructSession,
   expireReusableSession,
   extractEarlySentiment,
+  FEW_SHOT,
   getCachedResult,
   getModelStatus,
   getSession,
@@ -44,6 +47,7 @@ const {
   RATE_AFTER_APPLIES,
   setCachedResult,
   streamPrompt,
+  tracked,
 } = require('../content.js');
 
 function sessionFor(chunks) {
@@ -67,7 +71,154 @@ test.afterEach(() => {
   delete global.LanguageModel;
   delete global.window;
   delete global.browser;
+  delete global.document;
+  delete global.ResizeObserver;
 });
+
+// ── Minimal DOM stub for badge/tooltip flow tests ────────────────────────────
+//
+// Just enough DOM for attachToInput → onInput → renderBadge/renderApplied to
+// run in node: element trees with class/dataset-aware querySelector, text
+// aggregation, event listeners, and style.setProperty.
+class FakeEl {
+  constructor(tagName) {
+    this.tagName = String(tagName).toUpperCase();
+    this.children = [];
+    this.parentNode = null;
+    this.ownerDocument = null;
+    this.attributes = {};
+    this.dataset = {};
+    this.style = {
+      _values: {},
+      setProperty: (k, v) => { this.style._values[k] = v; },
+      getPropertyValue: k => this.style._values[k] || '',
+    };
+    this._className = '';
+    this._text = '';
+    this._html = '';
+    this._listeners = {};
+    this.offsetWidth = 0;
+    this.offsetHeight = 0;
+    this.value = '';
+  }
+  get className() { return this._className; }
+  set className(v) { this._className = v; }
+  get classList() {
+    const self = this;
+    return {
+      add: (...cs) => { self._className = [...new Set([...self._className.split(' ').filter(Boolean), ...cs])].join(' '); },
+      toggle: (c, force) => {
+        const has = self._className.split(' ').includes(c);
+        if (force === undefined ? !has : force) this.classList.add(c);
+        else self._className = self._className.split(' ').filter(x => x !== c).join(' ');
+      },
+      contains: c => self._className.split(' ').includes(c),
+    };
+  }
+  setAttribute(k, v) { this.attributes[k] = String(v); }
+  getAttribute(k) { return this.attributes[k]; }
+  get textContent() {
+    return this._text + this.children.map(c => c.textContent).join('');
+  }
+  set textContent(v) { this.children = []; this._html = ''; this._text = String(v); }
+  set innerHTML(v) { this.children = []; this._text = ''; this._html = String(v); }
+  get innerHTML() { return this._html; }
+  _adopt(node) { if (node instanceof FakeEl) { node.parentNode = this; node.ownerDocument = this.ownerDocument; } }
+  append(...nodes) { for (const n of nodes) { this._adopt(n); this.children.push(n); } }
+  appendChild(n) { this._adopt(n); this.children.push(n); return n; }
+  prepend(n) { this._adopt(n); this.children.unshift(n); }
+  insertBefore(node, ref) {
+    this._adopt(node);
+    const i = ref ? this.children.indexOf(ref) : -1;
+    if (i < 0) this.children.push(node); else this.children.splice(i, 0, node);
+    return node;
+  }
+  get nextSibling() {
+    if (!this.parentNode) return null;
+    const i = this.parentNode.children.indexOf(this);
+    return this.parentNode.children[i + 1] || null;
+  }
+  replaceChildren(...nodes) { this.children = []; this._text = ''; this._html = ''; this.append(...nodes); }
+  remove() { this.parentNode?.children.splice(this.parentNode.children.indexOf(this), 1); this.parentNode = null; }
+  contains(node) {
+    if (node === this) return true;
+    return this.children.some(c => c instanceof FakeEl && c.contains(node));
+  }
+  matches(sel) { return matchSimple(this, sel); }
+  _walk(fn) { for (const c of this.children) { if (c instanceof FakeEl) { fn(c); c._walk(fn); } } }
+  querySelectorAll(sel) {
+    const out = [];
+    this._walk(el => { if (sel.split(',').some(s => matchSimple(el, s.trim()))) out.push(el); });
+    if (sel === '.cv-spinner' && this._html.includes('cv-spinner')) out.push(new FakeEl('span'));
+    return out;
+  }
+  querySelector(sel) { return this.querySelectorAll(sel)[0] || null; }
+  addEventListener(type, fn) { (this._listeners[type] ??= []).push(fn); }
+  removeEventListener(type, fn) { this._listeners[type] = (this._listeners[type] || []).filter(f => f !== fn); }
+  dispatchEvent(event) {
+    for (const fn of this._listeners[event.type] || []) fn(event);
+    return true;
+  }
+  click() { this.dispatchEvent({ type: 'click', stopPropagation() {}, preventDefault() {} }); }
+  focus() {}
+  getBoundingClientRect() { return { top: 100, bottom: 130, left: 10, right: 310, width: 300, height: 30 }; }
+}
+
+function matchSimple(el, sel) {
+  sel = sel.replace(/:not\([^)]*\)/g, '').replace(/:[a-z-]+$/i, '').trim();
+  const m = sel.match(/^([a-zA-Z][a-zA-Z0-9]*)?((?:\.[\w-]+|\[[^\]]+\])*)$/);
+  if (!m || (!m[1] && !m[2])) return false;
+  const [, tag, rest] = m;
+  if (tag && el.tagName.toLowerCase() !== tag.toLowerCase()) return false;
+  for (const part of rest.match(/\.[\w-]+|\[[^\]]+\]/g) || []) {
+    if (part.startsWith('.')) {
+      if (!el.classList.contains(part.slice(1))) return false;
+    } else {
+      const inner = part.slice(1, -1);
+      const eq = inner.indexOf('=');
+      const name = (eq < 0 ? inner : inner.slice(0, eq)).trim();
+      const want = eq < 0 ? null : inner.slice(eq + 1).trim().replace(/^['"]|['"]$/g, '');
+      const have = name.startsWith('data-')
+        ? el.dataset[name.slice(5).replace(/-([a-z])/g, (_, c) => c.toUpperCase())]
+        : el.getAttribute(name);
+      if (want === null ? have === undefined || have === null : String(have) !== want) return false;
+    }
+  }
+  return true;
+}
+
+const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+const sleepUntilAnalyzed = () => sleep(1200);
+
+// Fake textarea + document/window globals, then attachToInput.
+function attachFakeField() {
+  const document_ = {
+    activeElement: null,
+    body: new FakeEl('body'),
+    createElement: tag => { const el = new FakeEl(tag); el.ownerDocument = document_; return el; },
+    addEventListener() {},
+  };
+  global.document = document_;
+  global.window = { innerWidth: 1024, innerHeight: 768, addEventListener() {}, removeEventListener() {}, open() {} };
+  global.ResizeObserver = class { observe() {} disconnect() {} };
+  const el = document_.createElement('textarea');
+  attachToInput(el);
+  return { el, state: tracked.get(el) };
+}
+
+function nanoReturning(stats, analyzeJson) {
+  return {
+    availability: async () => 'available',
+    create: async () => ({
+      clone: async () => ({
+        async * promptStreaming() { stats.analyses++; yield analyzeJson; },
+        prompt: async () => '"A friendlier rewrite."',
+        destroy() {},
+      }),
+      destroy() {},
+    }),
+  };
+}
 
 test('parseResponse parses valid JSON', () => {
   assert.deepEqual(parseResponse('{"sentiment":"positive","reason":"Helpful."}'), {
@@ -275,7 +426,7 @@ test('buildMessages omits the assistant prefill when responseConstraint is activ
 
 test('buildMessages includes few-shot examples and assistant prefill when constraint is inactive', () => {
   const messages = buildMessages('hello world', false, false);
-  assert.equal(messages.length, 6);
+  assert.equal(messages.length, 10);
   assert.equal(messages[0].role, 'user');
   assert.equal(messages[messages.length - 2].role, 'user');
   assert.deepEqual(messages[messages.length - 1], { role: 'assistant', content: '{"sentiment":', prefix: true });
@@ -317,6 +468,81 @@ test('parseAnalysisResponse parses constrained JSON directly', () => {
 
 test('parseAnalysisResponse prepends the prefill fragment for legacy streams', () => {
   assert.equal(parseAnalysisResponse('"positive","reason":"Kind."}', false).sentiment, 'positive');
+});
+
+test('parseAnalysisResponse remaps respectful negative to neutral without a rewrite', () => {
+  const result = parseAnalysisResponse(
+    '{"sentiment":"negative","emoji":"😕","label":"Negative","reason":"Calm complaint.","rewrite":"Kinder.","respectful":true}',
+    true,
+  );
+  assert.equal(result.sentiment, 'neutral');
+  assert.equal(result.label, 'Neutral');
+  assert.equal(result.emoji, '😐');
+  assert.equal(result.rewrite, null);
+});
+
+test('parseAnalysisResponse keeps disrespectful negative and its rewrite', () => {
+  const result = parseAnalysisResponse(
+    '{"sentiment":"negative","reason":"Sarcastic jab.","rewrite":"Kinder.","respectful":false}',
+    true,
+  );
+  assert.equal(result.sentiment, 'negative');
+  assert.equal(result.rewrite, 'Kinder.');
+});
+
+test('parseAnalysisResponse leaves negative alone when respectful is missing', () => {
+  const result = parseAnalysisResponse(
+    '{"sentiment":"negative","reason":"Harsh.","rewrite":"Kinder."}',
+    true,
+  );
+  assert.equal(result.sentiment, 'negative');
+  assert.equal(result.rewrite, 'Kinder.');
+});
+
+test('parseAnalysisResponse never remaps toxic even when respectful', () => {
+  const result = parseAnalysisResponse(
+    '{"sentiment":"toxic","reason":"Insults.","rewrite":"Calmer.","respectful":true}',
+    true,
+  );
+  assert.equal(result.sentiment, 'toxic');
+});
+
+test('streamPrompt does not emit a preliminary negative sentiment', async () => {
+  const sentiments = [];
+  const raw = await streamPrompt(
+    sessionFor(['{"sentiment":"negative"', ',"reason":"Sarcastic."', ',"respectful":true}']),
+    [{ role: 'user', content: 'message' }],
+    sentiment => sentiments.push(sentiment),
+    null,
+    true,
+  );
+  assert.equal(raw, '{"sentiment":"negative","reason":"Sarcastic.","respectful":true}');
+  assert.deepEqual(sentiments, []);
+});
+
+test('streamPrompt still emits other preliminary sentiments', async () => {
+  const sentiments = [];
+  await streamPrompt(
+    sessionFor(['{"sentiment":"positive"', ',"reason":"Kind.","respectful":true}']),
+    [{ role: 'user', content: 'message' }],
+    sentiment => sentiments.push(sentiment),
+    null,
+    true,
+  );
+  assert.deepEqual(sentiments, ['positive']);
+});
+
+test('RESPONSE_SCHEMA requires respectful and every few-shot answer matches its sentiment', () => {
+  assert.ok(RESPONSE_SCHEMA.required.includes('sentiment'));
+  assert.ok(RESPONSE_SCHEMA.required.includes('respectful'));
+  assert.equal(RESPONSE_SCHEMA.properties.respectful.type, 'boolean');
+  const assistants = FEW_SHOT.filter(m => m.role === 'assistant');
+  assert.ok(assistants.length >= 4);
+  for (const m of assistants) {
+    const parsed = JSON.parse(m.content);
+    assert.equal(typeof parsed.respectful, 'boolean', m.content);
+    assert.equal(parsed.respectful, !(parsed.sentiment === 'negative' || parsed.sentiment === 'toxic'), m.content);
+  }
 });
 
 test('invalidateRequest clears pending work and increments the request ID once', () => {
@@ -429,9 +655,9 @@ test('an aborted stream cannot produce a current final result', async () => {
     async * promptStreaming(messages, options) {
       assert.deepEqual(messages, [{ role: 'user', content: 'message' }]);
       assert.equal(options.signal, controller.signal);
-      yield '{"sentiment":"negative"';
+      yield '{"sentiment":"positive"';
       if (options.signal.aborted) throw new DOMException('Aborted', 'AbortError');
-      yield ',"reason":"Harsh."}';
+      yield ',"reason":"Kind."}';
     },
   };
 
@@ -477,7 +703,7 @@ test('constructSession prefers standard API with initial prompts, language optio
   assert.equal(metadata.responseConstraint, true);
   assert.equal(metadata.cloneCapable, true);
   assert.equal(optionsSeen.length, 1);
-  assert.equal(optionsSeen[0].initialPrompts.length, 5);
+  assert.equal(optionsSeen[0].initialPrompts.length, 9);
   assert.deepEqual(optionsSeen[0].expectedInputs, [{ type: 'text', languages: ['en'] }]);
   assert.deepEqual(optionsSeen[0].expectedOutputs, [{ type: 'text', languages: ['en'] }]);
   assert.equal(optionsSeen[0].responseConstraint, RESPONSE_SCHEMA);
@@ -509,7 +735,7 @@ test('constructSession retries through option reductions when response constrain
   assert.equal('responseConstraint' in optionsSeen[2], false);
   assert.deepEqual(optionsSeen[2].expectedInputs, [{ type: 'text', languages: ['en'] }]);
   // 4th: minimal initialPrompts
-  assert.equal(optionsSeen[3].initialPrompts.length, 5);
+  assert.equal(optionsSeen[3].initialPrompts.length, 9);
   assert.equal('expectedInputs' in optionsSeen[3], false);
   assert.equal('responseConstraint' in optionsSeen[3], false);
 });
@@ -790,7 +1016,7 @@ test('concurrent and sequential no-clone analyses each own a fresh session', asy
           return {
             async prompt(messages) {
               record.prompts++;
-              assert.equal(messages.length, 6);
+              assert.equal(messages.length, 10);
               return '"neutral","reason":"Measured."}';
             },
             destroy() { record.destroys++; },
@@ -1119,4 +1345,170 @@ test('Chrome Prompt API wins over the Firefox path when both exist', async () =>
   assert.equal(isFirefoxMLContext(), false);
   const result = await analyzeText('lovely and helpful writeup');
   assert.equal(result.sentiment, 'positive');
+});
+
+// ── "Use this" = done: applied rewrites are not re-checked ───────────────────
+
+const NEGATIVE_WITH_REWRITE =
+  '{"sentiment":"negative","reason":"Harsh wording.","rewrite":"Maybe there is a kinder way."}';
+
+const typeAndAnalyze = async (el, text) => {
+  el.value = text;
+  el.dispatchEvent({ type: 'input' });
+  await sleepUntilAnalyzed();
+};
+
+const clickButtonWithText = (root, selector, text) => {
+  const button = root.querySelectorAll(selector).find(b => b.textContent === text);
+  assert.ok(button, `button "${text}" (${selector})`);
+  button.click();
+};
+
+test('applying the suggested rewrite shows the applied state without re-analyzing', async () => {
+  const stats = { analyses: 0 };
+  global.LanguageModel = nanoReturning(stats, NEGATIVE_WITH_REWRITE);
+  const { el, state } = attachFakeField();
+  try {
+    await typeAndAnalyze(el, 'this is the dumbest idea ever posted');
+    assert.equal(stats.analyses, 1);
+    assert.match(state.badge.className, /cv-badge--negative/);
+
+    clickButtonWithText(state.tooltip, '.cv-tooltip-apply', 'Use this rewrite');
+
+    assert.equal(el.value, 'Maybe there is a kinder way.');
+    assert.equal(stats.analyses, 1);
+    assert.match(state.badge.className, /cv-badge--applied/);
+    assert.doesNotMatch(state.badge.className, /cv-badge--positive/);
+    assert.equal(state.badge.style.getPropertyValue('background'), '#f4f6fa');
+    assert.equal(state.badge.textContent, '✓ Rewritten');
+    assert.match(state.tooltip.textContent, /Not re-checked/);
+    await sleepUntilAnalyzed();
+    assert.equal(stats.analyses, 1);
+    assert.match(state.badge.className, /cv-badge--applied/);
+  } finally {
+    state.cleanup();
+  }
+});
+
+test('applying a writing-tool chip rewrite also lands on the applied state', async () => {
+  const stats = { analyses: 0 };
+  global.LanguageModel = nanoReturning(stats, NEGATIVE_WITH_REWRITE);
+  const { el, state } = attachFakeField();
+  try {
+    await typeAndAnalyze(el, 'what a completely idiotic suggestion');
+    clickButtonWithText(state.tooltip, '.cv-tooltip-chip', 'Friendlier');
+    await sleep(50);
+    clickButtonWithText(state.tooltip, '.cv-tooltip-apply', 'Use this');
+
+    assert.equal(el.value, 'A friendlier rewrite.');
+    assert.match(state.badge.className, /cv-badge--applied/);
+    assert.equal(state.badge.textContent, '✓ Rewritten');
+    await sleepUntilAnalyzed();
+    assert.equal(stats.analyses, 1);
+  } finally {
+    state.cleanup();
+  }
+});
+
+test('editing the text after applying clears the applied state and re-analyzes', async () => {
+  const stats = { analyses: 0 };
+  global.LanguageModel = nanoReturning(stats, NEGATIVE_WITH_REWRITE);
+  const { el, state } = attachFakeField();
+  try {
+    await typeAndAnalyze(el, 'that post is total garbage and you know it');
+    clickButtonWithText(state.tooltip, '.cv-tooltip-apply', 'Use this rewrite');
+    assert.match(state.badge.className, /cv-badge--applied/);
+
+    await typeAndAnalyze(el, 'an entirely different comment here');
+    assert.equal(state.appliedText, null);
+    assert.equal(stats.analyses, 2);
+    assert.match(state.badge.className, /cv-badge--negative/);
+  } finally {
+    state.cleanup();
+  }
+});
+
+test('whitespace-only differences still count as the applied rewrite', async () => {
+  const stats = { analyses: 0 };
+  global.LanguageModel = nanoReturning(stats, NEGATIVE_WITH_REWRITE);
+  const { el, state } = attachFakeField();
+  try {
+    await typeAndAnalyze(el, 'nobody asked for your terrible opinion');
+    clickButtonWithText(state.tooltip, '.cv-tooltip-apply', 'Use this rewrite');
+    assert.match(state.badge.className, /cv-badge--applied/);
+
+    el.value = 'Maybe  there is a kinder way. ';
+    el.dispatchEvent({ type: 'input' });
+    assert.match(state.badge.className, /cv-badge--applied/);
+    await sleepUntilAnalyzed();
+    assert.equal(stats.analyses, 1);
+  } finally {
+    state.cleanup();
+  }
+});
+
+test('Refresh after applying re-checks the applied text', async () => {
+  const stats = { analyses: 0 };
+  global.LanguageModel = nanoReturning(stats, NEGATIVE_WITH_REWRITE);
+  const { el, state } = attachFakeField();
+  try {
+    await typeAndAnalyze(el, 'your comment is genuinely awful and rude');
+    clickButtonWithText(state.tooltip, '.cv-tooltip-apply', 'Use this rewrite');
+    assert.match(state.badge.className, /cv-badge--applied/);
+
+    const refresh = state.tooltip.querySelector('[aria-label="Analyze again"]');
+    assert.ok(refresh);
+    refresh.click();
+    assert.equal(state.appliedText, null);
+    await sleepUntilAnalyzed();
+    assert.equal(stats.analyses, 2);
+    assert.match(state.badge.className, /cv-badge--negative/);
+  } finally {
+    state.cleanup();
+  }
+});
+
+test('Undo restores the original text and goes through the normal flow', async () => {
+  const stats = { analyses: 0 };
+  global.LanguageModel = nanoReturning(stats, NEGATIVE_WITH_REWRITE);
+  const { el, state } = attachFakeField();
+  try {
+    await typeAndAnalyze(el, 'this whole thread is embarrassingly bad');
+    clickButtonWithText(state.tooltip, '.cv-tooltip-apply', 'Use this rewrite');
+    assert.match(state.badge.className, /cv-badge--applied/);
+
+    clickButtonWithText(state.tooltip, '.cv-tooltip-copy', 'Undo');
+    assert.equal(el.value, 'this whole thread is embarrassingly bad');
+    assert.equal(state.appliedText, null);
+    await sleepUntilAnalyzed();
+    assert.match(state.badge.className, /cv-badge--negative/);
+  } finally {
+    state.cleanup();
+  }
+});
+
+test('manual mode: applying a rewrite shows the applied badge, not idle', async () => {
+  const stats = { analyses: 0 };
+  global.LanguageModel = nanoReturning(stats, NEGATIVE_WITH_REWRITE);
+  applySettings([], true, 'manual');
+  const { el, state } = attachFakeField();
+  try {
+    el.value = 'you clearly have no clue what you wrote';
+    el.dispatchEvent({ type: 'input' });
+    assert.match(state.badge.className, /cv-badge--idle/);
+
+    state.onInput({ force: true, immediate: true, openTooltip: true });
+    await sleep(50);
+    assert.match(state.badge.className, /cv-badge--negative/);
+
+    clickButtonWithText(state.tooltip, '.cv-tooltip-apply', 'Use this rewrite');
+    assert.match(state.badge.className, /cv-badge--applied/);
+    assert.doesNotMatch(state.badge.className, /cv-badge--idle/);
+    await sleepUntilAnalyzed();
+    assert.equal(stats.analyses, 1);
+    assert.match(state.badge.className, /cv-badge--applied/);
+  } finally {
+    state.cleanup();
+    applySettings([], true, 'auto');
+  }
 });
