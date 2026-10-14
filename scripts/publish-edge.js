@@ -119,7 +119,14 @@ async function publishToEdge({
   return { uploadOperation, publishOperation, message: result.message };
 }
 
-module.exports = { API_ROOT, operationIdFrom, publishToEdge };
+function certificationNotes(releaseNotes, extra) {
+  return [extra, releaseNotes]
+    .map((part) => String(part || '').trim())
+    .filter(Boolean)
+    .join('\n\n');
+}
+
+module.exports = { API_ROOT, certificationNotes, operationIdFrom, publishToEdge };
 
 async function main() {
   const [zipPath, notes] = process.argv.slice(2);
@@ -133,7 +140,7 @@ async function main() {
       clientId: process.env.EDGE_CLIENT_ID,
       apiKey: process.env.EDGE_API_KEY,
       zip: await readFile(zipPath),
-      notes,
+      notes: certificationNotes(notes, process.env.EDGE_CERTIFICATION_NOTES),
     });
   } catch (error) {
     console.error(error.message);
