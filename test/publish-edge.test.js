@@ -3,7 +3,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const { API_ROOT, operationIdFrom, publishToEdge } = require('../scripts/publish-edge.js');
+const { API_ROOT, certificationNotes, operationIdFrom, publishToEdge } = require('../scripts/publish-edge.js');
 
 const PRODUCT = 'd34f98f5-f9b7-42b1-bebb-98707202b21d';
 const product = `${API_ROOT}/v1/products/${PRODUCT}`;
@@ -110,4 +110,10 @@ test('times out a request that never answers', async () => {
       signal.addEventListener('abort', () => reject(signal.reason));
     });
   await assert.rejects(run(fetchImpl, { timeoutMs: 20 }), /Edge upload request timed out after 0.02s/);
+});
+
+test('certificationNotes puts reviewer notes before the release link', () => {
+  assert.equal(certificationNotes('Release v1.8.0', ' Test steps \n'), 'Test steps\n\nRelease v1.8.0');
+  assert.equal(certificationNotes('Release v1.8.0', undefined), 'Release v1.8.0');
+  assert.equal(certificationNotes('', ''), '');
 });
