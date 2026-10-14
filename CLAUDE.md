@@ -73,9 +73,10 @@ Store listing text and promo images live in `store-assets/` — Chrome copy in
 `store-assets/listing.md`, Firefox (AMO) copy in `store-assets/firefox/listing.md`,
 Edge Add-ons copy + Partner Center answers in `store-assets/edge/listing.md`.
 
-**Edge** runs the Chrome build. Regular Edge has no Prompt API (it is a
-developer preview in Edge Canary/Dev 138+, Phi-4-mini, behind an
-`edge://flags` flag), so on Stable only Fast mode works. `popup.js` `isEdge()`
+**Edge** runs the Chrome build. Edge 139+ Stable exposes the Prompt API to
+extensions by default (Phi-4-mini), but only on supported hardware and when
+not disabled by policy (`GenAILocalFoundationalModelSettings`); otherwise
+Fast mode is the only tone path. `popup.js` `isEdge()`
 swaps in the `#setup-edge` help; check it with `test/popup-harness.html?browser=edge&state=none`.
 Regenerate PNGs with `store-assets/render.sh` and `store-assets/firefox/render-firefox.sh`.
 Store assets must never ship inside the extension zip (they aren't — see the

@@ -2,7 +2,7 @@
 
 A browser extension that uses on-device AI (Chrome's Gemini Nano, or Firefox's AI runtime) to analyse the tone of your comments in real time — before you hit post.
 
-![Chrome](https://img.shields.io/badge/Chrome-127%2B-blue) ![Firefox](https://img.shields.io/badge/Firefox-134%2B-orange) ![Edge](https://img.shields.io/badge/Edge-Fast%20mode%20%7C%20Canary%2FDev%20on--device-0078D7) ![Manifest V3](https://img.shields.io/badge/Manifest-V3-green) ![On-device AI](https://img.shields.io/badge/AI-On--device-purple)
+![Chrome](https://img.shields.io/badge/Chrome-127%2B-blue) ![Firefox](https://img.shields.io/badge/Firefox-134%2B-orange) ![Edge](https://img.shields.io/badge/Edge-139%2B-0078D7) ![Manifest V3](https://img.shields.io/badge/Manifest-V3-green) ![On-device AI](https://img.shields.io/badge/AI-On--device-purple)
 
 **▶ [Install from the Chrome Web Store](https://chromewebstore.google.com/detail/comment-vibe/kibcnjcipaofjlbbnjdjaobbkoajiejp)** · **[Install from Firefox Add-ons](https://addons.mozilla.org/firefox/addon/comment-vibe-on-device-check/)** · [Website](https://dzienko.dev/comment-vibe/) · [API playground](https://dzienko.dev/comment-vibe/playground/)
 
@@ -35,13 +35,16 @@ Edge runs the Chrome build unchanged. The Edge Add-ons listing is in review;
 until it's live, Edge users can install from the Chrome Web Store (Edge offers
 *Allow extensions from other stores*).
 
-- **Regular Edge:** there is no on-device language model yet, so turn on
-  **Fast mode** in the popup with your SubQ or TypeSafe key.
-- **Edge Canary / Dev 138+** (Windows 10/11, macOS 13.3+): enable
-  *Prompt API for on-device language model* in `edge://flags` and restart.
-  Edge's built-in Phi-4-mini model then runs everything on-device, rewrites
-  included ([Microsoft docs](https://learn.microsoft.com/microsoft-edge/web-platform/prompt-api)).
-  Check `edge://on-device-internals` if the model doesn't appear.
+- **On-device (Edge 139+):** Edge ships the Prompt API for extensions with its
+  built-in Phi-4-mini model, on by default
+  ([Edge 139 release notes](https://learn.microsoft.com/deployedge/microsoft-edge-relnote-archive-stable-channel)).
+  It only runs on supported devices — Windows 10/11 or macOS 13.3+, 5.5 GB
+  VRAM, 20 GB free disk, unmetered network
+  ([hardware requirements](https://learn.microsoft.com/microsoft-edge/web-platform/prompt-api#hardware-requirements)) —
+  and organizations can turn it off by policy. Everything, rewrites included,
+  then runs on-device; check `edge://on-device-internals` if the model doesn't appear.
+- **Everywhere else on Edge:** turn on **Fast mode** in the popup with your
+  SubQ or TypeSafe key for the tone badge.
 
 ## Firefox support
 
