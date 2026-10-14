@@ -38,6 +38,20 @@ function hasChromeAI() {
   return typeof LanguageModel !== 'undefined' || !!window.ai?.languageModel;
 }
 
+// Edge runs the Chrome build unchanged; only the setup help differs.
+function isEdge() {
+  const brands = navigator.userAgentData?.brands || [];
+  return brands.some(b => b.brand === 'Microsoft Edge') || /\bEdg\//.test(navigator.userAgent);
+}
+
+function aiName() {
+  return isEdge() ? 'Edge AI' : 'Chrome AI';
+}
+
+function showSetup() {
+  document.getElementById(isEdge() ? 'setup-edge' : 'setup').classList.add('visible');
+}
+
 // Chrome now exposes `browser` as well; only the Chrome manifest has a service worker.
 function isFirefox() {
   if (typeof browser === 'undefined' || !browser.permissions) return false;
@@ -393,7 +407,7 @@ function wireDownload(els, inProgress) {
       session.destroy?.();
       storePct(null);
       document.getElementById('setup-download').classList.remove('visible');
-      setStatus(els, 'ok', 'Chrome AI ready ✓');
+      setStatus(els, 'ok', `${aiName()} ready ✓`);
     } catch (error) {
       button.disabled = false;
       bar.hidden = true;
@@ -497,16 +511,20 @@ async function initFirefoxPopup(els, fastMode) {
   if (hasChromeAI()) {
     const status = await chromeAIStatus();
     if (status === 'available') {
-      setStatus(els, 'ok', 'Chrome AI ready ✓');
+      setStatus(els, 'ok', `${aiName()} ready ✓`);
     } else if (status === 'downloadable' || status === 'downloading') {
       const inProgress = status === 'downloading';
       setStatus(els, 'checking', inProgress ? 'AI model downloading…' : 'AI model not downloaded yet');
+      if (isEdge()) {
+        document.getElementById('dl-text').textContent =
+          'Edge needs to download its on-device language model once. It is a few GB and normally happens in the background.';
+      }
       document.getElementById('setup-download').classList.add('visible');
       wireDownload(els, inProgress);
     } else {
-      onFastModeChange = on => setStatus(els, on ? 'ok' : 'err', on ? 'Fast mode ready ✓' : 'Chrome AI not available');
+      onFastModeChange = on => setStatus(els, on ? 'ok' : 'err', on ? 'Fast mode ready ✓' : `${aiName()} not available`);
       onFastModeChange(fastMode);
-      document.getElementById('setup').classList.add('visible');
+      showSetup();
     }
     return;
   }
@@ -516,7 +534,7 @@ async function initFirefoxPopup(els, fastMode) {
     return;
   }
 
-  onFastModeChange = on => setStatus(els, on ? 'ok' : 'err', on ? 'Fast mode ready ✓' : 'Chrome AI not available');
+  onFastModeChange = on => setStatus(els, on ? 'ok' : 'err', on ? 'Fast mode ready ✓' : `${aiName()} not available`);
   onFastModeChange(fastMode);
-  document.getElementById('setup').classList.add('visible');
+  showSetup();
 })();

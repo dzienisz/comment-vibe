@@ -90,7 +90,7 @@
 
     <section id="setup-download" class="setup setup--info">
       <strong>AI is getting ready</strong>
-      <p>Chrome needs to download its local Gemini Nano model once. It is a few GB and normally happens in the background.</p>
+      <p id="dl-text">Chrome needs to download its local Gemini Nano model once. It is a few GB and normally happens in the background.</p>
       <button id="dl-start" class="setup-button" type="button">Download model</button>
       <div id="dl-bar" class="setup-bar" role="progressbar" aria-label="Model download" aria-valuemin="0" aria-valuemax="100" hidden><span></span></div>
       <p id="dl-progress" class="setup-progress" hidden></p>
@@ -104,6 +104,17 @@
         <li>Check for 16 GB RAM, 4 GB VRAM, and 22 GB free disk space</li>
         <li>Review model status in <code>chrome://on-device-internals</code></li>
         <li>On Chrome 127–137, enable <em>Prompt API for Gemini Nano</em> in <code>chrome://flags</code></li>
+      </ol>
+    </section>
+
+    <section id="setup-edge" class="setup">
+      <strong>Edge on-device AI is not available here</strong>
+      <p>Regular Microsoft Edge does not include an on-device language model yet. Turn on <em>Fast tone check in the cloud</em> above with a SubQ or TypeSafe key, or:</p>
+      <ol>
+        <li>Use Edge Canary or Dev 138+ on Windows 10/11 or macOS 13.3+</li>
+        <li>Enable <em>Prompt API for on-device language model</em> in <code>edge://flags</code>, then restart Edge</li>
+        <li>Check for 5.5 GB VRAM and 20 GB free disk space</li>
+        <li>Review model status in <code>edge://on-device-internals</code></li>
       </ol>
     </section>
 
