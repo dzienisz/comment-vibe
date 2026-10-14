@@ -81,6 +81,8 @@ jobs:
       #
       # Microsoft Edge Add-ons — 3 sekrety repo (Partner Center → Microsoft
       # Edge → Publish API): EDGE_PRODUCT_ID, EDGE_CLIENT_ID, EDGE_API_KEY.
+      # Opcjonalny EDGE_CERTIFICATION_NOTES: notatki dla recenzentów
+      # (kroki testowe + klucz testowy Fast mode) dołączane do każdego zgłoszenia.
       # Edge dostaje paczkę Chrome bez zmian. API aktualizuje tylko istniejący
       # produkt — pierwsze zgłoszenie ręcznie (store-assets/edge/listing.md).
 
@@ -125,6 +127,8 @@ jobs:
           EDGE_PRODUCT_ID: ${{ secrets.EDGE_PRODUCT_ID }}
           EDGE_CLIENT_ID: ${{ secrets.EDGE_CLIENT_ID }}
           EDGE_API_KEY: ${{ secrets.EDGE_API_KEY }}
+          # Opcjonalnie: kroki testowe + klucz testowy dla recenzentów.
+          EDGE_CERTIFICATION_NOTES: ${{ secrets.EDGE_CERTIFICATION_NOTES }}
         run: |
           v="${GITHUB_REF_NAME#v}"
           node scripts/publish-edge.js "comment-vibe-$v.zip" \
