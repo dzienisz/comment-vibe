@@ -25,6 +25,10 @@
     <a href="?browser=firefox&amp;ffshape=bytes">bytes</a> ·
     <a href="?browser=firefox&amp;ffshape=unknown">unknown shape</a> ·
     <a href="?browser=firefox&amp;fail=1">fails</a></p>
+  <p>Edge: <a href="?browser=edge&amp;state=none">no Prompt API (regular Edge)</a> ·
+    <a href="?browser=edge&amp;state=unavailable">unavailable</a> ·
+    <a href="?browser=edge&amp;state=downloadable">downloadable</a> ·
+    <a href="?browser=edge&amp;state=available">available</a></p>
   <p>Options: <code>&amp;start=0.4</code> (progress already done when reopened),
     <code>&amp;duration=6000</code> (ms for the rest of the download),
     <code>&amp;activation=required</code> (create() needs a click, like Chrome may require),
@@ -42,6 +46,7 @@
     fail: q.get('fail') === '1',
     reattach: q.has('reattach') ? Number(q.get('reattach')) : null,
     firefox: q.get('browser') === 'firefox',
+    edge: q.get('browser') === 'edge',
     ffshape: q.get('ffshape') || 'fraction',
   };
 
@@ -108,7 +113,11 @@
   }
 
   fetch('../popup.html').then(r => r.text()).then(html => {
-    const setup = `<script>(${cfg.firefox ? ffStub : stub})(${JSON.stringify(cfg)})<\/script>`;
+    const edgeUA = cfg.edge
+      ? `<script>Object.defineProperty(navigator, 'userAgent', { value: navigator.userAgent + ' Edg/141.0.0.0' })<\/script>`
+      : '';
+    const model = cfg.edge && cfg.state === 'none' ? '' : `<script>(${cfg.firefox ? ffStub : stub})(${JSON.stringify(cfg)})<\/script>`;
+    const setup = edgeUA + model;
     document.getElementById('popup').srcdoc = html
       .replace('href="popup.css"', 'href="../popup.css"')
       .replace('<script src="popup.js">', `${setup}<script src="../popup.js">`);
