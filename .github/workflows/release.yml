@@ -18,6 +18,7 @@ jobs:
       # więc dostępność sekretów przekazujemy przez env.
       HAS_CHROME_SECRETS: ${{ secrets.REFRESH_TOKEN != '' }}
       HAS_AMO_SECRETS: ${{ secrets.AMO_JWT_SECRET != '' }}
+      HAS_EDGE_SECRETS: ${{ secrets.EDGE_PRODUCT_ID != '' && secrets.EDGE_CLIENT_ID != '' && secrets.EDGE_API_KEY != '' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -77,6 +78,11 @@ jobs:
       #
       # AMO — 2 sekrety repo (z https://addons.mozilla.org/developers/addon/api/key/):
       #   AMO_JWT_ISSUER, AMO_JWT_SECRET
+      #
+      # Microsoft Edge Add-ons — 3 sekrety repo (Partner Center → Microsoft
+      # Edge → Publish API): EDGE_PRODUCT_ID, EDGE_CLIENT_ID, EDGE_API_KEY.
+      # Edge dostaje paczkę Chrome bez zmian. API aktualizuje tylko istniejący
+      # produkt — pierwsze zgłoszenie ręcznie (store-assets/edge/listing.md).
 
       - name: Publish to Chrome Web Store
         if: ${{ env.HAS_CHROME_SECRETS == 'true' }}
@@ -111,3 +117,15 @@ jobs:
           # czekamy na jej wynik (listed może czekać godzinami/dniami).
           npx --yes web-ext@8 sign --channel listed \
             --source-dir amo-src --approval-timeout 0
+
+      - name: Publish to Microsoft Edge Add-ons
+        # !cancelled(): niezależnie od wyniku kroków Chrome i AMO.
+        if: ${{ !cancelled() && env.HAS_EDGE_SECRETS == 'true' }}
+        env:
+          EDGE_PRODUCT_ID: ${{ secrets.EDGE_PRODUCT_ID }}
+          EDGE_CLIENT_ID: ${{ secrets.EDGE_CLIENT_ID }}
+          EDGE_API_KEY: ${{ secrets.EDGE_API_KEY }}
+        run: |
+          v="${GITHUB_REF_NAME#v}"
+          node scripts/publish-edge.js "comment-vibe-$v.zip" \
+            "Release ${GITHUB_REF_NAME}: https://github.com/${GITHUB_REPOSITORY}/releases/tag/${GITHUB_REF_NAME}"
