@@ -110,3 +110,23 @@ body {
   font-size: 16px; font-weight: 700; color: #4540b8;
 }
 .brand-strip .tag { font-weight: 500; color: #65708a; }
+
+/* ── 1.7.0 tooltip parts (mirror content.css) ── */
+.cv-badge--applied { background: #f4f6fa; color: #3d4760; border: 1px solid #dfe4ee; }
+.cv-tooltip-header { align-items: flex-start; justify-content: flex-start; gap: 9px; }
+.cv-tooltip-signal { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 30px; height: 30px; border-radius: 8px; font-size: 15px; }
+.cv-tooltip--positive .cv-tooltip-signal { background: #eaf9f4; }
+.cv-tooltip--neutral .cv-tooltip-signal { background: #fff8e3; }
+.cv-tooltip--negative .cv-tooltip-signal { background: #fff0ee; }
+.cv-tooltip--toxic .cv-tooltip-signal { background: #f4effd; }
+.cv-tooltip--applied .cv-tooltip-signal { background: #eef1f6; }
+.cv-tooltip-title-group { display: flex; flex-direction: column; flex: 1 1 auto; padding-top: 1px; }
+.cv-tooltip-kicker { color: #758099; font-size: 11px; font-weight: 700; line-height: 1.2; }
+.cv-tooltip-title-group .cv-tooltip-title { line-height: 1.25; margin-top: 1px; }
+.cv-tooltip-controls { display: flex; gap: 6px; color: #71809b; font-size: 15px; padding-top: 4px; }
+.cv-tooltip-tools { border-top: 1px solid #e8eaf0; margin-top: 12px; padding-top: 12px; }
+.cv-tooltip-tools-label { display: block; color: #64708a; font-size: 11px; font-weight: 750; margin-bottom: 7px; }
+.cv-tooltip-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.cv-tooltip-chip { background: #fff; border: 1px solid #d8dce6; border-radius: 999px; color: #536078; font-size: 12px; font-weight: 700; padding: 4px 10px; }
+.cv-tooltip-footer { display: flex; align-items: center; justify-content: space-between; }
+.cv-tooltip-footer-note { color: #8a94a9; font-size: 11px; }

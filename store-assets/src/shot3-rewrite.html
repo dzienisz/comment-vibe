@@ -7,6 +7,7 @@
 }
 .before .label { font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #9ca3af; margin-bottom: 12px; }
 .before .quote { font-size: 18px; line-height: 1.55; color: #1f2937; margin-bottom: 16px; }
+.before .after-note { font-size: 13px; color: #6f7890; margin-top: 10px; }
 .arrow { font-size: 44px; color: #6d28d9; font-weight: 700; }
 .cv-tooltip.big { width: 420px; }
 .cv-tooltip.big .cv-tooltip-reason { font-size: 14px; }
@@ -22,16 +23,16 @@
       <div class="label">Your draft</div>
       <div class="quote">“Nobody asked for your opinion. This whole thread is garbage.”</div>
       <span class="cv-badge cv-badge--toxic">🚫 Toxic</span>
+      <div class="label" style="margin-top:22px;">After “Use this rewrite”</div>
+      <div class="quote">“I don't think this thread is heading in a useful direction — here's what I'd focus on instead.”</div>
+      <span class="cv-badge cv-badge--applied">✓ Rewritten</span>
+      <div class="after-note">Final until you edit it. Undo is one click away.</div>
     </div>
 
     <div class="arrow">→</div>
 
-    <div class="cv-tooltip big">
-      <div class="cv-tooltip-header">
-        <span class="cv-tooltip-title">🚫 Toxic</span>
-        <span class="cv-tooltip-refresh">↻</span>
-        <span class="cv-tooltip-close">✕</span>
-      </div>
+    <div class="cv-tooltip cv-tooltip--toxic big">
+      <div class="cv-tooltip-header"><span class="cv-tooltip-signal">🚫</span><div class="cv-tooltip-title-group"><span class="cv-tooltip-kicker">Comment tone</span><span class="cv-tooltip-title">Toxic</span></div><div class="cv-tooltip-controls"><span>↻</span><span>✕</span></div></div>
       <div class="cv-tooltip-reason">Dismissive and insulting language directed at another person.</div>
       <div class="cv-tooltip-rewrite">
         <span class="cv-tooltip-rewrite-label">A kinder way to say it</span>
@@ -41,7 +42,8 @@
           <span class="cv-tooltip-copy">Copy</span>
         </div>
       </div>
-      <div class="cv-tooltip-footer"><span class="cv-tooltip-mute">Hide on this site</span></div>
+      <div class="cv-tooltip-tools"><span class="cv-tooltip-tools-label">Improve this text</span><div class="cv-tooltip-chips"><span class="cv-tooltip-chip">Fix grammar</span><span class="cv-tooltip-chip">More professional</span><span class="cv-tooltip-chip">Friendlier</span><span class="cv-tooltip-chip">Shorter</span><span class="cv-tooltip-chip">Clearer</span></div></div>
+      <div class="cv-tooltip-footer"><span class="cv-tooltip-footer-note">Private, on-device guidance</span><span class="cv-tooltip-mute">Hide on this site</span></div>
     </div>
   </div>
 
