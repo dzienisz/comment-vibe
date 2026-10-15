@@ -73,7 +73,7 @@ TIP: The very first analysis can take a moment while Chrome loads the model — 
 **Permission justification — host permissions `https://api.subq.ai/*` and `https://api.typesafe.ai/*` (optional):**
 > Requested only when the user turns on the optional "Fast tone check in the cloud" setting in the popup. They let the extension send the comment the user is checking to the chosen provider's API to classify its tone (positive / neutral / negative / toxic). Off by default; never requested at install.
 
-**Data usage:** tick **Website content** (as of 1.7.0 the live listing still declared "will not collect or use your data" — fix it on the next dashboard edit) — the comment text the user types — with a note that it is sent only when the user enables Fast mode and only to classify tone. Certify all three statements: not sold to third parties, not used for unrelated purposes, not used for creditworthiness or lending.
+**Data usage:** tick **Website content** (the comment text the user types), with a note that it is sent only when the user enables Fast mode and only to classify tone. Certify all three statements: not sold to third parties, not used for unrelated purposes, not used for creditworthiness or lending. (Check the live listing: as of 1.7.0 it still declared "will not collect or use your data".)
 
 **Privacy policy URL:** keep the raw README link (https://raw.githubusercontent.com/dzienisz/comment-vibe/main/README.md). Its Privacy section now describes Fast mode.
 
