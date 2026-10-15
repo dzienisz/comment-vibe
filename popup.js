@@ -118,7 +118,7 @@ async function initPrefs(api) {
   const storage = api.storage?.sync;
   if (!storage) return;
   const data = await Promise.resolve(
-    storage.get({ cvDisabledHosts: [], cvEnabled: true }),
+    storage.get({ cvDisabledHosts: [], cvEnabled: true, cvMode: 'auto' }),
   ).catch(() => null);
   if (!data) return;
 
