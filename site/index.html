@@ -398,7 +398,7 @@
   <section id="browsers">
     <span class="sec-eyebrow">Chrome &amp; Firefox</span>
     <h2>Two browsers, two on-device AI stacks, one extension.</h2>
-    <p class="sec-sub">Chrome uses the Prompt API (Gemini Nano) — a generative model, so you get rewrites, streaming and translation. Firefox's brand-new WebExtensions AI API exposes on-device classifiers, so the Firefox build focuses on the tone badge. Comment Vibe is one of the first extensions shipping on both.</p>
+    <p class="sec-sub">Chrome uses the Prompt API (Gemini Nano) — a generative model, so you get rewrites, streaming and translation. Firefox's brand-new WebExtensions AI API exposes on-device classifiers, so the Firefox build focuses on the tone badge. Comment Vibe is one of the first extensions shipping on both. Microsoft Edge runs the Chrome build — on-device with Edge's built-in Phi-4-mini on supported PCs, or with Fast mode.</p>
     <div class="compare reveal">
       <table>
         <tr><th>Feature</th><th>Chrome 138+</th><th>Firefox 134+</th></tr>
@@ -430,6 +430,10 @@
       <details>
         <summary>What do I need on Firefox?</summary>
         <p>Firefox 134+ on desktop. Click “Enable on-device AI” in the extension popup — a multilingual classifier model (~340&nbsp;MB) downloads once. On Firefox 134–139 you may also need to set <code>browser.ml.enable</code> and <code>extensions.ml.enabled</code> to <code>true</code> in <code>about:config</code>; from Firefox 140 they're on by default.</p>
+      </details>
+      <details>
+        <summary>Does it work on Microsoft Edge?</summary>
+        <p>Yes — Edge runs the Chrome build. <strong>Edge 139+</strong> gives extensions its built-in Phi-4-mini model, so on a supported device (Windows 10/11 or macOS 13.3+, 5.5 GB VRAM, 20 GB free disk) Comment Vibe runs fully on-device, rewrites included. On devices Edge doesn't support, or where an organization turned it off, use <strong>Fast mode</strong> in the popup with your SubQ or TypeSafe key. The Edge Add-ons listing is in review; until then, install from the Chrome Web Store (Edge offers “Allow extensions from other stores”).</p>
       </details>
       <details>
         <summary>Why is the Firefox version simpler than the Chrome one?</summary>

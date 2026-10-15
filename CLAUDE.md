@@ -62,13 +62,22 @@ packaging scripts, not a build step: they only zip raw source files, so the
    `scripts/package.sh` locally and upload the zips.)
 5. The same workflow then submits each zip to its store for review, **if** the
    repo secrets are configured (Chrome: `CHROME_EXTENSION_ID`, `CLIENT_ID`,
-   `CLIENT_SECRET`, `REFRESH_TOKEN`; AMO: `AMO_JWT_ISSUER`, `AMO_JWT_SECRET` —
-   setup links are in the workflow comments). Without secrets those steps are
+   `CLIENT_SECRET`, `REFRESH_TOKEN`; AMO: `AMO_JWT_ISSUER`, `AMO_JWT_SECRET`;
+   Edge: `EDGE_PRODUCT_ID`, `EDGE_CLIENT_ID`, `EDGE_API_KEY` — setup links are
+   in the workflow comments). Edge gets the Chrome zip unchanged via
+   `scripts/publish-edge.js` (Edge Add-ons REST API, no deps). Without secrets those steps are
    skipped — upload the zips to the store dashboards manually. Store review
    still decides when users get it.
 
 Store listing text and promo images live in `store-assets/` — Chrome copy in
-`store-assets/listing.md`, Firefox (AMO) copy in `store-assets/firefox/listing.md`.
+`store-assets/listing.md`, Firefox (AMO) copy in `store-assets/firefox/listing.md`,
+Edge Add-ons copy + Partner Center answers in `store-assets/edge/listing.md`.
+
+**Edge** runs the Chrome build. Edge 139+ Stable exposes the Prompt API to
+extensions by default (Phi-4-mini), but only on supported hardware and when
+not disabled by policy (`GenAILocalFoundationalModelSettings`); otherwise
+Fast mode is the only tone path. `popup.js` `isEdge()`
+swaps in the `#setup-edge` help; check it with `test/popup-harness.html?browser=edge&state=none`.
 Regenerate PNGs with `store-assets/render.sh` and `store-assets/firefox/render-firefox.sh`.
 Store assets must never ship inside the extension zip (they aren't — see the
 exclusions in `scripts/package.sh`).

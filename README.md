@@ -2,7 +2,7 @@
 
 A browser extension that uses on-device AI (Chrome's Gemini Nano, or Firefox's AI runtime) to analyse the tone of your comments in real time — before you hit post.
 
-![Chrome](https://img.shields.io/badge/Chrome-127%2B-blue) ![Firefox](https://img.shields.io/badge/Firefox-134%2B-orange) ![Manifest V3](https://img.shields.io/badge/Manifest-V3-green) ![On-device AI](https://img.shields.io/badge/AI-On--device-purple)
+![Chrome](https://img.shields.io/badge/Chrome-127%2B-blue) ![Firefox](https://img.shields.io/badge/Firefox-134%2B-orange) ![Edge](https://img.shields.io/badge/Edge-139%2B-0078D7) ![Manifest V3](https://img.shields.io/badge/Manifest-V3-green) ![On-device AI](https://img.shields.io/badge/AI-On--device-purple)
 
 **▶ [Install from the Chrome Web Store](https://chromewebstore.google.com/detail/comment-vibe/kibcnjcipaofjlbbnjdjaobbkoajiejp)** · **[Install from Firefox Add-ons](https://addons.mozilla.org/firefox/addon/comment-vibe-on-device-check/)** · [Website](https://dzienko.dev/comment-vibe/) · [API playground](https://dzienko.dev/comment-vibe/playground/)
 
@@ -28,6 +28,23 @@ friendlier or more professional. Turn off automatic checks and use the
 By default all analysis runs locally — Chrome's on-device Gemini Nano model, or Firefox's on-device AI runtime. Your comments are never sent to any server.
 
 **Optional Fast mode (cloud).** If you turn on *Fast tone check in the cloud* in the popup and paste your own [SubQ](https://subq.ai) or [TypeSafe](https://typesafe.ai) API key, the text being checked is sent to that provider's decision model (typically well under a second). It is off by default, the extension asks for access to the provider's host only when you enable it, and the key is kept in this browser's local storage (never synced). Fast mode only powers the tone badge — writing actions and rewrites still run on-device — and if a cloud call fails, Comment Vibe falls back to the on-device model.
+
+## Microsoft Edge support
+
+Edge runs the Chrome build unchanged. The Edge Add-ons listing is in review;
+until it's live, Edge users can install from the Chrome Web Store (Edge offers
+*Allow extensions from other stores*).
+
+- **On-device (Edge 139+):** Edge ships the Prompt API for extensions with its
+  built-in Phi-4-mini model, on by default
+  ([Edge 139 release notes](https://learn.microsoft.com/deployedge/microsoft-edge-relnote-archive-stable-channel)).
+  It only runs on supported devices — Windows 10/11 or macOS 13.3+, 5.5 GB
+  VRAM, 20 GB free disk, unmetered network
+  ([hardware requirements](https://learn.microsoft.com/microsoft-edge/web-platform/prompt-api#hardware-requirements)) —
+  and organizations can turn it off by policy. Everything, rewrites included,
+  then runs on-device; check `edge://on-device-internals` if the model doesn't appear.
+- **Everywhere else on Edge:** turn on **Fast mode** in the popup with your
+  SubQ or TypeSafe key for the tone badge.
 
 ## Firefox support
 
@@ -68,6 +85,8 @@ Setup on Firefox:
 Chrome Web Store listing text and promo images (screenshots + tiles) live in [`store-assets/`](store-assets/). The PNGs are rendered from the HTML sources in `store-assets/src/` — edit those and run `store-assets/render.sh` (headless Chrome) to regenerate. See [`store-assets/listing.md`](store-assets/listing.md) for the description text and the asset → store-slot mapping.
 
 Firefox (addons.mozilla.org) assets live in [`store-assets/firefox/`](store-assets/firefox/): Firefox-accurate listing text in [`store-assets/firefox/listing.md`](store-assets/firefox/listing.md) and four screenshots rendered from `store-assets/firefox/src/` via `store-assets/firefox/render-firefox.sh`. The copy and images deliberately drop the rewrite/multilingual claims, which the Firefox build does not have.
+
+Microsoft Edge Add-ons copy and Partner Center answers live in [`store-assets/edge/listing.md`](store-assets/edge/listing.md). Edge reuses the Chrome zip and the Chrome PNGs.
 
 ---
 
