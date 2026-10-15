@@ -34,10 +34,13 @@ YOU'RE IN CONTROL
 • Turn Comment Vibe on or off globally, or set a site-specific preference
 • Changes apply right away and sync with your signed-in Chrome profile
 
+WRITING TOOLS
+Open the tone card to polish any draft, not only the harsh ones: Fix grammar, More professional, Friendlier, Shorter or Clearer. Preview the result, then use it or copy it. A rewrite you apply is marked "✓ Rewritten" and isn't judged again until you edit the text.
+
 FOUR CLEAR TONE LABELS
 😊 Positive — constructive and friendly
-😐 Neutral — balanced and factual
-😕 Negative — may come across as harsh or critical
+😐 Neutral — factual, or criticism said calmly and politely
+😕 Negative — harsh, sarcastic, dismissive or blaming
 🚫 Toxic — potentially aggressive or harmful language
 
 SPEAKS YOUR LANGUAGE
@@ -70,7 +73,7 @@ TIP: The very first analysis can take a moment while Chrome loads the model — 
 **Permission justification — host permissions `https://api.subq.ai/*` and `https://api.typesafe.ai/*` (optional):**
 > Requested only when the user turns on the optional "Fast tone check in the cloud" setting in the popup. They let the extension send the comment the user is checking to the chosen provider's API to classify its tone (positive / neutral / negative / toxic). Off by default; never requested at install.
 
-**Data usage:** tick **Website content** (the comment text the user types), with a note that it is sent only when the user enables Fast mode and only to classify tone. Certify all three statements: not sold to third parties, not used for unrelated purposes, not used for creditworthiness or lending.
+**Data usage:** tick **Website content** (the comment text the user types), with a note that it is sent only when the user enables Fast mode and only to classify tone. Certify all three statements: not sold to third parties, not used for unrelated purposes, not used for creditworthiness or lending. (Check the live listing: as of 1.7.0 it still declared "will not collect or use your data".)
 
 **Privacy policy URL:** keep the raw README link (https://raw.githubusercontent.com/dzienisz/comment-vibe/main/README.md). Its Privacy section now describes Fast mode.
 

@@ -70,10 +70,13 @@ YOU'RE IN CONTROL
 • Turn Comment Vibe on or off globally, or per site
 • Turn off automatic checks and press Alt+Shift+C to check on demand
 
+WRITING TOOLS
+Open the tone card to polish any draft, not only the harsh ones: Fix grammar, More professional, Friendlier, Shorter or Clearer. Preview the result, then use it or copy it. A rewrite you apply is marked "✓ Rewritten" and isn't judged again until you edit the text.
+
 FOUR CLEAR TONE LABELS
 😊 Positive — constructive and friendly
-😐 Neutral — balanced and factual
-😕 Negative — may come across as harsh or critical
+😐 Neutral — factual, or criticism said calmly and politely
+😕 Negative — harsh, sarcastic, dismissive or blaming
 🚫 Toxic — potentially aggressive or harmful language
 
 PRIVATE BY DESIGN
