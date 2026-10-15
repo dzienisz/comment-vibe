@@ -2,7 +2,7 @@
 
 A browser extension that uses on-device AI (Chrome's Gemini Nano, or Firefox's AI runtime) to analyse the tone of your comments in real time — before you hit post.
 
-![Chrome](https://img.shields.io/badge/Chrome-127%2B-blue) ![Firefox](https://img.shields.io/badge/Firefox-134%2B-orange) ![Edge](https://img.shields.io/badge/Edge-139%2B-0078D7) ![Manifest V3](https://img.shields.io/badge/Manifest-V3-green) ![On-device AI](https://img.shields.io/badge/AI-On--device-purple)
+![Chrome](https://img.shields.io/badge/Chrome-127%2B-blue) ![Firefox](https://img.shields.io/badge/Firefox-134%2B-orange) ![Edge](https://img.shields.io/badge/Edge-139%2B-0078D7) ![Manifest V3](https://img.shields.io/badge/Manifest-V3-green) ![On-device AI](https://img.shields.io/badge/AI-On--device-purple) [![I Ship This](https://ishipthis.com/badge/dzienisz.svg)](https://ishipthis.com/dzienisz?utm_source=badge)
 
 **▶ [Install from the Chrome Web Store](https://chromewebstore.google.com/detail/comment-vibe/kibcnjcipaofjlbbnjdjaobbkoajiejp)** · **[Install from Firefox Add-ons](https://addons.mozilla.org/firefox/addon/comment-vibe-on-device-check/)** · [Website](https://dzienko.dev/comment-vibe/) · [API playground](https://dzienko.dev/comment-vibe/playground/)
 
