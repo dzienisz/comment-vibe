@@ -1,7 +1,7 @@
 #!/bin/zsh
 # Renders store-assets/src/*.html to PNGs at exact Chrome Web Store sizes.
 set -e
-CHROME="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+CHROME="${CHROME:-/Applications/Google Chrome.app/Contents/MacOS/Google Chrome}"
 SRC="$(cd "$(dirname "$0")/src" && pwd)"
 OUT="$(cd "$(dirname "$0")" && pwd)"
 
