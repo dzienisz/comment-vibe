@@ -251,6 +251,7 @@ function resetSessionState() {
   rewriteSession = null;
   rewriteSessionCreation = null;
   rewriteLastUsedAt = 0;
+  unavailableNoticed = false;
 }
 
 function buildRewriteMessages(text, mode, lang) {
@@ -428,6 +429,13 @@ function storeUrl() {
   return navigator.userAgent.includes('Firefox')
     ? 'https://addons.mozilla.org/firefox/addon/comment-vibe-on-device-check/'
     : 'https://chromewebstore.google.com/detail/comment-vibe/kibcnjcipaofjlbbnjdjaobbkoajiejp';
+}
+
+// Edge runs the Chrome build unchanged; only the setup wording differs.
+function isEdgeBrowser() {
+  if (typeof navigator === 'undefined') return false;
+  const brands = navigator.userAgentData?.brands || [];
+  return brands.some(b => b.brand === 'Microsoft Edge') || /\bEdg\//.test(navigator.userAgent || '');
 }
 
 function markRatePromptDone() {
@@ -1677,7 +1685,9 @@ function attachToInput(el) {
           renderNotice(badge, tooltip, {
             emoji: '⚠️',
             label: 'AI not ready',
-            body: "Chrome's on-device AI (Gemini Nano) isn't available in this browser yet. Open the Comment Vibe popup from the toolbar for setup steps — it needs Chrome 138+ on a desktop with about 22 GB of free disk space.",
+            body: isEdgeBrowser()
+              ? "Edge's on-device AI is still a preview and isn't turned on in this browser. Open the Comment Vibe popup from the toolbar for setup steps — it needs the Prompt API flag in edge://flags and supported hardware — or turn on Fast tone check in the cloud there."
+              : "Chrome's on-device AI (Gemini Nano) isn't available in this browser yet. Open the Comment Vibe popup from the toolbar for setup steps — it needs Chrome 138+ on a desktop with about 22 GB of free disk space.",
             linkText: 'Setup guide',
             linkHref: 'https://dzienko.dev/comment-vibe/#browsers',
             onHideSite: ui.onHideSite,
@@ -1711,7 +1721,9 @@ function attachToInput(el) {
         renderNotice(badge, tooltip, {
           emoji: '⏳',
           label: 'Preparing AI model',
-          body: 'Chrome is downloading the Gemini Nano model once (a few GB). Keep the browser open — Comment Vibe starts working automatically when it finishes. Progress is shown in the Comment Vibe popup.',
+          body: isEdgeBrowser()
+            ? 'Edge is downloading its on-device language model once (a few GB). Keep the browser open — Comment Vibe starts working automatically when it finishes. Progress is shown in the Comment Vibe popup.'
+            : 'Chrome is downloading the Gemini Nano model once (a few GB). Keep the browser open — Comment Vibe starts working automatically when it finishes. Progress is shown in the Comment Vibe popup.',
           onHideSite: ui.onHideSite,
         });
         placeBadge(badge, el);
@@ -1995,6 +2007,7 @@ if (typeof module !== 'undefined' && module.exports) {
     isCleanupEligible,
     isCurrentRequest,
     isChromeBuild,
+    isEdgeBrowser,
     isFirefoxMLContext,
     normalize,
     normalizeDetectedLanguage,

@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Corrected Edge on-device AI guidance.** Tested on real Edge: the Prompt API is a flag-gated developer preview (`edge://flags` → "Prompt API for on-device language model", officially Canary/Dev), not on by default as previously documented. Verified end-to-end on Edge Dev 157 — popup reports "Edge AI ready ✓" and the content script classifies comments via a real `LanguageModel` session. Setup help, README, site FAQ and store copy now describe the flags, hardware requirements, and the CPU-model fallback (prerelease flag) when GPU sessions crash.
 
+### Fixed
+
+- **Edge in-page notices:** the "AI not ready" and "Preparing AI model" notices on the page now give Edge-specific guidance instead of Chrome/Gemini Nano steps.
+
 ## [1.8.0] - 2026-10-16
 
 ### Added
