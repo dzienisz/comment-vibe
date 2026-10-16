@@ -32,6 +32,7 @@ const {
   isCleanupEligible,
   isCurrentRequest,
   isChromeBuild,
+  isEdgeBrowser,
   isFirefoxMLContext,
   normalize,
   normalizeDetectedLanguage,
@@ -63,6 +64,19 @@ function modernApi(create) {
   return {
     availability: async () => 'available',
     create,
+  };
+}
+
+function stubNavigator(value) {
+  const descriptor = Object.getOwnPropertyDescriptor(globalThis, 'navigator');
+  Object.defineProperty(globalThis, 'navigator', {
+    value,
+    configurable: true,
+    writable: true,
+  });
+  return () => {
+    if (descriptor) Object.defineProperty(globalThis, 'navigator', descriptor);
+    else delete globalThis.navigator;
   };
 }
 
@@ -1389,6 +1403,101 @@ const clickButtonWithText = (root, selector, text) => {
   assert.ok(button, `button "${text}" (${selector})`);
   button.click();
 };
+
+test('isEdgeBrowser detects the Edge user-agent token', () => {
+  const restoreNavigator = stubNavigator({ userAgent: 'Mozilla/5.0 Chrome/155.0.0.0 Edg/155.0' });
+  try {
+    assert.equal(isEdgeBrowser(), true);
+  } finally {
+    restoreNavigator();
+  }
+});
+
+test('isEdgeBrowser detects the Microsoft Edge user-agent-data brand', () => {
+  const restoreNavigator = stubNavigator({
+    userAgent: 'Mozilla/5.0 Chrome/155.0.0.0',
+    userAgentData: { brands: [{ brand: 'Chromium' }, { brand: 'Microsoft Edge' }] },
+  });
+  try {
+    assert.equal(isEdgeBrowser(), true);
+  } finally {
+    restoreNavigator();
+  }
+});
+
+test('isEdgeBrowser does not classify a plain Chrome user agent as Edge', () => {
+  const restoreNavigator = stubNavigator({ userAgent: 'Mozilla/5.0 Chrome/155.0.0.0 Safari/537.36' });
+  try {
+    assert.equal(isEdgeBrowser(), false);
+  } finally {
+    restoreNavigator();
+  }
+});
+
+test('isEdgeBrowser returns false when navigator is undefined', () => {
+  const restoreNavigator = stubNavigator(undefined);
+  try {
+    assert.equal(isEdgeBrowser(), false);
+  } finally {
+    restoreNavigator();
+  }
+});
+
+test('Edge unavailable notice uses Edge setup guidance', async () => {
+  const restoreNavigator = stubNavigator({ userAgent: 'Mozilla/5.0 Edg/155.0' });
+  global.LanguageModel = { availability: async () => 'unavailable' };
+  applySettings([], true, 'auto');
+  const { el, state } = attachFakeField();
+  try {
+    await typeAndAnalyze(el, 'that is an outrageously terrible post');
+    assert.match(state.tooltip.textContent, /Edge's on-device AI is still a preview/);
+    assert.doesNotMatch(state.tooltip.textContent, /Gemini Nano/);
+  } finally {
+    try {
+      state.cleanup();
+    } finally {
+      restoreNavigator();
+    }
+  }
+});
+
+test('Chrome unavailable notice keeps the Gemini Nano guidance', async () => {
+  const restoreNavigator = stubNavigator({ userAgent: 'Mozilla/5.0 Chrome/155.0.0.0 Safari/537.36' });
+  global.LanguageModel = { availability: async () => 'unavailable' };
+  applySettings([], true, 'auto');
+  const { el, state } = attachFakeField();
+  try {
+    await typeAndAnalyze(el, 'that is an outrageously terrible post');
+    assert.match(state.tooltip.textContent, /Gemini Nano/);
+  } finally {
+    try {
+      state.cleanup();
+    } finally {
+      restoreNavigator();
+    }
+  }
+});
+
+test('Edge downloading notice uses the Edge model guidance', async () => {
+  const restoreNavigator = stubNavigator({ userAgent: 'Mozilla/5.0 Edg/155.0' });
+  global.LanguageModel = {
+    availability: async () => 'downloadable',
+    create: () => new Promise(() => {}),
+  };
+  applySettings([], true, 'auto');
+  const { el, state } = attachFakeField();
+  try {
+    await typeAndAnalyze(el, 'that is an outrageously terrible post');
+    assert.match(state.tooltip.textContent, /Edge is downloading its on-device language model/);
+    assert.doesNotMatch(state.tooltip.textContent, /Gemini Nano/);
+  } finally {
+    try {
+      state.cleanup();
+    } finally {
+      restoreNavigator();
+    }
+  }
+});
 
 test('buildTooltipTools explains local AI is needed when no Prompt API is available', () => {
   const { state } = attachFakeField();
