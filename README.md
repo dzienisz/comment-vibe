@@ -35,14 +35,17 @@ Edge runs the Chrome build unchanged. The Edge Add-ons listing is in review;
 until it's live, Edge users can install from the Chrome Web Store (Edge offers
 *Allow extensions from other stores*).
 
-- **On-device (Edge 139+):** Edge ships the Prompt API for extensions with its
-  built-in Phi-4-mini model, on by default
-  ([Edge 139 release notes](https://learn.microsoft.com/deployedge/microsoft-edge-relnote-archive-stable-channel)).
-  It only runs on supported devices — Windows 10/11 or macOS 13.3+, 5.5 GB
-  VRAM, 20 GB free disk, unmetered network
-  ([hardware requirements](https://learn.microsoft.com/microsoft-edge/web-platform/prompt-api#hardware-requirements)) —
-  and organizations can turn it off by policy. Everything, rewrites included,
-  then runs on-device; check `edge://on-device-internals` if the model doesn't appear.
+- **On-device (preview):** Edge's Prompt API is a developer preview — enable
+  *Prompt API for on-device language model* in `edge://flags` and restart
+  (officially supported on Canary/Dev since 138; the flag also exists on
+  Stable). Everything, rewrites included, then runs on Edge's built-in
+  language model — verified on Edge Dev 157. Requirements: Windows 10/11 or
+  macOS 13.3+, 5.5 GB VRAM, 20 GB free disk, unmetered network
+  ([hardware requirements](https://learn.microsoft.com/microsoft-edge/web-platform/prompt-api#hardware-requirements)),
+  *Device performance class* High+ in `edge://on-device-internals`; orgs can
+  turn it off by policy. If `create()` fails, the CPU-only prerelease model
+  (*Enable prerelease on-device language model* flag, Dev/Canary 150+) works
+  without a GPU.
 - **Everywhere else on Edge:** turn on **Fast mode** in the popup with your
   SubQ or TypeSafe key for the tone badge.
 

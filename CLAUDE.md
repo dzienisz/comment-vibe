@@ -73,11 +73,26 @@ Store listing text and promo images live in `store-assets/` — Chrome copy in
 `store-assets/listing.md`, Firefox (AMO) copy in `store-assets/firefox/listing.md`,
 Edge Add-ons copy + Partner Center answers in `store-assets/edge/listing.md`.
 
-**Edge** runs the Chrome build. Edge 139+ Stable exposes the Prompt API to
-extensions by default (Phi-4-mini), but only on supported hardware and when
-not disabled by policy (`GenAILocalFoundationalModelSettings`); otherwise
-Fast mode is the only tone path. `popup.js` `isEdge()`
-swaps in the `#setup-edge` help; check it with `test/popup-harness.html?browser=edge&state=none`.
+**Edge** runs the Chrome build. The Prompt API on Edge is a developer
+preview, not on by default — Microsoft officially supports it on Canary/Dev
+since 138, and it is flag-gated everywhere it exists. Enable _Prompt API for
+on-device language model_ in `edge://flags`; the flag's internal name differs
+by build (`edge-llm-prompt-api-for-phi-mini` on Stable 155,
+`edge-llm-prompt-api-for-default` on Dev 157). With the flag on,
+`LanguageModel` is exposed to extension pages, content scripts and web pages
+alike — verified end-to-end on Edge Dev 157 (popup shows "Edge AI ready ✓",
+content script classified a comment "Toxic" via a real session). Hardware:
+Windows 10/11 or macOS 13.3+, 5.5 GB VRAM, 20 GB disk, unmetered network,
+_Device performance class_ High+ in `edge://on-device-internals`; orgs can
+disable it (`GenAILocalFoundationalModelSettings`). Known failure: the
+Phi-4-mini GPU model session can crash the model process on some machines
+(observed on macOS arm64, Stable 155 and Dev 157 —
+`InvalidStateError`/`NotSupportedError` from `create()`); the prerelease CPU
+model (Aion-1.0-Instruct, flag `edge-llm-on-device-model-prerelease`,
+Dev/Canary 150+) bypasses it. Edge may also auto-disable unpacked "other
+sources" extensions on restart — reload the unpacked extension before
+testing. `popup.js` `isEdge()` swaps in the `#setup-edge` help; check it with
+`test/popup-harness.html?browser=edge&state=none`.
 Regenerate PNGs with `store-assets/render.sh` and `store-assets/firefox/render-firefox.sh`.
 Store assets must never ship inside the extension zip (they aren't — see the
 exclusions in `scripts/package.sh`).

@@ -109,11 +109,12 @@
 
     <section id="setup-edge" class="setup">
       <strong>Edge on-device AI is not available here</strong>
-      <p>Edge 139+ includes an on-device model (Phi-4-mini) for extensions, but only on supported devices. Turn on <em>Fast tone check in the cloud</em> above with a SubQ or TypeSafe key, or check:</p>
+      <p>Edge's on-device model is still a preview: it needs an <code>edge://flags</code> opt-in and supported hardware. Turn on <em>Fast tone check in the cloud</em> above with a SubQ or TypeSafe key, or set it up:</p>
       <ol>
-        <li>Update Edge to 139 or later, on Windows 10/11 or macOS 13.3+</li>
-        <li>Your device needs 5.5 GB VRAM, 20 GB free disk space and an unmetered connection</li>
+        <li>In <code>edge://flags</code>, enable <em>Prompt API for on-device language model</em> and restart Edge</li>
+        <li>Use Windows 10/11 or macOS 13.3+ with 5.5 GB VRAM, 20 GB free disk and an unmetered connection</li>
         <li>In <code>edge://on-device-internals</code>, <em>Device performance class</em> should be High or above</li>
+        <li>If sessions fail, try <em>Enable prerelease on-device language model</em> in flags — the CPU model needs no GPU</li>
         <li>On a work device, your organization may have turned on-device AI off</li>
       </ol>
     </section>

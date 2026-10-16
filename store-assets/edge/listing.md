@@ -4,15 +4,21 @@ Edge takes the **Chrome zip unchanged** (`comment-vibe-<version>.zip` from
 `scripts/package.sh`). The copy below must stay honest about what works on
 Edge:
 
-- **Edge 139+ Stable exposes the Prompt API to extensions by default**
-  (`LanguageModel`, built-in Phi-4-mini;
-  [Edge 139 release notes](https://learn.microsoft.com/deployedge/microsoft-edge-relnote-archive-stable-channel)),
-  but only on supported devices: Windows 10/11 or macOS 13.3+, 5.5 GB VRAM,
-  20 GB free disk, unmetered network, *Device performance class* High or above
-  in `edge://on-device-internals`
+- **The Prompt API is a developer preview on Edge — not on by default.**
+  Microsoft officially supports it on Canary/Dev since 138
+  ([docs](https://learn.microsoft.com/microsoft-edge/web-platform/prompt-api));
+  the flag also exists on Stable (`edge://flags` → *Prompt API for on-device
+  language model*). With the flag on, `LanguageModel` works in extension
+  pages, content scripts and web pages — verified end-to-end on Edge Dev 157
+  (Phi-4-mini / Aion models). Supported devices: Windows 10/11 or macOS 13.3+,
+  5.5 GB VRAM, 20 GB free disk, unmetered network, *Device performance class*
+  High or above in `edge://on-device-internals`
   ([hardware requirements](https://learn.microsoft.com/microsoft-edge/web-platform/prompt-api#hardware-requirements)).
   Admins can turn it off (`GenAILocalFoundationalModelSettings` policy), and it
-  is not available in China.
+  is not available in China. Known issue: the GPU model session can crash the
+  model process on some machines (observed on macOS arm64); the prerelease CPU
+  model (*Enable prerelease on-device language model* flag, Dev/Canary 150+)
+  bypasses it.
 - **Fast mode** (SubQ or TypeSafe key, opt-in cloud) works on every Edge
   device. Where the on-device model is unavailable it is the only way to get a
   tone badge; rewrites and writing actions need the on-device model.
@@ -62,7 +68,7 @@ Your words matter. Comment Vibe gives you a quiet second look before you share t
 As you write a comment, a small badge shows how it may land: Positive, Neutral, Negative or Toxic. Click it for a short explanation of why.
 
 HOW IT WORKS ON MICROSOFT EDGE
-• On-device: Edge 139+ includes a built-in language model (Phi-4-mini) for extensions. On supported devices (Windows 10/11 or macOS 13.3+, 5.5 GB of GPU memory, 20 GB free disk) Comment Vibe runs entirely on your device — including kinder rewrite suggestions and writing actions. No account, no servers. The model downloads once (a few GB).
+• On-device (preview): enable "Prompt API for on-device language model" in edge://flags and restart — Comment Vibe then runs entirely on your device with Edge's built-in model, including kinder rewrite suggestions and writing actions. No account, no servers. Needs Windows 10/11 or macOS 13.3+, 5.5 GB of GPU memory, 20 GB free disk; the model downloads once (a few GB).
 • Fast mode: on any other device, turn on "Fast tone check in the cloud" in the popup and paste your own SubQ (subq.ai) or TypeSafe (typesafe.ai) API key. Only the text being checked is sent to that provider, with your key, which stays in this browser and is never synced. Off by default.
 
 YOU'RE IN CONTROL
@@ -99,8 +105,9 @@ please test with Fast mode:
 4. Type "This is the dumbest idea I've ever read." into a comment box — a red
    "Negative"/"Toxic" badge appears; click it for the explanation.
 
-Without a key on an unsupported device, the popup shows Edge setup help. On a
-supported device with Edge 139+, everything runs on-device with no key.
+Without a key, or where the on-device preview is unavailable, the popup shows
+Edge setup help. With the edge://flags preview enabled on a supported device,
+everything runs on-device with no key.
 No remote code: all JavaScript ships in the package; the only network calls
 are the optional Fast mode requests to api.subq.ai / api.typesafe.ai.
 ```
