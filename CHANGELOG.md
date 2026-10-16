@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Popup:** automatic checking now stays off after reopening when manual mode is selected.
 - **Rewrite tools:** When on-device AI is unavailable, the tooltip explains why rewriting cannot run instead of showing unusable mode chips; the same message appears if the local model is unavailable when a rewrite is requested.
+- **On-device AI availability:** Checks no longer hang when the browser exposes the Prompt API but never reports availability; after 5 seconds, the model is treated as unavailable.
 
 ## [1.7.0] - 2026-10-13
 

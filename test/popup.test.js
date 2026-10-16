@@ -3,10 +3,13 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
-const vm = require('node:vm');
 const path = require('node:path');
+const vm = require('node:vm');
 
-const popupScript = fs.readFileSync(path.join(__dirname, '../popup.js'), 'utf8');
+const popupSource = fs.readFileSync(path.join(__dirname, '../popup.js'), 'utf8');
+const initIndex = popupSource.indexOf('\n(async () => {');
+assert.notEqual(initIndex, -1);
+const popupDeclarations = popupSource.slice(0, initIndex);
 
 async function autoModeChecked(stored = {}) {
   const elements = new Map();
@@ -26,7 +29,7 @@ async function autoModeChecked(stored = {}) {
     navigator: { userAgent: 'Chrome' },
     window: {},
   });
-  vm.runInContext(popupScript, context);
+  vm.runInContext(popupSource, context);
   context.api = {
     storage: {
       sync: {
@@ -51,4 +54,67 @@ test('popup restores automatic checking as off when manual mode is stored', asyn
 
 test('popup defaults automatic checking on when no mode is stored', async () => {
   assert.equal(await autoModeChecked(), true);
+});
+
+function loadPopupContext(LanguageModel) {
+  const timers = new Map();
+  let nextTimerId = 0;
+  let now = 0;
+  const context = vm.createContext({
+    LanguageModel,
+    window: {},
+    setTimeout(callback, delay) {
+      const timerId = ++nextTimerId;
+      timers.set(timerId, { callback, dueAt: now + delay });
+      return timerId;
+    },
+    clearTimeout(timerId) {
+      timers.delete(timerId);
+    },
+  });
+  vm.runInContext(popupDeclarations, context, { filename: 'popup.js' });
+
+  return {
+    chromeAIStatus: () => context.chromeAIStatus(),
+    tick(milliseconds) {
+      now += milliseconds;
+      for (const [timerId, timer] of timers) {
+        if (timer.dueAt <= now) {
+          timers.delete(timerId);
+          timer.callback();
+        }
+      }
+    },
+    get pendingTimerCount() {
+      return timers.size;
+    },
+  };
+}
+
+test('chromeAIStatus treats a stalled Prompt API probe as unavailable after five seconds', async () => {
+  const popup = loadPopupContext({
+    availability: () => new Promise(() => {}),
+  });
+  const status = popup.chromeAIStatus();
+
+  popup.tick(5000);
+  assert.equal(await status, 'unavailable');
+  assert.equal(popup.pendingTimerCount, 0);
+});
+
+test('chromeAIStatus preserves a quickly available Prompt API result', async () => {
+  let calls = 0;
+  const popup = loadPopupContext({
+    availability: async () => {
+      calls++;
+      return 'available';
+    },
+  });
+
+  const status = await popup.chromeAIStatus();
+  popup.tick(5000);
+
+  assert.equal(status, 'available');
+  assert.equal(calls, 1);
+  assert.equal(popup.pendingTimerCount, 0);
 });
