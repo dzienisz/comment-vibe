@@ -909,6 +909,25 @@ test('getModelStatus reports unavailable when the standard model cannot run here
   assert.equal(await getModelStatus(), 'unavailable');
 });
 
+test('getModelStatus reports unavailable when native availability stalls', async t => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  applyJevSetting(false);
+  global.LanguageModel = { availability: () => new Promise(() => {}) };
+  const status = getModelStatus();
+
+  t.mock.timers.tick(5000);
+  assert.equal(await status, 'unavailable');
+});
+
+test('constructSession rejects when native availability stalls', async t => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  global.LanguageModel = { availability: () => new Promise(() => {}) };
+  const session = constructSession();
+
+  t.mock.timers.tick(5000);
+  await assert.rejects(session, { message: 'unavailable' });
+});
+
 test('getModelStatus maps the legacy capabilities namespace', async () => {
   global.window = { ai: { languageModel: { capabilities: async () => ({ available: 'readily' }) } } };
   assert.equal(await getModelStatus(), 'available');
@@ -926,17 +945,20 @@ test('getModelStatus reports unavailable when neither API namespace exists', asy
 
 test('concurrent reusable session callers share one creation promise', async () => {
   let release;
+  let markCreationStarted;
+  const creationStarted = new Promise(resolve => { markCreationStarted = resolve; });
   let creates = 0;
   const session = { clone() {}, destroy() {} };
   global.LanguageModel = modernApi(async () => {
     creates++;
+    markCreationStarted();
     await new Promise(resolve => { release = resolve; });
     return session;
   });
 
   const first = getSession();
   const second = getSession();
-  await Promise.resolve();
+  await creationStarted;
   release();
   const [firstMetadata, secondMetadata] = await Promise.all([first, second]);
 
@@ -948,9 +970,12 @@ test('concurrent reusable session callers share one creation promise', async () 
 test('concurrent creation failure reaches all waiters and a later call retries', async () => {
   const failure = new Error('creation failed');
   let release;
+  let markCreationStarted;
+  const creationStarted = new Promise(resolve => { markCreationStarted = resolve; });
   let creates = 0;
   global.LanguageModel = modernApi(async () => {
     creates++;
+    markCreationStarted();
     if (creates === 1) {
       await new Promise(resolve => { release = resolve; });
       throw failure;
@@ -960,7 +985,7 @@ test('concurrent creation failure reaches all waiters and a later call retries',
 
   const first = getSession();
   const second = getSession();
-  await Promise.resolve();
+  await creationStarted;
   release();
   const rejected = await Promise.allSettled([first, second]);
 

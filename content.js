@@ -6,6 +6,7 @@ const MIN_LENGTH  = 15;
 const DEBOUNCE_MS = 900;
 const SESSION_TTL = 600_000;
 const ANALYSIS_TIMEOUT_MS = 30_000;
+const AVAILABILITY_TIMEOUT_MS = 5000;
 const MODEL_DOWNLOAD_TIMEOUT_MS = 300_000;
 const RESULT_CACHE_TTL = 300_000; // 5 minutes
 // Firefox's classifier has no "downloading" availability probe; if an analysis
@@ -134,13 +135,21 @@ function hasLocalPromptApi() {
     || (typeof window !== 'undefined' && !!window.ai?.languageModel);
 }
 
+function availabilityWithTimeout(promise) {
+  let timer;
+  const timeout = new Promise(resolve => {
+    timer = setTimeout(() => resolve('unavailable'), AVAILABILITY_TIMEOUT_MS);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+
 // Cheap, non-triggering check: availability()/capabilities() never starts a
 // download by themselves, so this can be polled before deciding whether to
 // show "Analyzing…" or an honest "model is still downloading" state.
 async function getModelStatus() {
   if (jevEnabled) return 'available';
   if (typeof LanguageModel !== 'undefined') {
-    const avail = await LanguageModel.availability();
+    const avail = await availabilityWithTimeout(LanguageModel.availability());
     if (avail === 'unavailable') return 'unavailable';
     return avail === 'available' ? 'available' : 'downloading';
   }
@@ -159,7 +168,7 @@ async function getModelStatus() {
 
 async function constructSession() {
   if (typeof LanguageModel !== 'undefined') {
-    const avail = await LanguageModel.availability();
+    const avail = await availabilityWithTimeout(LanguageModel.availability());
     if (avail === 'unavailable') throw new Error('unavailable');
     const initialPrompts = [{ role: 'system', content: SYSTEM_PROMPT }, ...FEW_SHOT];
     // Prefer a structured-output constraint for reliable JSON, but fall back
@@ -284,7 +293,7 @@ function cleanRewriteOutput(raw) {
 
 async function constructRewriteSession() {
   if (typeof LanguageModel !== 'undefined') {
-    const avail = await LanguageModel.availability();
+    const avail = await availabilityWithTimeout(LanguageModel.availability());
     if (avail === 'unavailable') throw new Error('unavailable');
     const initialPrompts = [{ role: 'system', content: REWRITE_SYSTEM_PROMPT }];
     const combos = [
@@ -649,7 +658,7 @@ async function getDetector() {
   if (detectorBusy) return null; // best-effort: skip rather than queue
   detectorBusy = true;
   try {
-    if (await LanguageDetector.availability() === 'unavailable') return null;
+    if (await availabilityWithTimeout(LanguageDetector.availability()) === 'unavailable') return null;
     detector = await LanguageDetector.create();
   } catch { detector = null; }
   finally { detectorBusy = false; }
@@ -678,7 +687,7 @@ async function getTranslator(target) {
   if (cached) return cached === 'unavailable' ? null : cached;
   const pair = { sourceLanguage: 'en', targetLanguage: target };
   try {
-    if (await Translator.availability(pair) === 'unavailable') {
+    if (await availabilityWithTimeout(Translator.availability(pair)) === 'unavailable') {
       translators.set(target, 'unavailable'); // genuinely unsupported — cache permanently
       return null;
     }

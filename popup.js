@@ -5,6 +5,19 @@ const LANG_OPTS = {
   expectedOutputs: [{ type: 'text', languages: ['en'] }],
 };
 
+const AVAILABILITY_TIMEOUT_MS = 5000;
+
+function availabilityWithTimeout(promise, onTimeout) {
+  let timer;
+  const timeout = new Promise(resolve => {
+    timer = setTimeout(() => {
+      onTimeout?.();
+      resolve('unavailable');
+    }, AVAILABILITY_TIMEOUT_MS);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+
 function storeUrl() {
   return navigator.userAgent.includes('Firefox')
     ? 'https://addons.mozilla.org/firefox/addon/comment-vibe-on-device-check/'
@@ -20,8 +33,13 @@ async function chromeAIStatus() {
     if (typeof LanguageModel !== 'undefined') {
       // Pass language options to satisfy the API requirement;
       // fall back without them for older Chrome builds that reject the options.
-      let avail = await LanguageModel.availability(LANG_OPTS);
-      if (avail === 'unavailable') avail = await LanguageModel.availability();
+      let availabilityTimedOut = false;
+      let avail = await availabilityWithTimeout(LanguageModel.availability(LANG_OPTS), () => {
+        availabilityTimedOut = true;
+      });
+      if (avail === 'unavailable' && !availabilityTimedOut) {
+        avail = await availabilityWithTimeout(LanguageModel.availability());
+      }
       if (avail === 'unavailable') return 'unavailable';
       return avail === 'available' || avail === 'downloading' ? avail : 'downloadable';
     }
