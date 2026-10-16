@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Microsoft Edge support.** Edge takes the Chrome package unchanged; the popup now detects Edge and shows Edge setup help (Edge 139+ on-device Phi-4-mini requirements, or Fast mode) instead of the Chrome/Gemini Nano steps. The release workflow submits each tag to Edge Add-ons when the `EDGE_PRODUCT_ID`, `EDGE_CLIENT_ID` and `EDGE_API_KEY` secrets are set (`scripts/publish-edge.js`; optional `EDGE_CERTIFICATION_NOTES` secret for reviewer test steps); listing copy in `store-assets/edge/listing.md`.
 
+### Fixed
+
+- **Rewrite tools:** When on-device AI is unavailable, the tooltip explains why rewriting cannot run instead of showing unusable mode chips; the same message appears if the local model is unavailable when a rewrite is requested.
+
 ## [1.7.0] - 2026-10-13
 
 ### Changed

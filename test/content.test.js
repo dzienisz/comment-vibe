@@ -15,6 +15,7 @@ const {
   beginInputChange,
   buildMessages,
   buildRewriteMessages,
+  buildTooltipTools,
   cacheKey,
   cleanRewriteOutput,
   cleanResultCache,
@@ -1363,6 +1364,66 @@ const clickButtonWithText = (root, selector, text) => {
   assert.ok(button, `button "${text}" (${selector})`);
   button.click();
 };
+
+test('buildTooltipTools explains local AI is needed when no Prompt API is available', () => {
+  const { state } = attachFakeField();
+  try {
+    delete global.LanguageModel;
+    delete global.window.ai;
+    const tools = buildTooltipTools(() => {});
+
+    assert.equal(tools.querySelector('.cv-tooltip-tools-label').textContent, 'Improve this text');
+    assert.equal(tools.querySelectorAll('.cv-tooltip-chip').length, 0);
+    assert.equal(
+      tools.querySelector('.cv-tooltip-note').textContent,
+      'Rewriting needs on-device AI, which isn’t available in this browser.',
+    );
+  } finally {
+    state.cleanup();
+  }
+});
+
+test('buildTooltipTools renders all five rewrite modes when LanguageModel is available', () => {
+  const { state } = attachFakeField();
+  try {
+    global.LanguageModel = modernApi(async () => {});
+    const tools = buildTooltipTools(() => {});
+
+    const chips = tools.querySelectorAll('.cv-tooltip-chip');
+    assert.equal(chips.length, 5);
+    assert.deepEqual(chips.map(chip => chip.dataset.mode), Object.keys(REWRITE_MODES));
+    assert.equal(tools.querySelector('.cv-tooltip-note'), null);
+  } finally {
+    state.cleanup();
+  }
+});
+
+test('unavailable rewrite model shows the local AI guidance in the tooltip', async () => {
+  let availabilityCalls = 0;
+  global.LanguageModel = {
+    availability: async () => ++availabilityCalls <= 2 ? 'available' : 'unavailable',
+    create: async () => ({
+      clone: async () => ({
+        async * promptStreaming() { yield NEGATIVE_WITH_REWRITE; },
+        destroy() {},
+      }),
+      destroy() {},
+    }),
+  };
+  applySettings([], true, 'auto');
+  const { el, state } = attachFakeField();
+  try {
+    await typeAndAnalyze(el, 'that is an outrageously terrible post');
+    assert.equal(availabilityCalls, 2);
+    clickButtonWithText(state.tooltip, '.cv-tooltip-chip', 'Fix grammar');
+    await sleep(0);
+
+    assert.equal(availabilityCalls, 3);
+    assert.match(state.tooltip.textContent, /Rewriting needs on-device AI, which isn’t available in this browser\./);
+  } finally {
+    state.cleanup();
+  }
+});
 
 test('applying the suggested rewrite shows the applied state without re-analyzing', async () => {
   const stats = { analyses: 0 };

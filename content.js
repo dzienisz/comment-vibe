@@ -73,6 +73,8 @@ const REWRITE_MODES = {
                   instruction: 'Make it clearer and easier to read: simpler words, shorter sentences, one idea per sentence. Keep the meaning and length roughly the same.' },
 };
 
+const REWRITE_LOCAL_AI_NOTE = 'Rewriting needs on-device AI, which isn’t available in this browser.';
+
 const LANGUAGE_OPTIONS = {
   expectedInputs:  [{ type: 'text', languages: ['en'] }],
   expectedOutputs: [{ type: 'text', languages: ['en'] }],
@@ -125,6 +127,11 @@ function sessionMetadata(session, fewShotBaked, responseConstraint) {
 
 function supportsReducedOptionsRetry(error) {
   return error instanceof TypeError || error?.name === 'NotSupportedError';
+}
+
+function hasLocalPromptApi() {
+  return typeof LanguageModel !== 'undefined'
+    || (typeof window !== 'undefined' && !!window.ai?.languageModel);
 }
 
 // Cheap, non-triggering check: availability()/capabilities() never starts a
@@ -1096,6 +1103,13 @@ function buildTooltipTools(onRewrite) {
   const toolsLabel = document.createElement('span');
   toolsLabel.className = 'cv-tooltip-tools-label';
   toolsLabel.textContent = 'Improve this text';
+  if (!hasLocalPromptApi()) {
+    const note = document.createElement('p');
+    note.className = 'cv-tooltip-note';
+    note.textContent = REWRITE_LOCAL_AI_NOTE;
+    tools.append(toolsLabel, note);
+    return tools;
+  }
   const chips = document.createElement('div');
   chips.className = 'cv-tooltip-chips';
   for (const [mode, config] of Object.entries(REWRITE_MODES)) {
@@ -1539,7 +1553,9 @@ function attachToInput(el) {
       showResult(text);
     }).catch(error => {
       if (error?.name === 'AbortError' || controller.signal.aborted) return;
-      pending.textContent = 'Couldn’t rewrite — try again.';
+      pending.textContent = error?.message === 'unavailable' || error?.message === 'Chrome AI not found'
+        ? REWRITE_LOCAL_AI_NOTE
+        : 'Couldn’t rewrite — try again.';
     }).finally(() => {
       finish();
       placeTooltip(tooltip, badge);
@@ -1953,6 +1969,7 @@ if (typeof module !== 'undefined' && module.exports) {
     beginInputChange,
     buildMessages,
     buildRewriteMessages,
+    buildTooltipTools,
     cacheKey,
     cleanRewriteOutput,
     cleanResultCache,
