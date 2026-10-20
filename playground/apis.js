@@ -21,12 +21,12 @@ const dl = report => m =>
   });
 
 const RELEASE_INFO = {
-  verifiedAt: '2026-09-10',
-  stable: 153,
-  beta: 154,
-  nextStableDate: '2026-09-22',
-  source: 'https://developer.chrome.com/blog/chrome-two-week-start',
-  betaSource: 'https://developer.chrome.com/blog/chrome-154-beta',
+  verifiedAt: '2026-10-20',
+  stable: 156,
+  beta: 157,
+  nextStableDate: '2026-11-03',
+  source: 'https://chromiumdash.appspot.com/schedule',
+  betaSource: 'https://chromestatus.com/release-notes/157',
   roadmap: 'https://chromestatus.com/roadmap',
 };
 
@@ -121,7 +121,9 @@ const APIS = [
       Obsługę konkretnej kombinacji sprawdzaj przez <code>availability()</code> z tymi samymi
       <code>expectedInputs</code> i <code>expectedOutputs</code>, których użyjesz w <code>create()</code>;
       wejście audio wymaga GPU. Udokumentowane języki to en, ja, es, de i fr — demo domyślnie używa angielskiego.
-      <br><br>Na web parametr <code>samplingMode</code> pozostaje osobnym origin trial.
+      <br><br>Na web parametr <code>samplingMode</code> pozostaje osobnym origin trial, przedłużonym do Chrome 159
+      (Chrome Status wpisuje wydanie na Chrome 160 — bez potwierdzenia). Tryb rozumowania
+      (<code>thinkingEffort</code>) jest dopiero na etapie Intent to Prototype.
       <code>topK</code>, <code>temperature</code> i <code>LanguageModel.params()</code> to nadal ścieżka
       rozszerzeń, nie domyślne API strony. Rozwój kolejnych języków nie ma tu przypisanej daty stable.`,
     versions: [
@@ -269,6 +271,7 @@ console.log(pl);`,
       język przetłumaczyć etykietę i sugestię.`,
     versions: [
       { v: 'Chrome 138', label: 'Stabilne (web + rozszerzenia)', state: 'now' },
+      { v: 'Chrome 157', label: 'Android: Chrome Status planuje wydanie (status Proposed — bez potwierdzenia)', state: 'future' },
     ],
     links: [
       { label: 'Dokumentacja: Language Detection', url: 'https://developer.chrome.com/docs/ai/language-detection' },
@@ -443,12 +446,12 @@ console.log(result.corrections); // lista poprawek`,
     },
   },
 
-  // ── Decisions API (prototyp) ───────────────────────────────────────────────────
+  // ── Decisions API (developer trial) ────────────────────────────────────────────
   {
     id: 'decisions',
     name: 'Decisions API',
     globalName: 'DecisionModel',
-    status: 'prototype',
+    status: 'dev-trial',
     tagline: '„Semantyczny if": szybkie decyzje i klasyfikacja bez generowania tekstu.',
     description: `Lokalny model „System One" (w stylu Jev i Laya): dostaje tekst i z góry
       zdefiniowane pytania (<code>boolean</code>, <code>choice</code>, <code>score</code>), a w jednym
@@ -456,15 +459,19 @@ console.log(result.corrections); // lista poprawek`,
       więc nie może zwrócić etykiety spoza listy. Google celuje w dziesiątki–setki milisekund na zwykłym
       laptopie. Dla Comment Vibe to naturalny kandydat na sam badge tonu: pytanie z trybu Fast mode
       (Jev) przenosi się 1:1.
-      <br><br><strong>Na razie tylko Intent to Prototype</strong> — w Chrome nie ma jeszcze implementacji.
-      DevTrial ma się pojawić w Canary za flagą <code>chrome://flags/#ai-decisions-api</code>.
-      Demo zadziała dziś z <a target="_blank" rel="noopener" href="https://web-ai.studio/extension">rozszerzeniem
+      <br><br><strong>Developer trial od Chrome 157</strong> za flagą <code>chrome://flags/#decisions-api</code>
+      (backend EmbeddingGemma V1 albo Gemma 4 na CPU). Sprawdziliśmy w Chrome 158 Dev: z flagą
+      pojawia się natywne <code>DecisionModel</code> z <code>availability()</code>, <code>create()</code>,
+      <code>decide()</code> i <code>destroy()</code>; w Chrome 155 Stable go nie ma. Bez dostępnego
+      modelu (np. wyłączone <em>On-device AI</em> w <code>chrome://settings/ai</code>) zwraca „unavailable”.
+      Demo zadziała też z <a target="_blank" rel="noopener" href="https://web-ai.studio/extension">rozszerzeniem
       WebAI</a>, które dodaje <code>DecisionModel</code> na stronach z lokalnym modelem Laya (~690 MB).
       W naszym teście na 10 komentarzach (EN+PL) Laya trafiła 8/10 (pomyliła sarkazm i polską obelgę),
       a Jev w chmurze 10/10. Kształt API może się jeszcze zmienić.`,
     versions: [
-      { v: 'Październik 2026', label: 'Intent to Prototype na blink-dev + explainer WICG', state: 'now' },
-      { v: 'Chrome Canary', label: 'Planowany DevTrial za flagą #ai-decisions-api — bez potwierdzonej wersji', state: 'future' },
+      { v: 'Październik 2026', label: 'Intent to Prototype na blink-dev + explainer WICG', state: 'past' },
+      { v: 'Chrome 157', label: 'Developer trial za flagą #decisions-api (desktop)', state: 'now' },
+      { v: 'Kolejne wersje', label: 'Origin trial / stable — brak potwierdzonej daty', state: 'future' },
     ],
     links: [
       { label: 'Explainer: Decisions API', url: 'https://github.com/explainers-by-googlers/decisions-api' },
@@ -472,7 +479,7 @@ console.log(result.corrections); // lista poprawek`,
       { label: 'Playground Decisions w Web AI Studio', url: 'https://web-ai.studio/playgrounds/decisions' },
       { label: 'Rozszerzenie WebAI (polyfill z modelem Laya)', url: 'https://web-ai.studio/extension' },
     ],
-    usage: `// Szkic z explainera — API jest na etapie prototypu i może się zmienić.
+    usage: `// Wymaga chrome://flags/#decisions-api (Chrome 157+) — API może się zmienić.
 const schema = {
   context: 'Comment box tone check',
   questions: [
@@ -580,13 +587,14 @@ if (await SemanticEmbedder.availability() !== 'unavailable') {
       wycofywane od Chrome 150 — narzędzia należą do konkretnej strony, nie do przeglądarki),
       a w Chrome 153 <code>execute(input, { signal })</code> pozwala obsługiwać anulowanie
       wywołań. Wyrejestrowanie narzędzia nie przerywa już trwającego wykonania.
-      <strong>Chrome 153 jest stabilny, ale WebMCP nadal jest origin trial</strong> — numer
+      <strong>Chrome 156 jest stabilny, ale WebMCP nadal jest origin trial</strong> (przedłużonym do Chrome 162) — numer
       przeglądarki nie oznacza stabilności API. Wykrycie <code>registerTool</code> nie potwierdza
       obecności agenta. To wpis informacyjny, bez dema; agent może korzystać z usług sieciowych.`,
     versions: [
       { v: 'Chrome 149', label: 'Origin trial (od czerwca 2026) — wcześniej tylko za flagą', state: 'past' },
       { v: 'Chrome 150', label: 'navigator.modelContext wycofywane na rzecz document.modelContext', state: 'past' },
-      { v: 'Chrome 153', label: 'Anulowanie przez execute(input, { signal }); wyrejestrowanie nie przerywa aktywnych wywołań. API nadal w trial.', state: 'now' },
+      { v: 'Chrome 153', label: 'Anulowanie przez execute(input, { signal }); wyrejestrowanie nie przerywa aktywnych wywołań.', state: 'past' },
+      { v: 'Chrome 156', label: 'Origin trial przedłużony do Chrome 162. API nadal w trial.', state: 'now' },
       { v: 'Kolejne wersje', label: 'Brak potwierdzonej daty stable WebMCP; śledź dokumentację i wykrywaj metody, nie numer Chrome.', state: 'future' },
     ],
     links: [
@@ -626,7 +634,7 @@ const RESOURCES = [
     { label: 'Built-in AI: status wszystkich API', url: 'https://developer.chrome.com/docs/ai/built-in-apis',
       note: 'Oficjalna tabela statusów i wersji.' },
     { label: 'Pierwsze kroki i wymagania sprzętowe', url: 'https://developer.chrome.com/docs/ai/get-started',
-      note: 'Wymagania, pobieranie modeli, chrome://on-device-internals.' },
+      note: 'Wymagania i pobieranie modeli. Przełącznik On-device AI: chrome://settings/ai.' },
     { label: 'Polyfille Writer/Rewriter', url: 'https://github.com/GoogleChromeLabs/web-ai-demos/tree/main/writer-rewriter-polyfills',
       note: 'Writer i Rewriter zbudowane na Prompt API.' },
   ] },

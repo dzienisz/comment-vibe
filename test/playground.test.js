@@ -23,15 +23,16 @@ function defaults(api) {
 
 test('release snapshot distinguishes stable from planned releases', () => {
   const { RELEASE_INFO, APIS } = loadPlayground();
-  assert.equal(RELEASE_INFO.verifiedAt, '2026-09-10');
-  assert.equal(RELEASE_INFO.stable, 153);
-  assert.equal(RELEASE_INFO.beta, 154);
-  assert.equal(RELEASE_INFO.nextStableDate, '2026-09-22');
+  assert.equal(RELEASE_INFO.verifiedAt, '2026-10-20');
+  assert.equal(RELEASE_INFO.stable, 156);
+  assert.equal(RELEASE_INFO.beta, 157);
+  assert.equal(RELEASE_INFO.nextStableDate, '2026-11-03');
   assert.equal(APIS.find(api => api.id === 'proofreader').status, 'dev-trial');
   assert.equal(APIS.find(api => api.id === 'writer').status, 'deprecating');
   assert.equal(APIS.find(api => api.id === 'rewriter').status, 'deprecating');
   assert.equal(APIS.find(api => api.id === 'webmcp').status, 'origin-trial');
-  assert.equal(APIS.find(api => api.id === 'webmcp').versions.find(v => v.v === 'Chrome 153').state, 'now');
+  assert.equal(APIS.find(api => api.id === 'webmcp').versions.find(v => v.v === 'Chrome 156').state, 'now');
+  assert.equal(APIS.find(api => api.id === 'decisions').status, 'dev-trial');
 });
 
 test('modern Prompt API takes precedence over legacy without creating a session', async () => {
@@ -196,7 +197,7 @@ test('Decisions API passes the tone schema to availability and formats the decis
     availability: async options => { schema = options; return 'downloadable'; },
   } });
   const api = APIS.find(api => api.id === 'decisions');
-  assert.equal(api.status, 'prototype');
+  assert.equal(api.status, 'dev-trial');
   assert.equal(await checkApi(api), 'downloadable');
   assert.equal(JSON.stringify(schema.questions.map(q => q.id)), '["tone","contains_pii"]');
   assert.equal(schema.questions[0].options.map(o => o.label).join(), 'positive,neutral,negative,toxic');
