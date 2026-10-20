@@ -474,19 +474,31 @@ async function initFirefoxPopup(els, fastMode) {
     .contains({ permissions: ['trialML'] })
     .catch(() => false);
 
+  // The permission survives Settings → AI controls blocking the API, so ask the
+  // background script whether Firefox still allows it.
+  const blocked = granted && await browser.runtime
+    .sendMessage({ type: 'cv-status' })
+    .then(status => status?.blocked === true)
+    .catch(() => false);
+
   setCloudBadge(fastMode);
-  if (granted) {
+  if (granted && !blocked) {
     setStatus(els, 'ok', 'Firefox AI ready ✓');
     return;
   }
 
-  onFastModeChange = on => setStatus(els, on ? 'ok' : 'err', on ? 'Fast mode ready ✓' : 'On-device AI not enabled');
+  const offText = blocked ? 'Firefox AI is blocked' : 'On-device AI not enabled';
+  onFastModeChange = on => setStatus(els, on ? 'ok' : 'err', on ? 'Fast mode ready ✓' : offText);
   onFastModeChange(fastMode);
   const setupFf  = document.getElementById('setup-firefox');
   const enable   = document.getElementById('ff-enable');
   const progress = document.getElementById('ff-progress');
   const bar      = document.getElementById('ff-bar');
   setupFf.classList.add('visible');
+  if (blocked) {
+    progress.hidden = false;
+    progress.textContent = firefoxSetupHint('Trial ML API is disabled');
+  }
 
   browser.runtime.onMessage.addListener(message => {
     if (message?.type !== 'cv-progress') return;
