@@ -39,6 +39,19 @@ Full manual testing on Firefox requires:
 - Package the Firefox zip (below) and load it via `about:debugging` → "Load Temporary Add-on"
 - Click "Enable on-device AI" in the popup (grants `trialML`, downloads the classifier once)
 
+Firefox AI playground: `playground-firefox/` is a separate, standalone
+Firefox add-on (own gecko id, optional `trialML`) with one live demo per
+`browser.trial.ml` task — not part of Comment Vibe and excluded from both store
+zips. Firefox allows one trial.ml engine per extension run with no way to close
+it, so switching task reloads the add-on (`browser.runtime.reload()`) and
+`background.js` reopens the page on the chosen task. `styles.css` must stay a
+byte-for-byte copy of `playground/styles.css` (`firefox.css` holds the
+overrides); `test/playground-firefox.test.js` enforces it. Automating it in
+real Firefox over WebDriver BiDi needs `--remote-allow-system-access` and
+`user_pref("remote.prefs.recommended", false)`: the remote agent's recommended
+prefs otherwise set `browser.ml.enable` to `false`, and the API reports
+"Trial ML API is disabled".
+
 ## Distribution
 
 Packaging is scripted — do not hand-roll zip commands (they drift). These are

@@ -734,3 +734,37 @@ const AVAIL_META = {
   'no-api':       { label: '🚫 Brak tego API w przeglądarce', cls: 'av-no' },
   'error':        { label: '⚠️ Błąd sprawdzania (zobacz konsolę)', cls: 'av-no' },
 };
+
+// Firefox: stan lokalnego AI (zakładka „Firefox"). Firefox nie ma tych API na
+// stronach WWW — lokalne AI jest tylko dla rozszerzeń (browser.trial.ml), więc
+// dema na żywo są w osobnym rozszerzeniu playground-firefox/.
+const FIREFOX_STATUS = {
+  verifiedAt: '2026-10-20',
+  release: 158,
+  beta: 159,
+  nightly: 160,
+  esr: '153.5.0esr',
+  docs: 'https://firefox-source-docs.mozilla.org/toolkit/components/ml/extensions.html',
+  playgroundUrl: 'https://github.com/dzienisz/comment-vibe/tree/main/playground-firefox',
+  webApis: [
+    { api: 'Prompt API (LanguageModel)', position: 'negative', issue: 1213 },
+    { api: 'Translator', position: 'negative', issue: 1015 },
+    { api: 'Summarizer, Writer, Rewriter', position: 'negative', issue: 1067 },
+    { api: 'Language Detector', position: 'open', issue: 1219 },
+    { api: 'WebNN (navigator.ml)', position: 'positive', issue: 1215 },
+  ],
+  tasks: [
+    'text-classification', 'token-classification', 'question-answering', 'fill-mask',
+    'summarization', 'translation', 'text2text-generation', 'text-generation',
+    'zero-shot-classification', 'feature-extraction', 'image-to-text', 'image-classification',
+    'image-segmentation', 'zero-shot-image-classification', 'object-detection',
+    'zero-shot-object-detection', 'document-question-answering', 'image-to-image',
+    'depth-estimation', 'image-feature-extraction', 'text-to-speech', 'text-to-audio',
+  ],
+};
+
+const POSITION_META = {
+  negative: { label: 'Mozilla: negatywne stanowisko', cls: 'av-no' },
+  open:     { label: 'Mozilla: brak decyzji', cls: 'av-pending' },
+  positive: { label: 'Mozilla: pozytywne, niewdrożone', cls: 'av-dl' },
+};

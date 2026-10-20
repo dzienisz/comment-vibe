@@ -1,0 +1,16 @@
+/* Uzupełnienia do styles.css (kopia z playground/ — trzymaj w zgodzie). */
+:root { --accent: #e66000; }
+.field input[type="text"] {
+  width: 100%;
+  font: inherit;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: #fff;
+  color: var(--text);
+}
+.field input[type="text"]:focus { outline: 2px solid var(--accent); border-color: transparent; }
+.raw { margin-top: 12px; }
+.raw summary { cursor: pointer; color: var(--muted); font-size: 13.5px; }
+.raw pre { max-height: 320px; overflow: auto; }
+.foot-note a { color: inherit; }
