@@ -31,6 +31,7 @@ Full manual testing on Chrome requires:
 - Chrome 127+ (desktop only — no mobile support)
 - Gemini Nano enabled via `chrome://flags/#optimization-guide-on-device-model` and `chrome://flags/#prompt-api-for-gemini-nano`
 - Model downloaded: confirm at `chrome://components` → "Optimization Guide On Device Model"
+- On Chrome 152+, _On-device AI_ on in `chrome://settings/ai` (146–151: `chrome://settings/system`). When it is off, `availability()` returns `unavailable`. Stable defaults it on; Beta/Dev/Canary 157+ default it off in a fresh profile
 
 Full manual testing on Firefox requires:
 - Firefox 134+ (Nightly, or set `browser.ml.enable` and `extensions.ml.enabled` to `true` in `about:config`)

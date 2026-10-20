@@ -118,3 +118,14 @@ test('chromeAIStatus preserves a quickly available Prompt API result', async () 
   assert.equal(calls, 1);
   assert.equal(popup.pendingTimerCount, 0);
 });
+
+test('aiSettingsUrl opens the AI settings page on Chrome 152+ and System settings before that', () => {
+  const context = vm.createContext({ window: {}, navigator: { userAgent: '' } });
+  vm.runInContext(popupDeclarations, context, { filename: 'popup.js' });
+  const ua = v => `Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${v} Safari/537.36`;
+
+  assert.equal(context.aiSettingsUrl(ua('155.0.8059.84')), 'chrome://settings/ai');
+  assert.equal(context.aiSettingsUrl(ua('152.0.0.0')), 'chrome://settings/ai');
+  assert.equal(context.aiSettingsUrl(ua('151.0.0.0')), 'chrome://settings/system');
+  assert.equal(context.aiSettingsUrl('Mozilla/5.0'), 'chrome://settings/ai');
+});
