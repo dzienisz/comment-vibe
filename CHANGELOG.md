@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Firefox AI playground.** Firefox exposes none of Chrome's built-in AI web APIs, so the API playground cannot demo anything there. New `playground-firefox/`: a standalone Firefox add-on (not part of Comment Vibe, excluded from both store zips) with one live demo per `browser.trial.ml` task — zero-shot (including Comment Vibe's multilingual model), sentiment, NER, question answering, fill-mask, summarization, translation, Flan-T5, text generation and embeddings — plus model download progress, the raw `runEngine` output, a code sample and a "delete cached models" button. Firefox allows one engine per extension run, so switching task reloads the add-on and reopens the page on that task.
+- **Playground: Edge tab.** `playground/#edge` shows each API's state in Microsoft Edge (Stable 155 / Dev 157): Translator and Language Detector on by default since Edge 148, Summarizer on by default in Canary/Dev, Prompt, Writer, Rewriter and Proofreader behind `edge://flags` on Canary/Dev (their origin trials have ended), WebMCP in origin trial, Decisions and Semantic Embedder absent. It also covers Phi-4-mini vs the Aion-1.0-Instruct CPU model, hardware and the admin policy. Edge visitors without the Prompt API get an Edge-specific banner. Edge and Firefox now sit at the bottom of the sidebar under an "Inne przeglądarki" separator.
+- **Playground: Firefox tab.** `playground/#firefox` lists the Chrome web APIs as unavailable in Firefox with Mozilla's standards positions, explains the extension-only `browser.trial.ml` API, AI controls and the Firefox 134–139 prefs, and links to the add-on. Firefox visitors get a banner pointing there instead of the Prompt API warning.
+
 ### Changed
 
 - **Firefox setup help covers AI controls.** Blocking AI features in Firefox Settings → AI controls (Firefox 148+) sets `extensions.ml.enabled` to `false`, so `browser.trial.ml` rejects with "Trial ML API is disabled". The popup's Firefox setup help now says to allow AI features there, and that error gets the same hint instead of "check the about:config flags". The about:config step is limited to Firefox 134–139, since both prefs are on by default from Firefox 140. README, `CLAUDE.md` and the AMO listing copy match, and `test/popup-harness.html?browser=firefox&blocked=1` shows the blocked case.

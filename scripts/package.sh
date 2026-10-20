@@ -38,7 +38,7 @@ rm -f "$CHROME_ZIP" "$FF_ZIP"
 # files (background.js and the Firefox manifest must never ship to Chrome).
 zip -rq "$CHROME_ZIP" . \
   -x "*.DS_Store" -x "*.zip" -x "*.git*" -x ".claude/*" -x ".github/*" \
-     -x ".gitignore" -x "*.md" -x "store-assets/*" -x "playground/*" \
+     -x ".gitignore" -x "*.md" -x "store-assets/*" -x "playground/*" -x "playground-firefox/*" \
      -x "test/*" -x "plans/*" -x "scripts/*" -x "icons/make-icons.html" \
      -x "manifest.firefox.json" -x "background.js"
 

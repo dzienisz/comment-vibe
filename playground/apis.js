@@ -734,3 +734,82 @@ const AVAIL_META = {
   'no-api':       { label: '🚫 Brak tego API w przeglądarce', cls: 'av-no' },
   'error':        { label: '⚠️ Błąd sprawdzania (zobacz konsolę)', cls: 'av-no' },
 };
+
+// Firefox: stan lokalnego AI (zakładka „Firefox"). Firefox nie ma tych API na
+// stronach WWW — lokalne AI jest tylko dla rozszerzeń (browser.trial.ml), więc
+// dema na żywo są w osobnym rozszerzeniu playground-firefox/.
+const FIREFOX_STATUS = {
+  verifiedAt: '2026-10-20',
+  release: 158,
+  beta: 159,
+  nightly: 160,
+  esr: '153.5.0esr',
+  docs: 'https://firefox-source-docs.mozilla.org/toolkit/components/ml/extensions.html',
+  playgroundUrl: 'https://github.com/dzienisz/comment-vibe/tree/main/playground-firefox',
+  webApis: [
+    { api: 'Prompt API (LanguageModel)', position: 'negative', issue: 1213 },
+    { api: 'Translator', position: 'negative', issue: 1015 },
+    { api: 'Summarizer, Writer, Rewriter', position: 'negative', issue: 1067 },
+    { api: 'Language Detector', position: 'open', issue: 1219 },
+    { api: 'WebNN (navigator.ml)', position: 'positive', issue: 1215 },
+  ],
+  tasks: [
+    'text-classification', 'token-classification', 'question-answering', 'fill-mask',
+    'summarization', 'translation', 'text2text-generation', 'text-generation',
+    'zero-shot-classification', 'feature-extraction', 'image-to-text', 'image-classification',
+    'image-segmentation', 'zero-shot-image-classification', 'object-detection',
+    'zero-shot-object-detection', 'document-question-answering', 'image-to-image',
+    'depth-estimation', 'image-feature-extraction', 'text-to-speech', 'text-to-audio',
+  ],
+};
+
+const POSITION_META = {
+  negative: { label: 'Mozilla: negatywne stanowisko', cls: 'av-no' },
+  open:     { label: 'Mozilla: brak decyzji', cls: 'av-pending' },
+  positive: { label: 'Mozilla: pozytywne, niewdrożone', cls: 'av-dl' },
+};
+
+// Edge: stan wbudowanego AI (zakładka „Edge"). Edge ma te same globalne obiekty
+// co Chrome, więc dema z tego środowiska działają w Edge, gdy API jest włączone.
+// Źródło: dokumentacja Microsoft Edge (web-platform) i noty wydań 147–156.
+const EDGE_STATUS = {
+  verifiedAt: '2026-10-20',
+  stable: 155,
+  beta: 156,
+  nextStableDate: '2026-10-22',
+  dev: 157,
+  canary: 158,
+  docs: 'https://learn.microsoft.com/microsoft-edge/web-platform/prompt-api',
+  demos: 'https://microsoftedge.github.io/Demos/built-in-ai/',
+  insider: 'https://www.microsoft.com/edge/download/insider',
+  apis: [
+    { id: 'prompt', state: 'preview', doc: 'prompt-api', note:
+      'Canary/Dev 138+. Flaga <em>Prompt API for on-device language model</em> (wewnętrznie ' +
+      '<code>edge-llm-prompt-api-for-phi-mini</code> w Stable 155, <code>edge-llm-prompt-api-for-default</code> w Dev 157). ' +
+      'Origin trial był w notach Edge 149–150; <code>topK</code>/<code>temperature</code> mają osobny OT (155–156).' },
+    { id: 'summarizer', state: 'insider', doc: 'writing-assistance-apis', note:
+      'Włączone domyślnie w Canary/Dev od 138.0.3309.2 (developer preview); Microsoft nie opisuje Stable.' },
+    { id: 'translator', state: 'default', doc: 'translator-api', note:
+      'Od Edge 148, własny model tłumaczeń wbudowany w Edge (nie Phi-4-mini).' },
+    { id: 'detector', state: 'default', doc: 'languagedetector-api', note:
+      'Od Edge 148; od 151 rozróżnia <code>zh-Hant</code> i <code>zh-Hans</code>.' },
+    { id: 'writer', state: 'preview', doc: 'writing-assistance-apis', note:
+      'Canary/Dev 138+, flaga <em>Writer API for on-device language model</em> (do Edge 149: „… for Phi mini”). ' +
+      'Origin trial wygasł 21.04.2026.' },
+    { id: 'rewriter', state: 'preview', doc: 'writing-assistance-apis', note:
+      'Canary/Dev 138+, flaga <em>Rewriter API for on-device language model</em>. Origin trial wygasł 21.04.2026.' },
+    { id: 'proofreader', state: 'preview', doc: 'proofreader-api', note:
+      'Canary/Dev 142+, flaga <em>Proofreader API for Phi mini</em>. Origin trial wygasł 19.05.2026.' },
+    { id: 'decisions', state: 'none', note: 'Brak w dokumentacji i notach wydań Edge.' },
+    { id: 'embedder', state: 'none', note: 'Brak w dokumentacji i notach wydań Edge.' },
+    { id: 'webmcp', state: 'ot', note: 'Origin trial (noty wydań Edge 150–156).' },
+  ],
+};
+
+const EDGE_STATE_META = {
+  default: { label: '✅ Włączone domyślnie', cls: 'av-ok' },
+  insider: { label: '✅ Domyślnie w Canary/Dev', cls: 'av-ok' },
+  preview: { label: '🧪 Flaga, Canary/Dev', cls: 'av-dl' },
+  ot:      { label: 'Origin Trial', cls: 'av-pending' },
+  none:    { label: '🚫 Brak w Edge', cls: 'av-no' },
+};

@@ -79,6 +79,9 @@ function buildSidebar() {
   for (const api of APIS) {
     nav.appendChild(navItem(api.id, api.name, STATUS_META[api.status].cls));
   }
+  nav.appendChild(el('div', { class: 'nav-sep', text: 'Inne przeglądarki' }));
+  nav.appendChild(navItem('edge', 'Microsoft Edge', 'st-neutral'));
+  nav.appendChild(navItem('firefox', 'Firefox', 'st-neutral'));
 
   const foot = document.getElementById('sidebar-foot');
   foot.innerHTML = '';
@@ -222,6 +225,148 @@ function infoRow(label, value) {
     el('span', { class: 'info-label', text: label }),
     el('span', { class: 'info-value', text: value }),
   ]);
+}
+
+// ── Panel: Firefox ──────────────────────────────────────────────────────────
+
+function isFirefox() {
+  return /Firefox\//.test(globalThis.navigator?.userAgent || '');
+}
+
+function renderFirefox() {
+  const main = document.getElementById('main');
+  main.innerHTML = '';
+  const fx = FIREFOX_STATUS;
+
+  main.appendChild(el('h1', { text: 'Firefox — lokalne AI' }));
+  main.appendChild(el('p', { class: 'lead', html:
+    `Firefox <strong>nie udostępnia stronom</strong> żadnego z API z tego środowiska, więc dema obok pokażą tam
+     „brak API”. Lokalne AI w Firefoksie jest <strong>tylko dla rozszerzeń</strong>: <code>browser.trial.ml</code>
+     (Firefox 134+) uruchamia modele Transformers.js na urządzeniu. Stan na <strong>${fx.verifiedAt}</strong>:
+     Firefox ${fx.release}, Beta ${fx.beta}, Nightly ${fx.nightly}, ESR ${fx.esr}.` }));
+
+  const web = el('div', { class: 'card' });
+  web.appendChild(el('h2', { text: 'API stron WWW w Firefoksie' }));
+  const table = el('table', { class: 'matrix' });
+  table.appendChild(el('thead', {}, el('tr', {}, [
+    el('th', { text: 'API' }), el('th', { text: 'W Firefoksie' }), el('th', { text: 'Stanowisko' }),
+  ])));
+  const tbody = el('tbody');
+  for (const row of fx.webApis) {
+    const meta = POSITION_META[row.position];
+    tbody.appendChild(el('tr', {}, [
+      el('td', { text: row.api }),
+      el('td', {}, el('span', { class: 'pill av-no', text: '🚫 Brak' })),
+      el('td', {}, el('a', { href: `https://github.com/mozilla/standards-positions/issues/${row.issue}`,
+        target: '_blank', rel: 'noopener' }, el('span', { class: `pill ${meta.cls}`, text: meta.label }))),
+    ]));
+  }
+  table.appendChild(tbody);
+  web.appendChild(el('div', { class: 'table-wrap' }, table));
+  main.appendChild(web);
+
+  const ext = el('div', { class: 'card' });
+  ext.appendChild(el('h2', { text: 'API rozszerzeń: browser.trial.ml' }));
+  ext.appendChild(el('p', { html:
+    'Każde zadanie ma własny mały model, a nie jeden czat. Dozwolone są modele z huba Mozilli oraz z organizacji ' +
+    '<strong>Mozilla</strong> i <strong>Xenova</strong> na Hugging Face. Rozszerzenie prosi o opcjonalne uprawnienie ' +
+    '<code>trialML</code>, ma jeden silnik naraz i nie może go zamknąć bez przeładowania. Comment Vibe w Firefoksie używa ' +
+    'zadania <code>zero-shot-classification</code>.' }));
+  ext.appendChild(el('p', { class: 'muted', text: `Zadania (taskName): ${fx.tasks.join(', ')}.` }));
+  ext.appendChild(el('div', { class: 'code-wrap' }, el('pre', {}, el('code', { text:
+`await browser.permissions.request({ permissions: ['trialML'] });
+await browser.trial.ml.createEngine({ taskName: 'summarization', modelHub: 'huggingface' });
+const [{ summary_text }] = await browser.trial.ml.runEngine({ args: [text] });` }))));
+  main.appendChild(ext);
+
+  const pg = el('div', { class: 'card' });
+  pg.appendChild(el('h2', { text: 'Firefox AI Playground — dema na żywo' }));
+  pg.appendChild(el('ol', { class: 'links' }, [
+    el('li', { html: `Pobierz folder <a target="_blank" rel="noopener" href="${fx.playgroundUrl}"><code>playground-firefox/</code></a> z repozytorium.` }),
+    el('li', { html: 'Otwórz <code>about:debugging#/runtime/this-firefox</code> → <em>Load Temporary Add-on…</em> i wybierz <code>playground-firefox/manifest.json</code>.' }),
+    el('li', { html: 'Kliknij ikonę rozszerzenia, przyznaj <code>trialML</code> i uruchom demo — pierwsze uruchomienie pobiera model.' }),
+  ]));
+  main.appendChild(pg);
+
+  const setup = el('div', { class: 'card' });
+  setup.appendChild(el('h2', { text: 'Gdy API jest wyłączone' }));
+  setup.appendChild(el('ul', { class: 'tips' }, [
+    el('li', { html: '<strong>Firefox 148+:</strong> blokada w Ustawieniach → <em>AI controls</em> wyłącza też <code>extensions.ml.enabled</code>; API zwraca wtedy „Trial ML API is disabled”.' }),
+    el('li', { html: '<strong>Firefox 134–139:</strong> ustaw <code>browser.ml.enable</code> i <code>extensions.ml.enabled</code> na <em>true</em> w <code>about:config</code> (od 140 domyślnie włączone).' }),
+  ]));
+  main.appendChild(setup);
+
+  main.appendChild(el('p', { class: 'muted', html:
+    `Źródła: <a target="_blank" rel="noopener" href="${fx.docs}">WebExtensions AI API</a> · ` +
+    '<a target="_blank" rel="noopener" href="https://github.com/mozilla/standards-positions">Mozilla standards positions</a> · ' +
+    '<a target="_blank" rel="noopener" href="https://github.com/mdn/browser-compat-data">MDN browser-compat-data</a>' }));
+}
+
+// ── Panel: Edge ─────────────────────────────────────────────────────────────
+
+function isEdge() {
+  const brands = globalThis.navigator?.userAgentData?.brands || [];
+  return brands.some(b => b.brand === 'Microsoft Edge') || /\bEdg\//.test(globalThis.navigator?.userAgent || '');
+}
+
+function renderEdge() {
+  const main = document.getElementById('main');
+  main.innerHTML = '';
+  const edge = EDGE_STATUS;
+  const docUrl = slug => `https://learn.microsoft.com/microsoft-edge/web-platform/${slug}`;
+
+  main.appendChild(el('h1', { text: 'Microsoft Edge — wbudowane AI' }));
+  main.appendChild(el('p', { class: 'lead', html:
+    `Edge ma <strong>te same API</strong> co Chrome (<code>LanguageModel</code>, <code>Translator</code>…), ale z innymi
+     modelami (Phi-4-mini lub Aion-1.0-Instruct zamiast Gemini Nano) i innym stanem wdrożenia. Dema w tym środowisku
+     działają w Edge, gdy dane API jest włączone. Stan na <strong>${edge.verifiedAt}</strong>: Edge ${edge.stable} Stable,
+     ${edge.beta} Beta (Stable ${edge.nextStableDate}), ${edge.dev} Dev, ${edge.canary} Canary.` }));
+
+  const card = el('div', { class: 'card' });
+  card.appendChild(el('h2', { text: 'API w Edge' }));
+  const table = el('table', { class: 'matrix' });
+  table.appendChild(el('thead', {}, el('tr', {}, [
+    el('th', { text: 'API' }), el('th', { text: 'W Edge' }), el('th', { text: 'Szczegóły' }),
+  ])));
+  const tbody = el('tbody');
+  for (const row of edge.apis) {
+    const api = APIS.find(a => a.id === row.id);
+    const meta = EDGE_STATE_META[row.state];
+    const name = row.doc
+      ? el('a', { href: docUrl(row.doc), target: '_blank', rel: 'noopener', text: api.name })
+      : el('span', { text: api.name });
+    tbody.appendChild(el('tr', {}, [
+      el('td', {}, name),
+      el('td', {}, el('span', { class: `pill ${meta.cls}`, text: meta.label })),
+      el('td', { class: 'muted', html: row.note }),
+    ]));
+  }
+  table.appendChild(tbody);
+  card.appendChild(el('div', { class: 'table-wrap' }, table));
+  main.appendChild(card);
+
+  const setup = el('div', { class: 'card' });
+  setup.appendChild(el('h2', { text: 'Jak włączyć (Canary/Dev)' }));
+  setup.appendChild(el('ol', { class: 'links' }, [
+    el('li', { html: `Zainstaluj <a target="_blank" rel="noopener" href="${edge.insider}">Edge Canary lub Dev</a>.` }),
+    el('li', { html: 'W <code>edge://flags</code> włącz flagę danego API (nazwy w tabeli) i uruchom Edge ponownie.' }),
+    el('li', { html: 'W <code>edge://on-device-internals</code> sprawdź <em>Device performance class</em>: ' +
+      '<strong>High</strong> lub wyżej obsługuje Phi-4-mini (GPU).' }),
+    el('li', { html: 'Przy klasie Medium/Low albo gdy sesja Phi-4-mini się wysypuje: włącz <em>Enable prerelease on-device ' +
+      'language model</em> (Canary/Dev 150.0.4070+) — Aion-1.0-Instruct działa na CPU i zastępuje Phi-4-mini.' }),
+  ]));
+  setup.appendChild(el('ul', { class: 'tips' }, [
+    el('li', { html: '<strong>Sprzęt:</strong> Windows 10/11 lub macOS 13.3+, 5,5 GB VRAM, 20 GB wolnego miejsca ' +
+      '(poniżej 10 GB model jest usuwany), sieć bez limitu danych.' }),
+    el('li', { html: 'Edge nie ma odpowiednika <code>chrome://settings/ai</code>. Administrator może wyłączyć model ' +
+      'polityką <code>GenAILocalFoundationalModelSettings</code>.' }),
+  ]));
+  main.appendChild(setup);
+
+  main.appendChild(el('p', { class: 'muted', html:
+    `Źródła: <a target="_blank" rel="noopener" href="${edge.docs}">Prompt API w Edge</a> · ` +
+    `<a target="_blank" rel="noopener" href="https://learn.microsoft.com/microsoft-edge/web-platform/release-notes/">noty wydań Edge</a> · ` +
+    `<a target="_blank" rel="noopener" href="${edge.demos}">dema Microsoftu</a>` }));
 }
 
 // ── Panel: pojedyncze API ─────────────────────────────────────────────────────
@@ -463,6 +608,29 @@ function buildDemo(api, onOptionsChange = () => {}, onDownload = () => {}) {
 function injectBanner(main) {
   if (getApi('LanguageModel')) return;                        // Prompt API jest — bez baneru
   if (sessionStorage.getItem('cv-banner-dismissed')) return;
+  if (isFirefox()) {
+    if (location.hash === '#firefox') return;
+    const fxBanner = el('div', { class: 'banner' }, [
+      el('span', { html: '🦊 Używasz <strong>Firefoksa</strong>: te API nie działają na stronach w Firefoksie. ' +
+        'Zobacz <a href="#firefox">stan lokalnego AI w Firefoksie</a> i rozszerzenie z demami na żywo.' }),
+      el('button', { class: 'banner-x', text: '✕', title: 'Ukryj',
+        onclick: () => { sessionStorage.setItem('cv-banner-dismissed', '1'); fxBanner.remove(); } }),
+    ]);
+    main.prepend(fxBanner);
+    return;
+  }
+  if (isEdge()) {
+    if (location.hash === '#edge') return;
+    const edgeBanner = el('div', { class: 'banner' }, [
+      el('span', { html: '⚠️ <strong>Prompt API</strong> nie jest dostępne w tym Edge. W Edge to wciąż developer preview: ' +
+        'Canary lub Dev i flaga w <code>edge://flags</code>. Zobacz <a href="#edge">stan API w Edge</a>; ' +
+        'Translator i Language Detector działają domyślnie od Edge 148.' }),
+      el('button', { class: 'banner-x', text: '✕', title: 'Ukryj',
+        onclick: () => { sessionStorage.setItem('cv-banner-dismissed', '1'); edgeBanner.remove(); } }),
+    ]);
+    main.prepend(edgeBanner);
+    return;
+  }
   const banner = el('div', { class: 'banner' }, [
     el('span', { html:
       '⚠️ <strong>Prompt API</strong> nie jest dostępne w tej przeglądarce. Od <strong>Chrome 148</strong> ' +
@@ -482,6 +650,8 @@ function route() {
   const id = (location.hash || '#overview').slice(1);
   setActive(id);
   if (id === 'overview') renderOverview();
+  else if (id === 'firefox') renderFirefox();
+  else if (id === 'edge') renderEdge();
   else {
     const api = APIS.find(a => a.id === id);
     if (api) renderApi(api); else renderOverview();
