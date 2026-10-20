@@ -124,7 +124,7 @@ function renderOverview() {
      To datowany stan dokumentacji, nie automatycznie aktualizowany wykaz wydań.` }));
   main.appendChild(el('p', { class: 'muted', html:
     `Kolejne wydanie: Chrome ${RELEASE_INFO.beta} Stable jest <strong>planowane na ${RELEASE_INFO.nextStableDate}</strong>.
-     Od Chrome 153 wydania Stable ukazują się co dwa tygodnie.
+     Od Chrome 153 wydania Stable ukazują się co dwa tygodnie; Chrome ${RELEASE_INFO.beta + 1} jest w kanale Dev.
      Plan nie jest potwierdzeniem wdrożenia API — trial nie staje się stable wraz z aktualizacją przeglądarki.
      <a target="_blank" rel="noopener" href="${RELEASE_INFO.source}">Harmonogram Google</a> ·
      <a target="_blank" rel="noopener" href="${RELEASE_INFO.betaSource}">Zmiany w Beta</a> ·
@@ -162,7 +162,10 @@ function renderOverview() {
   env.appendChild(el('p', { class: 'muted', html:
     'Modele są pobierane osobno. Pierwsze użycie może wymagać pobrania danych i aktywacji przez użytkownika; ' +
     'samo sprawdzenie dostępności nie uruchamia pobierania. Wymagania zależą od API, sprzętu, języka i polityk przeglądarki. ' +
-    'Status zobaczysz w <code>chrome://on-device-internals</code>. ' +
+    'Lokalny model działa tylko przy włączonym <em>On-device AI</em> w <code>chrome://settings/ai</code> ' +
+    '(Chrome 152+; wcześniej <code>chrome://settings/system</code>). Stable ma go domyślnie włączonego, ' +
+    'nowe profile Beta, Dev i Canary od Chrome 157 — wyłączonego; wyłączenie usuwa pobrany model. ' +
+    'Szczegóły modelu: <code>chrome://on-device-internals</code> (strona debugowania — najpierw włącz ją w <code>chrome://chrome-urls</code>). ' +
     '<a target="_blank" rel="noopener" href="https://developer.chrome.com/docs/ai/get-started">Aktualne wymagania Google</a>.' }));
   main.appendChild(env);
 
@@ -433,6 +436,7 @@ function buildDemo(api, onOptionsChange = () => {}, onDownload = () => {}) {
       output.textContent = e?.name === 'InputError' ? `Błąd: ${e.message}` : `Błąd: ${e?.message || e}\n\n` +
         `Najczęstsze przyczyny:\n` +
         `• To API jest niedostępne w tej wersji Chrome (zobacz „Czy zadziała u Ciebie?")\n` +
+        `• On-device AI jest wyłączone w chrome://settings/ai\n` +
         `• Model nie został jeszcze pobrany — uruchom ponownie\n` +
         `• Strona nie jest w bezpiecznym kontekście (użyj http://localhost)`;
       aiLog(`❌ błąd: ${e?.message || e}`);
@@ -464,6 +468,7 @@ function injectBanner(main) {
       '⚠️ <strong>Prompt API</strong> nie jest dostępne w tej przeglądarce. Od <strong>Chrome 148</strong> ' +
       'jest stabilne także na zwykłych stronach (bez tokenu i flag) — upewnij się, że masz Chrome 148+ ' +
       'na desktopie i kompatybilny sprzęt; model Gemini Nano pobiera się przy pierwszym użyciu. ' +
+      'Jeśli API zwraca „niedostępne”, włącz <em>On-device AI</em> w <code>chrome://settings/ai</code>. ' +
       'Pozostałe API mogą działać niezależnie.' }),
     el('button', { class: 'banner-x', text: '✕', title: 'Ukryj',
       onclick: () => { sessionStorage.setItem('cv-banner-dismissed', '1'); banner.remove(); } }),

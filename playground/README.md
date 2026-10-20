@@ -33,18 +33,23 @@ Możesz użyć dowolnego istniejącego serwera statycznego — nie instaluj zale
   (w rozszerzeniach od 138), a Summarizer, Translator i Language Detector od 138.
   Nie blokujemy nowszych wersji numerem — sprawdzamy obecność API i jego metody.
 - Sprzęt, system i wolne miejsce zgodne z [aktualnymi wymaganiami Google](https://developer.chrome.com/docs/ai/get-started).
-  Modele pobierają się osobno; rozmiar może się zmieniać. Status sprawdzisz w `chrome://on-device-internals`.
+  Modele pobierają się osobno; rozmiar może się zmieniać.
+- **Przełącznik On-device AI** w `chrome://settings/ai` (Chrome 152+; w 146–151 `chrome://settings/system`).
+  Gdy jest wyłączony, API zwracają `unavailable`. Stable ma go domyślnie włączonego, nowe profile
+  Beta/Dev/Canary od Chrome 157 — wyłączonego. Wyłączenie usuwa pobrany model. Strona z narzędzi nie
+  otworzy linku `chrome://`, więc playground tylko o tym informuje. Status modelu pokazuje
+  `chrome://on-device-internals` (strona debugowania: najpierw włącz ją w `chrome://chrome-urls`).
   Sprawdzenie dostępności nie pobiera modelu, ale pierwsze uruchomienie demo może to zrobić.
 - **Writer i Rewriter**: Chrome proponuje ich wycofanie i usunięcie (konsultacja do 23.10.2026).
   Zamiennik to Prompt API albo [polyfill Google](https://github.com/GoogleChromeLabs/web-ai-demos/tree/main/writer-rewriter-polyfills).
 - **Proofreader** pozostaje w developer trial. Może wymagać flag lub udziału w Early Preview Program.
   Nie zakładamy, że wygasły origin trial oznacza wydanie stable.
-- **Decisions API** (`DecisionModel`) jest dopiero na etapie Intent to Prototype — Chrome go jeszcze
-  nie ma. Demo działa z [rozszerzeniem WebAI](https://web-ai.studio/extension), które dodaje
-  `DecisionModel` z lokalnym modelem Laya, albo po pojawieniu się flagi `#ai-decisions-api` w Canary.
+- **Decisions API** (`DecisionModel`) jest w developer trial od Chrome 157 za flagą
+  `chrome://flags/#decisions-api` (sprawdzone w Chrome 158 Dev; w 155 Stable go nie ma). Demo działa też
+  z [rozszerzeniem WebAI](https://web-ai.studio/extension), które dodaje `DecisionModel` z lokalnym modelem Laya.
 - **Semantic Embedder API** (`SemanticEmbedder`) to wczesna propozycja; w Chrome 155 działa za flagą
   `chrome://flags/#semantic-embedder-api` (model pobiera się przy pierwszym `create()`).
-- **WebMCP** pozostaje w origin trial. Lokalnie Google udostępnia flagę
+- **WebMCP** pozostaje w origin trial (przedłużonym do Chrome 162). Lokalnie Google udostępnia flagę
   `chrome://flags/#enable-webmcp-testing`. Wykrycie `registerTool` nie potwierdza obecności agenta.
 - Dema Prompt i Summarizer startują z angielskim tekstem. Obsługiwane języki zależą od API;
   obsługa polskiego w Translatorze lub detektorze nie oznacza obsługi polskiego w Prompt API.
@@ -59,9 +64,10 @@ rozszerzeń działającym w tle — ta samodzielna strona go nie udostępnia.
 
 ## Aktualizowanie wersji
 
-Stan dokumentacji zweryfikowano **2026-09-10**: **Chrome 153 Stable**, **154 Beta**.
-Według [harmonogramu Google](https://developer.chrome.com/blog/chrome-two-week-start)
-Stable 154 jest planowane na **2026-09-22**, a cykl Stable od 153 wynosi dwa tygodnie.
+Stan dokumentacji zweryfikowano **2026-10-20**: **Chrome 156 Stable**, **157 Beta**, 158 Dev.
+Według [harmonogramu Chromium](https://chromiumdash.appspot.com/schedule)
+Stable 157 jest planowane na **2026-11-03**, a cykl Stable od 153 wynosi dwa tygodnie.
+Notatki wydań Beta są teraz w [Chrome Status](https://chromestatus.com/release-notes/157).
 To datowany stan, nie automatycznie aktualizowana lista. Planowane daty nie potwierdzają
 wydania ani stabilności poszczególnych API.
 

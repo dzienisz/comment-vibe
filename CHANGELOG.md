@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - **Chrome on-device AI setup help points to `chrome://settings/ai`.** Chrome's _On-device AI_ toggle makes the Prompt API report `unavailable` when it is off, and Chrome Beta, Dev and Canary 157+ start with it off in a fresh profile (checked in fresh profiles: Chrome 155 Stable on, Chrome 158 Dev off). The setup help also no longer renders "Chrome 138+" on its own line. The popup's "not available" help now lists it first and has an **Open On-device AI settings** button (`chrome://settings/system` on Chrome 146–151). `chrome://on-device-internals` stays as an advanced step, with a note that it needs debug pages enabled in `chrome://chrome-urls`. The in-page "AI not ready" notice and console warning mention the setting too.
+- **Playground: release status as of 2026-10-20.** Chrome 156 Stable, 157 Beta, next Stable 157 on 2026-11-03 (from Chromium Dash and Chrome Status). Decisions API moves from prototype to developer trial (Chrome 157, `chrome://flags/#decisions-api`; native `DecisionModel` verified in Chrome 158 Dev). WebMCP's origin trial is extended to Chrome 162, the Prompt API `samplingMode` trial to 159, and Chrome Status lists a planned (not confirmed) Language Detector release on Android in 157. The overview, missing-API banner and demo error help now point to the On-device AI toggle in `chrome://settings/ai` and mark `chrome://on-device-internals` as a debug page.
 
 ## [1.8.1] - 2026-10-16
 
