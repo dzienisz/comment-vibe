@@ -17,9 +17,12 @@ public launch.
 - **Unlisted (self-distributed):** Actions → *Firefox AI playground (AMO)* →
   channel `unlisted`. AMO signs automatically; the signed `.xpi` is in the run's
   artifacts. Users install it by opening the file in Firefox. No public page.
-- **Listed (public page):** first submission by hand in the AMO Developer Hub
-  (Submit a New Add-on → On this site) with `scripts/package-playground-firefox.sh`'s
-  zip and the copy below; later versions can use the workflow with channel `listed`.
+- **Listed (public page):** Actions → *Firefox AI playground (AMO)* → channel
+  `listed`. The workflow sends `amo-metadata.json` (summary, description,
+  category, homepage, support URL, MIT license, generated from the copy below)
+  with the upload and submits it for review. AMO refuses a version number it
+  has already signed, so bump `playground-firefox/manifest.json` first. Keep
+  `amo-metadata.json` in sync when the copy below changes.
 
 ## Name
 

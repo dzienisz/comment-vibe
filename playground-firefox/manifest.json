@@ -3,7 +3,7 @@
   "name": "On-device AI Playground for Firefox",
   "short_name": "AI Playground",
   "description": "Try every task of Firefox's on-device WebExtensions AI API (browser.trial.ml) in one page. Developer playground from the Comment Vibe project.",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "browser_specific_settings": {
     "gecko": {
       "id": "firefox-ai-playground@dzienko.dev",
