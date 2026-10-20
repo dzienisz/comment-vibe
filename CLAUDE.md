@@ -84,6 +84,11 @@ packaging scripts, not a build step: they only zip raw source files, so the
    skipped — upload the zips to the store dashboards manually. Store review
    still decides when users get it.
 
+The standalone Firefox AI playground (`playground-firefox/`, own AMO id and version) is packaged
+by `scripts/package-playground-firefox.sh` and signed by the manual workflow
+`.github/workflows/playground-firefox.yml` (unlisted by default); its listing copy is in
+`store-assets/playground-firefox/listing.md`.
+
 Store listing text and promo images live in `store-assets/` — Chrome copy in
 `store-assets/listing.md`, Firefox (AMO) copy in `store-assets/firefox/listing.md`,
 Edge Add-ons copy + Partner Center answers in `store-assets/edge/listing.md`.

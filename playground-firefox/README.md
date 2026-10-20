@@ -1,4 +1,4 @@
-# Firefox AI Playground
+# On-device AI Playground for Firefox
 
 A small standalone Firefox add-on for trying Firefox's on-device WebExtensions
 AI API, [`browser.trial.ml`](https://firefox-source-docs.mozilla.org/toolkit/components/ml/extensions.html),
@@ -52,6 +52,14 @@ included yet.
   `false`, and every call fails with "Trial ML API is disabled".
   **Firefox 134–139:** set `browser.ml.enable` and `extensions.ml.enabled` to `true` in `about:config`.
 - The API is experimental: feature-detect `browser.trial?.ml` instead of checking versions.
+
+## Publishing on AMO
+
+`scripts/package-playground-firefox.sh` writes `firefox-ai-playground-<version>.zip`.
+The manual workflow `.github/workflows/playground-firefox.yml` lints it and signs it on AMO
+(`unlisted` by default: the signed `.xpi` lands in the run's artifacts). Listing copy and
+reviewer notes: [`store-assets/playground-firefox/listing.md`](../store-assets/playground-firefox/listing.md).
+AMO rejects names containing "Firefox" unless phrased "… for Firefox".
 
 ## Tests
 
