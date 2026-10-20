@@ -114,7 +114,10 @@ cd playground && python3 -m http.server 8000   # → http://localhost:8000
 
 > Note: the **Prompt API** is stable on the open web since Chrome 148, so on Chrome 148+ it works with no token or flag. Writer, Rewriter, and Proofreader are still in trial and may not be available.
 
-### Firefox
+### Edge and Firefox
+
+The sidebar's **Other browsers** section has an **Edge** tab ([`playground/#edge`](https://dzienko.dev/comment-vibe/playground/#edge)): Edge exposes the same globals, so the demos run there once an API is enabled. As of Edge 155, Translator and Language Detector are on by default; Prompt, Writer, Rewriter and Proofreader need a flag on Canary/Dev.
+
 
 Firefox exposes none of these APIs to web pages. Its on-device AI is extension-only (`browser.trial.ml`), so the website has a **Firefox** tab ([`playground/#firefox`](https://dzienko.dev/comment-vibe/playground/#firefox)) with the current status and Mozilla's standards positions, and live demos live in a separate add-on: [`playground-firefox/`](playground-firefox/). Load it via `about:debugging#/runtime/this-firefox` → **Load Temporary Add-on…** → `playground-firefox/manifest.json`. It is not part of either store zip.
 

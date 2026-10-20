@@ -59,6 +59,9 @@ standardowe `LanguageModel` ma pierwszeństwo. Firefoxowe `browser.trial.ml` jes
 rozszerzeń — ta samodzielna strona go nie udostępnia. Zakładka **Firefox** (`#firefox`)
 opisuje stan lokalnego AI w Firefoksie, a dema na żywo są w osobnym rozszerzeniu
 [`playground-firefox/`](../playground-firefox/). W Firefoksie baner u góry kieruje do tej zakładki.
+Zakładka **Microsoft Edge** (`#edge`) pokazuje stan każdego API w Edge (flagi w `edge://flags`,
+modele Phi-4-mini / Aion-1.0-Instruct, wymagania sprzętowe). Obie zakładki są na dole menu,
+pod separatorem „Inne przeglądarki”.
 
 > Jeśli demo zwraca błąd, najpierw sprawdź panel dostępności u góry danego API oraz
 > sekcję „Twoje środowisko" w zakładce **Przegląd**. Zmiana opcji demo ponawia sprawdzenie

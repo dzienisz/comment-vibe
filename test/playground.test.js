@@ -273,3 +273,28 @@ test('form validation errors are marked as input errors and create no session', 
   const translator = APIS.find(api => api.id === 'translator');
   await assert.rejects(translator.demo.run({ source: 'en', target: 'en', text: 'hi' }, report), { name: 'InputError' });
 });
+
+test('Edge tab covers every API with a known state and sits after a separator', () => {
+  const ctx = loadPlayground().context;
+  const { EDGE_STATUS, EDGE_STATE_META, APIS } = vm.runInContext('({ EDGE_STATUS, EDGE_STATE_META, APIS })', ctx);
+  assert.deepEqual([...EDGE_STATUS.apis.map(r => r.id)], [...APIS.map(a => a.id)]);
+  for (const row of EDGE_STATUS.apis) {
+    assert.ok(EDGE_STATE_META[row.state], row.id);
+    assert.ok(row.note.length > 10, row.id);
+  }
+  const byId = Object.fromEntries(EDGE_STATUS.apis.map(r => [r.id, r.state]));
+  assert.equal(byId.translator, 'default');
+  assert.equal(byId.detector, 'default');
+  assert.equal(byId.prompt, 'preview');
+  const src = fs.readFileSync(path.join(__dirname, '../playground/app.js'), 'utf8');
+  const sep = src.indexOf("class: 'nav-sep'");
+  assert.ok(sep > src.indexOf('for (const api of APIS)'), 'separator after the API list');
+  assert.ok(src.indexOf("navItem('edge'") > sep && src.indexOf("navItem('firefox'") > sep);
+});
+
+test('isEdge detects Edge by brand or UA token, not Chrome', () => {
+  const edge = loadPlayground({ navigator: { userAgent: 'Mozilla/5.0 Chrome/155.0 Safari/537.36 Edg/155.0' } }).context;
+  assert.equal(vm.runInContext('isEdge()', edge), true);
+  const chrome = loadPlayground({ navigator: { userAgent: 'Mozilla/5.0 Chrome/155.0 Safari/537.36' } }).context;
+  assert.equal(vm.runInContext('isEdge()', chrome), false);
+});

@@ -76,10 +76,12 @@ function availPill(state) {
 function buildSidebar() {
   const nav = document.getElementById('nav');
   nav.appendChild(navItem('overview', 'Przegląd', 'st-neutral'));
-  nav.appendChild(navItem('firefox', 'Firefox', 'st-neutral'));
   for (const api of APIS) {
     nav.appendChild(navItem(api.id, api.name, STATUS_META[api.status].cls));
   }
+  nav.appendChild(el('div', { class: 'nav-sep', text: 'Inne przeglądarki' }));
+  nav.appendChild(navItem('edge', 'Microsoft Edge', 'st-neutral'));
+  nav.appendChild(navItem('firefox', 'Firefox', 'st-neutral'));
 
   const foot = document.getElementById('sidebar-foot');
   foot.innerHTML = '';
@@ -260,7 +262,7 @@ function renderFirefox() {
     ]));
   }
   table.appendChild(tbody);
-  web.appendChild(table);
+  web.appendChild(el('div', { class: 'table-wrap' }, table));
   main.appendChild(web);
 
   const ext = el('div', { class: 'card' });
@@ -298,6 +300,73 @@ const [{ summary_text }] = await browser.trial.ml.runEngine({ args: [text] });` 
     `Źródła: <a target="_blank" rel="noopener" href="${fx.docs}">WebExtensions AI API</a> · ` +
     '<a target="_blank" rel="noopener" href="https://github.com/mozilla/standards-positions">Mozilla standards positions</a> · ' +
     '<a target="_blank" rel="noopener" href="https://github.com/mdn/browser-compat-data">MDN browser-compat-data</a>' }));
+}
+
+// ── Panel: Edge ─────────────────────────────────────────────────────────────
+
+function isEdge() {
+  const brands = globalThis.navigator?.userAgentData?.brands || [];
+  return brands.some(b => b.brand === 'Microsoft Edge') || /\bEdg\//.test(globalThis.navigator?.userAgent || '');
+}
+
+function renderEdge() {
+  const main = document.getElementById('main');
+  main.innerHTML = '';
+  const edge = EDGE_STATUS;
+  const docUrl = slug => `https://learn.microsoft.com/microsoft-edge/web-platform/${slug}`;
+
+  main.appendChild(el('h1', { text: 'Microsoft Edge — wbudowane AI' }));
+  main.appendChild(el('p', { class: 'lead', html:
+    `Edge ma <strong>te same API</strong> co Chrome (<code>LanguageModel</code>, <code>Translator</code>…), ale z innymi
+     modelami (Phi-4-mini lub Aion-1.0-Instruct zamiast Gemini Nano) i innym stanem wdrożenia. Dema w tym środowisku
+     działają w Edge, gdy dane API jest włączone. Stan na <strong>${edge.verifiedAt}</strong>: Edge ${edge.stable} Stable,
+     ${edge.beta} Beta (Stable ${edge.nextStableDate}), ${edge.dev} Dev, ${edge.canary} Canary.` }));
+
+  const card = el('div', { class: 'card' });
+  card.appendChild(el('h2', { text: 'API w Edge' }));
+  const table = el('table', { class: 'matrix' });
+  table.appendChild(el('thead', {}, el('tr', {}, [
+    el('th', { text: 'API' }), el('th', { text: 'W Edge' }), el('th', { text: 'Szczegóły' }),
+  ])));
+  const tbody = el('tbody');
+  for (const row of edge.apis) {
+    const api = APIS.find(a => a.id === row.id);
+    const meta = EDGE_STATE_META[row.state];
+    const name = row.doc
+      ? el('a', { href: docUrl(row.doc), target: '_blank', rel: 'noopener', text: api.name })
+      : el('span', { text: api.name });
+    tbody.appendChild(el('tr', {}, [
+      el('td', {}, name),
+      el('td', {}, el('span', { class: `pill ${meta.cls}`, text: meta.label })),
+      el('td', { class: 'muted', html: row.note }),
+    ]));
+  }
+  table.appendChild(tbody);
+  card.appendChild(el('div', { class: 'table-wrap' }, table));
+  main.appendChild(card);
+
+  const setup = el('div', { class: 'card' });
+  setup.appendChild(el('h2', { text: 'Jak włączyć (Canary/Dev)' }));
+  setup.appendChild(el('ol', { class: 'links' }, [
+    el('li', { html: `Zainstaluj <a target="_blank" rel="noopener" href="${edge.insider}">Edge Canary lub Dev</a>.` }),
+    el('li', { html: 'W <code>edge://flags</code> włącz flagę danego API (nazwy w tabeli) i uruchom Edge ponownie.' }),
+    el('li', { html: 'W <code>edge://on-device-internals</code> sprawdź <em>Device performance class</em>: ' +
+      '<strong>High</strong> lub wyżej obsługuje Phi-4-mini (GPU).' }),
+    el('li', { html: 'Przy klasie Medium/Low albo gdy sesja Phi-4-mini się wysypuje: włącz <em>Enable prerelease on-device ' +
+      'language model</em> (Canary/Dev 150.0.4070+) — Aion-1.0-Instruct działa na CPU i zastępuje Phi-4-mini.' }),
+  ]));
+  setup.appendChild(el('ul', { class: 'tips' }, [
+    el('li', { html: '<strong>Sprzęt:</strong> Windows 10/11 lub macOS 13.3+, 5,5 GB VRAM, 20 GB wolnego miejsca ' +
+      '(poniżej 10 GB model jest usuwany), sieć bez limitu danych.' }),
+    el('li', { html: 'Edge nie ma odpowiednika <code>chrome://settings/ai</code>. Administrator może wyłączyć model ' +
+      'polityką <code>GenAILocalFoundationalModelSettings</code>.' }),
+  ]));
+  main.appendChild(setup);
+
+  main.appendChild(el('p', { class: 'muted', html:
+    `Źródła: <a target="_blank" rel="noopener" href="${edge.docs}">Prompt API w Edge</a> · ` +
+    `<a target="_blank" rel="noopener" href="https://learn.microsoft.com/microsoft-edge/web-platform/release-notes/">noty wydań Edge</a> · ` +
+    `<a target="_blank" rel="noopener" href="${edge.demos}">dema Microsoftu</a>` }));
 }
 
 // ── Panel: pojedyncze API ─────────────────────────────────────────────────────
@@ -550,6 +619,18 @@ function injectBanner(main) {
     main.prepend(fxBanner);
     return;
   }
+  if (isEdge()) {
+    if (location.hash === '#edge') return;
+    const edgeBanner = el('div', { class: 'banner' }, [
+      el('span', { html: '⚠️ <strong>Prompt API</strong> nie jest dostępne w tym Edge. W Edge to wciąż developer preview: ' +
+        'Canary lub Dev i flaga w <code>edge://flags</code>. Zobacz <a href="#edge">stan API w Edge</a>; ' +
+        'Translator i Language Detector działają domyślnie od Edge 148.' }),
+      el('button', { class: 'banner-x', text: '✕', title: 'Ukryj',
+        onclick: () => { sessionStorage.setItem('cv-banner-dismissed', '1'); edgeBanner.remove(); } }),
+    ]);
+    main.prepend(edgeBanner);
+    return;
+  }
   const banner = el('div', { class: 'banner' }, [
     el('span', { html:
       '⚠️ <strong>Prompt API</strong> nie jest dostępne w tej przeglądarce. Od <strong>Chrome 148</strong> ' +
@@ -570,6 +651,7 @@ function route() {
   setActive(id);
   if (id === 'overview') renderOverview();
   else if (id === 'firefox') renderFirefox();
+  else if (id === 'edge') renderEdge();
   else {
     const api = APIS.find(a => a.id === id);
     if (api) renderApi(api); else renderOverview();

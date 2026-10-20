@@ -78,6 +78,15 @@ body { display: flex; }
 }
 .nav-item:hover { background: rgba(255, 255, 255, 0.06); color: #fff; }
 .nav-item.active { background: var(--accent); color: #fff; }
+.nav-sep {
+  margin: 14px 12px 6px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 11.5px;
+  color: #8b95a3;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
 
 .dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
 .st-stable { background: var(--stable); }
@@ -343,6 +352,8 @@ pre code { background: none; padding: 0; color: inherit; font-size: inherit; }
   .brand { padding: 14px 16px; }
   #nav { display: flex; gap: 6px; overflow-x: auto; padding: 10px; flex: none; }
   .nav-item { flex: none; margin-bottom: 0; white-space: nowrap; }
+  .nav-sep { flex: none; display: flex; align-items: center; margin: 0 2px; padding: 0 0 0 10px;
+    border-top: 0; border-left: 1px solid rgba(255, 255, 255, 0.14); white-space: nowrap; }
   .sidebar-foot { padding: 10px 16px; }
   .content { height: auto; overflow: visible; max-width: none; padding: 20px 16px 60px; }
   .cta-card { padding: 16px; }
