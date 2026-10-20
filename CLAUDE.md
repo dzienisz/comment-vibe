@@ -24,7 +24,7 @@ The popup's model-download states can be checked the same way with
 `popup.html` with a stubbed Prompt API. Modes: `?state=downloadable`,
 `downloading`, `available`, `unavailable`; options `&start=0.4`,
 `&duration=6000`, `&activation=required`, `&fail=1`, `&reattach=0.2`; `?browser=firefox`
-(`&ffshape=bytes|unknown`) for the Firefox setup flow. Reload mid-download to
+(`&ffshape=bytes|unknown`, `&blocked=1` for AI controls blocking it) for the Firefox setup flow. Reload mid-download to
 simulate reopening the popup.
 
 Full manual testing on Chrome requires:
@@ -34,7 +34,8 @@ Full manual testing on Chrome requires:
 - On Chrome 152+, _On-device AI_ on in `chrome://settings/ai` (146–151: `chrome://settings/system`). When it is off, `availability()` returns `unavailable`. Stable defaults it on; Beta/Dev/Canary 157+ default it off in a fresh profile
 
 Full manual testing on Firefox requires:
-- Firefox 134+ (Nightly, or set `browser.ml.enable` and `extensions.ml.enabled` to `true` in `about:config`)
+- Firefox 134+ (on 134–139, set `browser.ml.enable` and `extensions.ml.enabled` to `true` in `about:config`; on by default since 140)
+- AI features allowed in Settings → AI controls (Firefox 148+): blocking them sets `extensions.ml.enabled` to `false`, and `browser.trial.ml` then rejects with "Trial ML API is disabled"
 - Package the Firefox zip (below) and load it via `about:debugging` → "Load Temporary Add-on"
 - Click "Enable on-device AI" in the popup (grants `trialML`, downloads the classifier once)
 

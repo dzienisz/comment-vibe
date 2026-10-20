@@ -129,3 +129,13 @@ test('aiSettingsUrl opens the AI settings page on Chrome 152+ and System setting
   assert.equal(context.aiSettingsUrl(ua('151.0.0.0')), 'chrome://settings/system');
   assert.equal(context.aiSettingsUrl('Mozilla/5.0'), 'chrome://settings/ai');
 });
+
+test('firefoxSetupHint points to AI controls when Firefox blocks the trial ML API', () => {
+  const context = vm.createContext({ window: {}, navigator: { userAgent: '' } });
+  vm.runInContext(popupDeclarations, context, { filename: 'popup.js' });
+  const blocked = 'Trial ML API is disabled. This API is only available when "extensions.ml.enabled" and browser.ml.enable" preferences are set to true.';
+
+  assert.match(context.firefoxSetupHint(blocked), /AI controls/);
+  assert.doesNotMatch(context.firefoxSetupHint('Network error'), /AI controls/);
+  assert.doesNotMatch(context.firefoxSetupHint(undefined), /AI controls/);
+});

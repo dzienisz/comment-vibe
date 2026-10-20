@@ -73,11 +73,18 @@ What differs from the Chrome experience:
 
 Setup on Firefox:
 
-1. Firefox 134+ — on non-Nightly builds set `browser.ml.enable` and
-   `extensions.ml.enabled` to `true` in `about:config`
+1. Firefox 134+. On Firefox 134–139 set `browser.ml.enable` and
+   `extensions.ml.enabled` to `true` in `about:config` (both are on by default
+   since Firefox 140)
 2. [Install Comment Vibe from Firefox Add-ons](https://addons.mozilla.org/firefox/addon/comment-vibe-on-device-check/),
    open the popup, and click **Enable on-device AI**
    (grants the optional `trialML` permission and downloads the model once)
+
+If AI features are blocked in Firefox Settings → **AI controls** (Firefox
+148+), the add-on AI API is switched off too: blocking sets
+`extensions.ml.enabled` to `false`, and `browser.trial.ml` rejects with
+"Trial ML API is disabled". Allow AI features there to use the on-device
+classifier.
 
 > ⚠️ `browser.trial.ml` is explicitly experimental — Mozilla may change it
 > between major Firefox versions. The extension feature-detects it and fails
