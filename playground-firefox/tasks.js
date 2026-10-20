@@ -136,8 +136,8 @@ const TASKS = [
     models: [['Xenova/distilgpt2', 'distilGPT-2 (Xenova)']],
     fields: [{ id: 'text', label: 'Początek tekstu', type: 'textarea', value: 'On-device AI in the browser means' }],
     args: v => [v.text],
-    options: () => ({ max_new_tokens: 30 }),
-    format: out => [].concat(out).map(r => r?.generated_text).join('\n'),
+    options: () => ({ max_new_tokens: 30, repetition_penalty: 1.3 }),
+    format: out => [].concat(out).map(r => String(r?.generated_text ?? '').trim()).join('\n'),
   },
   {
     id: 'embeddings',
