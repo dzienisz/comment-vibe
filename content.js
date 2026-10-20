@@ -1687,7 +1687,7 @@ function attachToInput(el) {
             label: 'AI not ready',
             body: isEdgeBrowser()
               ? "Edge's on-device AI is still a preview and isn't turned on in this browser. Open the Comment Vibe popup from the toolbar for setup steps — it needs the Prompt API flag in edge://flags and supported hardware — or turn on Fast tone check in the cloud there."
-              : "Chrome's on-device AI (Gemini Nano) isn't available in this browser yet. Open the Comment Vibe popup from the toolbar for setup steps — it needs Chrome 138+ on a desktop with about 22 GB of free disk space.",
+              : "Chrome's on-device AI (Gemini Nano) isn't available in this browser yet. Open the Comment Vibe popup from the toolbar for setup steps — it needs Chrome 138+ on a desktop with about 22 GB of free disk space, and On-device AI turned on in chrome://settings/ai.",
             linkText: 'Setup guide',
             linkHref: 'https://dzienko.dev/comment-vibe/#browsers',
             onHideSite: ui.onHideSite,
@@ -1954,7 +1954,7 @@ async function init() {
     initFirefox();
     return;
   }
-  console.warn('[CommentVibe] Chrome built-in AI not available. Enable the Prompt API in chrome://flags');
+  console.warn('[CommentVibe] Chrome built-in AI not available. Turn on On-device AI in chrome://settings/ai, or on Chrome 127–137 enable the Prompt API in chrome://flags');
 }
 
 // trialML is an optional permission, so the background may report the AI as

@@ -158,14 +158,18 @@ On **Chrome 138+** with eligible hardware, no setup is required — install the 
 
 Click the Comment Vibe icon in the Chrome toolbar. The popup should show **Chrome AI ready ✓**. If so, you're done.
 
-### Step 2 — (Older builds only) Enable the flags
+### Step 2 — Check that on-device AI is turned on
+
+Open `chrome://settings/ai` and make sure **On-device AI** is on. Chrome Stable turns it on by default; Chrome Beta, Dev and Canary 157+ start with it off on a fresh install, and an organization policy can lock it off. Turning it off also deletes the downloaded model. On Chrome 146–151 the same toggle is under `chrome://settings/system`. The popup's **Open On-device AI settings** button opens the page for you.
+
+### Step 3 — (Older builds only) Enable the flags
 
 1. Open `chrome://flags`
 2. Search for **Prompt API for Gemini Nano** → set to **Enabled**
 3. Search for **Summarization API for Gemini Nano** → set to **Enabled** (needed on some builds)
 4. Click **Relaunch**
 
-### Step 3 — Force the model download
+### Step 4 — Force the model download
 
 1. Open `chrome://components`
 2. Find **Optimization Guide On Device Model**
@@ -173,7 +177,7 @@ Click the Comment Vibe icon in the Chrome toolbar. The popup should show **Chrom
 
 The model is ~2–4 GB and downloads silently in the background. If the popup still shows "not available" afterward, restart Chrome fully (quit and reopen, not just close the tab) and try again.
 
-> **Note on the on-device model:** Chrome downloads Gemini Nano (the "Optimization Guide On Device Model" component) automatically on eligible hardware. In May 2026 this drew [criticism](https://www.tomsguide.com/ai/check-your-storage-chrome-may-be-downloading-a-4gb-ai-model-heres-what-we-know) for happening without a clear consent prompt; Chrome settings now let you disable and remove the model, and you can inspect its status at `chrome://on-device-internals`. Comment Vibe uses this same model — it never downloads anything itself.
+> **Note on the on-device model:** Chrome downloads Gemini Nano (the "Optimization Guide On Device Model" component) automatically on eligible hardware. In May 2026 this drew [criticism](https://www.tomsguide.com/ai/check-your-storage-chrome-may-be-downloading-a-4gb-ai-model-heres-what-we-know) for happening without a clear consent prompt; the **On-device AI** toggle in `chrome://settings/ai` now lets you disable and remove the model, and you can inspect its status at `chrome://on-device-internals` (a debug page: enable it in `chrome://chrome-urls` first). Comment Vibe uses this same model — it never downloads anything itself.
 
 ---
 
