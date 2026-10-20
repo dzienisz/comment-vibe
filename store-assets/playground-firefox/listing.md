@@ -61,7 +61,7 @@ Source code: https://github.com/dzienisz/comment-vibe/tree/main/playground-firef
 
 ## Categories
 
-Developer Tools (Firefox). Tags: developer, AI, machine learning.
+Web Development (AMO slug `web-development`).
 
 ## Support / homepage
 
