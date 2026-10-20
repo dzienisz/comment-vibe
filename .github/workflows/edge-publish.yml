@@ -1,0 +1,43 @@
+name: Publish to Edge (retry)
+
+# Ręcznie: Actions → "Publish to Edge (retry)" → Run workflow, podaj tag (np. v1.9.0).
+# Ponawia tylko krok Edge z release.yml — np. po błędzie InProgressSubmission,
+# gdy poprzednia wersja była jeszcze w certyfikacji. Chrome i AMO nie są
+# zgłaszane ponownie. Sekrety jak w release.yml: EDGE_PRODUCT_ID,
+# EDGE_CLIENT_ID, EDGE_API_KEY (opcjonalnie EDGE_CERTIFICATION_NOTES).
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to publish (vX.Y.Z)
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  edge:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout tag
+        uses: actions/checkout@v7
+        with:
+          ref: refs/tags/${{ inputs.tag }}
+
+      - name: Build packages
+        run: bash scripts/package.sh
+
+      - name: Publish to Microsoft Edge Add-ons
+        env:
+          TAG: ${{ inputs.tag }}
+          EDGE_PRODUCT_ID: ${{ secrets.EDGE_PRODUCT_ID }}
+          EDGE_CLIENT_ID: ${{ secrets.EDGE_CLIENT_ID }}
+          EDGE_API_KEY: ${{ secrets.EDGE_API_KEY }}
+          EDGE_CERTIFICATION_NOTES: ${{ secrets.EDGE_CERTIFICATION_NOTES }}
+        run: |
+          v="${TAG#v}"
+          if [ ! -f "comment-vibe-$v.zip" ]; then
+            echo "Tag $TAG does not match the manifest version at that tag." >&2; exit 1
+          fi
+          node scripts/publish-edge.js "comment-vibe-$v.zip" \
+            "Release ${TAG}: https://github.com/${GITHUB_REPOSITORY}/releases/tag/${TAG}"
