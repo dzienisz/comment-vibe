@@ -1,6 +1,6 @@
 {
   "categories": [
-    "developer-tools"
+    "web-development"
   ],
   "summary": {
     "en-US": "Try every task of Firefox's experimental on-device AI API for extensions (browser.trial.ml) in one page: classification, NER, Q&A, summarization, translation, text generation, embeddings. Models run locally; nothing is sent to a server."
@@ -9,9 +9,7 @@
     "en-US": "A developer playground for Firefox's WebExtensions AI API (browser.trial.ml). Pick a task, edit the input, and run it — the add-on shows the model download progress, the result and the raw output, plus the code to call it from your own extension.\n\nTASKS\n• Zero-shot classification (incl. the multilingual mDeBERTa model Comment Vibe uses)\n• Text classification (sentiment)\n• Token classification (named entities)\n• Question answering\n• Fill mask\n• Summarization\n• Translation\n• Text-to-text generation (Flan-T5)\n• Text generation (distilGPT-2)\n• Feature extraction (embeddings, with cosine similarity)\n\nHOW IT WORKS\nEverything runs on your device through Firefox's own AI runtime. Each model is downloaded once from Mozilla's model hub or the Mozilla/Xenova organisations on Hugging Face (tens to hundreds of MB) and cached; the \"Delete downloaded models\" button removes them. Your input text never leaves the browser. No account, no analytics.\n\nGOOD TO KNOW\n• Firefox 134+ on desktop. The AI API is experimental; it is on by default since Firefox 140.\n• If you blocked AI features in Settings → AI controls (Firefox 148+), allow them again: that also switches off the AI API for add-ons.\n• Firefox allows one AI engine per add-on run, so switching tasks reloads the add-on and reopens the page on the new task.\n• The interface is in Polish.\n\nSource code: https://github.com/dzienisz/comment-vibe/tree/main/playground-firefox"
   },
   "homepage": {
-    "url": {
-      "en-US": "https://dzienko.dev/comment-vibe/playground/#firefox"
-    }
+    "en-US": "https://dzienko.dev/comment-vibe/playground/#firefox"
   },
   "support_url": {
     "en-US": "https://github.com/dzienisz/comment-vibe/issues"
