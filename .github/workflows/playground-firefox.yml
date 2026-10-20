@@ -3,9 +3,9 @@ name: Firefox AI playground (AMO)
 # Ręcznie: Actions → "Firefox AI playground (AMO)" → Run workflow.
 # unlisted: AMO podpisuje paczkę automatycznie (bez publicznej strony), a
 #   podpisany .xpi trafia do artefaktów przebiegu — do instalacji z pliku.
-# listed: zgłoszenie do recenzji publicznej strony na AMO. Pierwsze zgłoszenie
-#   listed najlepiej zrobić ręcznie w AMO Developer Hub z tekstem z
-#   store-assets/playground-firefox/listing.md (API wymaga kompletu metadanych).
+# listed: zgłoszenie do recenzji publicznej strony na AMO. Metadane strony
+#   (opis, kategoria, licencja) idą z store-assets/playground-firefox/amo-metadata.json.
+#   Każde zgłoszenie wymaga nowej wersji w playground-firefox/manifest.json.
 # Używa tych samych sekretów co release.yml: AMO_JWT_ISSUER, AMO_JWT_SECRET.
 on:
   workflow_dispatch:
@@ -44,9 +44,13 @@ jobs:
           mkdir amo-src && unzip -q firefox-ai-playground-*.zip -d amo-src
           # unlisted: wait for the automatic signature and download the .xpi;
           # listed: submit for review without waiting for it.
-          timeout=900000; [ "$CHANNEL" = listed ] && timeout=0
+          timeout=900000; extra=()
+          if [ "$CHANNEL" = listed ]; then
+            timeout=0
+            extra=(--amo-metadata store-assets/playground-firefox/amo-metadata.json)
+          fi
           npx --yes web-ext@8 sign --channel "$CHANNEL" --source-dir amo-src \
-            --artifacts-dir web-ext-artifacts --approval-timeout "$timeout"
+            --artifacts-dir web-ext-artifacts --approval-timeout "$timeout" "${extra[@]}"
 
       - name: Upload artifacts
         if: ${{ always() }}
