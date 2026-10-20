@@ -35,7 +35,10 @@ build step, no dependencies.
 | Feature extraction | `feature-extraction` | `Xenova/all-MiniLM-L6-v2` |
 
 Firefox only accepts models from Mozilla's model hub and the Mozilla and Xenova
-organisations on Hugging Face. Image and audio tasks are not included yet.
+organisations on Hugging Face. Models that Mozilla's hub (`model-hub.mozilla.org`)
+mirrors are loaded from there (`modelHub: 'mozilla'`); mDeBERTa and distilGPT-2
+are not mirrored and come from Hugging Face. Image and audio tasks are not
+included yet.
 
 ## Limits of the trial API
 
