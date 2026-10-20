@@ -64,12 +64,16 @@ test('manifest keeps trialML optional and is a standalone Firefox add-on', () =>
 });
 
 test('every task uses a Firefox-supported taskName and an allowed model organisation', () => {
-  const { TASKS } = load();
+  const { TASKS, engineOptions } = load();
   const { FIREFOX_STATUS } = loadWebFirefox();
   assert.equal(new Set(TASKS.map(t => t.id)).size, TASKS.length);
   for (const task of TASKS) {
     assert.ok(FIREFOX_STATUS.tasks.includes(task.taskName), task.taskName);
-    for (const [modelId] of task.models) assert.match(modelId, /^(Mozilla|Xenova)\//, modelId);
+    for (const [modelId, , hub] of task.models) {
+      assert.match(modelId, /^(Mozilla|Xenova)\//, modelId);
+      assert.ok(hub === undefined || hub === 'mozilla', modelId);
+      assert.equal(engineOptions(task, modelId).modelHub, hub || 'huggingface', modelId);
+    }
   }
   const zeroShot = TASKS.find(t => t.taskName === 'zero-shot-classification');
   assert.ok(zeroShot.models.some(([id]) => id === 'Xenova/mDeBERTa-v3-base-xnli-multilingual-nli-2mil7'));
@@ -98,6 +102,10 @@ test('formatters turn pipeline output into text', () => {
   assert.equal(fmt('summarization', [{ summary_text: 'Short.' }]), 'Short.');
   assert.equal(fmt('translation', [{ translation_text: 'Hallo' }]), 'Hallo');
   assert.equal(fmt('ner', [{ entity: 'B-PER', word: 'Kamil', score: 1 }]), 'B-PER  Kamil  100%');
+  assert.equal(fmt('ner', [
+    { entity: 'B-ORG', word: 'Fire', score: 0.92 }, { entity: 'I-ORG', word: '##fo', score: 0.77 },
+    { entity: 'I-ORG', word: '##ksa', score: 0.9 }, { entity: 'B-LOC', word: 'Mo', score: 0.95 },
+  ]), 'B-ORG  Firefoksa   77%\nB-LOC  Mo   95%');
   assert.match(fmt('embeddings', { dims: [2, 2], data: { 0: 1, 1: 0, 2: 1, 3: 0, length: 4 } }), /1,000 · wymiar wektora: 2/);
 });
 
@@ -136,7 +144,7 @@ test('ensureEngine creates one engine per run and asks to reload for another tas
   assert.equal(await pg.ensureEngine(pg.engineOptions(sentiment), report), 'ready');
   assert.equal(fake.calls.length, 1);
   assert.equal(fake.calls[0].taskName, 'text-classification');
-  assert.equal(fake.calls[0].modelHub, 'huggingface');
+  assert.equal(fake.calls[0].modelHub, 'mozilla');
   assert.equal(await pg.getActiveEngine(), pg.engineKey(pg.engineOptions(sentiment)));
   assert.equal(await pg.ensureEngine(pg.engineOptions(ner), report), 'switch');
   assert.equal(fake.calls.length, 1);

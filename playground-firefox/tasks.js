@@ -26,7 +26,7 @@ const TASKS = [
     taskName: 'zero-shot-classification',
     tagline: 'Dopasowanie tekstu do Twoich etykiet bez trenowania — tego używa Comment Vibe.',
     models: [
-      ['Xenova/distilbert-base-uncased-mnli', 'distilbert-mnli (domyślny, angielski, mały)'],
+      ['Xenova/distilbert-base-uncased-mnli', 'distilbert-mnli (domyślny, angielski, mały)', 'mozilla'],
       ['Xenova/mDeBERTa-v3-base-xnli-multilingual-nli-2mil7', 'mDeBERTa-v3 XNLI (Comment Vibe, ~100 języków, ~340 MB)'],
     ],
     fields: [
@@ -47,7 +47,7 @@ const TASKS = [
     name: 'Text classification',
     taskName: 'text-classification',
     tagline: 'Klasyfikacja tekstu, np. sentyment POSITIVE / NEGATIVE.',
-    models: [['Xenova/distilbert-base-uncased-finetuned-sst-2-english', 'distilbert SST-2 (domyślny, angielski)']],
+    models: [['Xenova/distilbert-base-uncased-finetuned-sst-2-english', 'distilbert SST-2 (domyślny, angielski)', 'mozilla']],
     fields: [{ id: 'text', label: 'Tekst', type: 'textarea', value: 'I was skeptical, but this update is genuinely useful.' }],
     args: v => [v.text],
     options: () => ({}),
@@ -58,18 +58,18 @@ const TASKS = [
     name: 'Token classification (NER)',
     taskName: 'token-classification',
     tagline: 'Rozpoznawanie nazw własnych: osoby, organizacje, miejsca — wielojęzycznie.',
-    models: [['Xenova/bert-base-multilingual-cased-ner-hrl', 'mBERT NER HRL (domyślny, wielojęzyczny)']],
+    models: [['Xenova/bert-base-multilingual-cased-ner-hrl', 'mBERT NER HRL (domyślny, wielojęzyczny)', 'mozilla']],
     fields: [{ id: 'text', label: 'Tekst', type: 'textarea', value: 'Kamil z Warszawy testuje Firefoksa od Mozilli.' }],
     args: v => [v.text],
     options: () => ({}),
-    format: out => [].concat(out).map(t => `${t?.entity ?? t?.entity_group}  ${t?.word}  ${pct(t?.score)}`).join('\n'),
+    format: out => mergeWordPieces(out).map(t => `${t?.entity ?? t?.entity_group}  ${t?.word}  ${pct(t?.score)}`).join('\n'),
   },
   {
     id: 'qa',
     name: 'Question answering',
     taskName: 'question-answering',
     tagline: 'Odpowiedź wycięta z podanego kontekstu (extractive QA).',
-    models: [['Xenova/distilbert-base-cased-distilled-squad', 'distilbert SQuAD (domyślny, angielski)']],
+    models: [['Xenova/distilbert-base-cased-distilled-squad', 'distilbert SQuAD (domyślny, angielski)', 'mozilla']],
     fields: [
       { id: 'question', label: 'Pytanie', type: 'text', value: 'Where does the inference run?' },
       { id: 'context', label: 'Kontekst', type: 'textarea', rows: 4,
@@ -84,7 +84,7 @@ const TASKS = [
     name: 'Fill mask',
     taskName: 'fill-mask',
     tagline: 'Model zgaduje słowo w miejscu [MASK].',
-    models: [['Xenova/bert-base-uncased', 'BERT base uncased (domyślny)']],
+    models: [['Xenova/bert-base-uncased', 'BERT base uncased (domyślny)', 'mozilla']],
     fields: [{ id: 'text', label: 'Tekst z [MASK]', type: 'text', value: 'Firefox is a web [MASK].' }],
     args: v => [v.text],
     options: () => ({}),
@@ -95,7 +95,7 @@ const TASKS = [
     name: 'Summarization',
     taskName: 'summarization',
     tagline: 'Streszczenie dłuższego tekstu (angielski).',
-    models: [['Xenova/distilbart-cnn-6-6', 'distilBART CNN 6-6 (domyślny)']],
+    models: [['Xenova/distilbart-cnn-6-6', 'distilBART CNN 6-6 (domyślny)', 'mozilla']],
     fields: [{ id: 'text', label: 'Tekst', type: 'textarea', rows: 6, value:
       'The tower is 324 metres (1,063 ft) tall, about the same height as an 81-storey building, and the tallest ' +
       'structure in Paris. Its base is square, measuring 125 metres (410 ft) on each side. During its construction, ' +
@@ -110,7 +110,7 @@ const TASKS = [
     name: 'Translation',
     taskName: 'translation',
     tagline: 'Tłumaczenie T5: prefiks „translate English to German/French/Romanian:".',
-    models: [['Xenova/t5-small', 't5-small (domyślny; EN → DE/FR/RO)']],
+    models: [['Xenova/t5-small', 't5-small (domyślny; EN → DE/FR/RO)', 'mozilla']],
     fields: [{ id: 'text', label: 'Tekst z prefiksem zadania', type: 'textarea',
       value: 'translate English to German: The model runs on your device.' }],
     args: v => [v.text],
@@ -122,8 +122,8 @@ const TASKS = [
     name: 'Text2text generation',
     taskName: 'text2text-generation',
     tagline: 'Małe instrukcje dla Flan-T5 — nie czat, ale krótkie polecenia działają.',
-    models: [['Xenova/flan-t5-small', 'Flan-T5 small (domyślny)']],
-    fields: [{ id: 'text', label: 'Polecenie', type: 'textarea', value: 'Answer the question: what is the capital of Poland?' }],
+    models: [['Xenova/flan-t5-small', 'Flan-T5 small (domyślny)', 'mozilla']],
+    fields: [{ id: 'text', label: 'Polecenie', type: 'textarea', value: 'Is this review positive or negative? Review: this update is genuinely useful.' }],
     args: v => [v.text],
     options: () => ({ max_new_tokens: 40 }),
     format: out => [].concat(out).map(r => r?.generated_text).join('\n'),
@@ -136,18 +136,18 @@ const TASKS = [
     models: [['Xenova/distilgpt2', 'distilGPT-2 (Xenova)']],
     fields: [{ id: 'text', label: 'Początek tekstu', type: 'textarea', value: 'On-device AI in the browser means' }],
     args: v => [v.text],
-    options: () => ({ max_new_tokens: 30 }),
-    format: out => [].concat(out).map(r => r?.generated_text).join('\n'),
+    options: () => ({ max_new_tokens: 30, repetition_penalty: 1.3 }),
+    format: out => [].concat(out).map(r => String(r?.generated_text ?? '').trim()).join('\n'),
   },
   {
     id: 'embeddings',
     name: 'Feature extraction (embeddings)',
     taskName: 'feature-extraction',
     tagline: 'Wektory zdań i ich podobieństwo kosinusowe.',
-    models: [['Xenova/all-MiniLM-L6-v2', 'all-MiniLM-L6-v2 (domyślny, angielski)']],
+    models: [['Xenova/all-MiniLM-L6-v2', 'all-MiniLM-L6-v2 (domyślny, angielski)', 'mozilla']],
     fields: [
-      { id: 'a', label: 'Zdanie A', type: 'text', value: 'The extension runs the model locally.' },
-      { id: 'b', label: 'Zdanie B', type: 'text', value: 'Inference happens on the device.' },
+      { id: 'a', label: 'Zdanie A', type: 'text', value: 'The model runs locally in the browser.' },
+      { id: 'b', label: 'Zdanie B', type: 'text', value: 'The browser runs the model on this machine.' },
     ],
     args: v => [[v.a, v.b]],
     options: () => ({ pooling: 'mean', normalize: true }),
@@ -165,13 +165,30 @@ function splitList(text) {
   return String(text).split(',').map(s => s.trim()).filter(Boolean);
 }
 
+// BERT dzieli słowa na części „##…”; skleja je z poprzednim tokenem (najniższy wynik).
+function mergeWordPieces(out) {
+  const merged = [];
+  for (const t of [].concat(out)) {
+    const prev = merged[merged.length - 1];
+    if (prev && typeof t?.word === 'string' && t.word.startsWith('##')) {
+      prev.word += t.word.slice(2);
+      if (typeof t.score === 'number') prev.score = Math.min(prev.score ?? t.score, t.score);
+    } else {
+      merged.push({ ...t });
+    }
+  }
+  return merged;
+}
+
 function pct(score) {
   return typeof score === 'number' ? `${Math.round(score * 100)}%`.padStart(4) : '  ? ';
 }
 
-// Opcje createEngine dla wybranego modelu.
+// Opcje createEngine dla wybranego modelu. Hub Mozilli (model-hub.mozilla.org) tam,
+// gdzie ma pliki modelu; reszta z Hugging Face.
 function engineOptions(task, modelId = task.models[0][0]) {
-  return { taskName: task.taskName, modelHub: 'huggingface', modelId };
+  const hub = task.models.find(m => m[0] === modelId)?.[2] || 'huggingface';
+  return { taskName: task.taskName, modelHub: hub, modelId };
 }
 
 function engineKey(options) {
