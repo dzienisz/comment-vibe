@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
-  "name": "Firefox AI Playground (Comment Vibe)",
-  "short_name": "Firefox AI Playground",
+  "name": "On-device AI Playground for Firefox",
+  "short_name": "AI Playground",
   "description": "Try every task of Firefox's on-device WebExtensions AI API (browser.trial.ml) in one page. Developer playground from the Comment Vibe project.",
   "version": "0.1.0",
   "browser_specific_settings": {
@@ -12,7 +12,7 @@
     }
   },
   "icons": { "48": "icon48.png", "128": "icon128.png" },
-  "action": { "default_title": "Firefox AI Playground", "default_icon": { "48": "icon48.png" } },
+  "action": { "default_title": "On-device AI Playground", "default_icon": { "48": "icon48.png" } },
   "permissions": ["storage"],
   "optional_permissions": ["trialML"],
   "background": { "scripts": ["background.js"] }
