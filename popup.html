@@ -98,13 +98,15 @@
 
     <section id="setup" class="setup">
       <strong>Chrome AI is not available here</strong>
-      <p>Your Chrome version or hardware may not support Gemini Nano.</p>
+      <p>On-device AI may be turned off in Chrome settings, or your Chrome version or hardware may not support Gemini Nano.</p>
       <ol>
+        <li>Turn on <em>On-device AI</em> in <code>chrome://settings/ai</code>. Chrome Beta, Dev and Canary start with it off</li>
         <li>Use <strong>Chrome 138+</strong> on a desktop computer</li>
         <li>Check for 16 GB RAM, 4 GB VRAM, and 22 GB free disk space</li>
-        <li>Review model status in <code>chrome://on-device-internals</code></li>
         <li>On Chrome 127–137, enable <em>Prompt API for Gemini Nano</em> in <code>chrome://flags</code></li>
+        <li>Advanced: model status is in <code>chrome://on-device-internals</code> after you enable debug pages in <code>chrome://chrome-urls</code></li>
       </ol>
+      <button id="open-ai-settings" class="setup-button" type="button">Open On-device AI settings</button>
     </section>
 
     <section id="setup-edge" class="setup">

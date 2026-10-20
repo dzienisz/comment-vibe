@@ -70,6 +70,12 @@ function showSetup() {
   document.getElementById(isEdge() ? 'setup-edge' : 'setup').classList.add('visible');
 }
 
+// The "On-device AI" toggle moved from System to the AI settings page in Chrome 152.
+function aiSettingsUrl(userAgent = navigator.userAgent) {
+  const major = Number(/Chrome\/(\d+)/.exec(userAgent)?.[1]);
+  return major && major < 152 ? 'chrome://settings/system' : 'chrome://settings/ai';
+}
+
 // Chrome now exposes `browser` as well; only the Chrome manifest has a service worker.
 function isFirefox() {
   if (typeof browser === 'undefined' || !browser.permissions) return false;
@@ -518,6 +524,13 @@ async function initFirefoxPopup(els, fastMode) {
 
   const api = getExtApi();
   document.getElementById('rate-link').href = storeUrl();
+  // Pages cannot follow chrome:// links; only tabs.create can open them.
+  const aiSettings = document.getElementById('open-ai-settings');
+  if (api?.tabs?.create) {
+    aiSettings.addEventListener('click', () => api.tabs.create({ url: aiSettingsUrl() }));
+  } else {
+    aiSettings.hidden = true;
+  }
   let fastMode = false;
   if (api) {
     initPrefs(api);
