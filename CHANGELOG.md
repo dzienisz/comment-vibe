@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Edge: re-publish one tag without re-running the whole release.** The v1.9.0 release uploaded the Edge package but the publish failed with `InProgressSubmission`, because the previous version was still in Microsoft's certification. The manual workflow `edge-publish.yml` rebuilds the Chrome zip from a given tag and runs only `scripts/publish-edge.js`, so Chrome and AMO are not resubmitted. `publish-edge.js` now explains that error and points to the workflow.
 - **Firefox AI playground: AMO packaging.** `scripts/package-playground-firefox.sh` builds `firefox-ai-playground-<version>.zip`; the manual workflow `playground-firefox.yml` lints it with `web-ext lint --warnings-as-errors` and signs it on AMO (unlisted by default, signed `.xpi` in the run artifacts) with the existing `AMO_JWT_*` secrets. Listing copy and reviewer notes are in `store-assets/playground-firefox/listing.md`. The add-on is renamed **On-device AI Playground for Firefox**, because AMO rejects names containing "Firefox" unless they read "… for Firefox". Its last `web-ext lint` warning (`innerHTML` in `el()`) is gone: static markup is now parsed with `DOMParser`.
 
 ## [1.9.0] - 2026-10-20

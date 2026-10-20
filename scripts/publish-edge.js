@@ -30,7 +30,11 @@ function describeFailure(step, body) {
     ? body.errors.map((e) => (typeof e === "string" ? e : e?.message || JSON.stringify(e)))
     : [];
   const code = body?.errorCode ? ` [${body.errorCode}]` : "";
-  return [`Edge ${step} failed${code}: ${body?.message || "no message"}`, ...errors].join("\n  ");
+  const hints = body?.errorCode === "InProgressSubmission"
+    ? ["The new package is uploaded as a draft, but the previous version is still in certification.",
+       "Once Partner Center shows that review finished, re-run .github/workflows/edge-publish.yml for this tag."]
+    : [];
+  return [`Edge ${step} failed${code}: ${body?.message || "no message"}`, ...errors, ...hints].join("\n  ");
 }
 
 async function expectAccepted(response, step) {

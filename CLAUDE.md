@@ -80,7 +80,9 @@ packaging scripts, not a build step: they only zip raw source files, so the
    `CLIENT_SECRET`, `REFRESH_TOKEN`; AMO: `AMO_JWT_ISSUER`, `AMO_JWT_SECRET`;
    Edge: `EDGE_PRODUCT_ID`, `EDGE_CLIENT_ID`, `EDGE_API_KEY` — setup links are
    in the workflow comments). Edge gets the Chrome zip unchanged via
-   `scripts/publish-edge.js` (Edge Add-ons REST API, no deps). Without secrets those steps are
+   `scripts/publish-edge.js` (Edge Add-ons REST API, no deps). If Edge rejects the publish with `InProgressSubmission` (the previous version
+   is still in certification), re-run only Edge later with the manual
+   `.github/workflows/edge-publish.yml` (input: the tag). Without secrets those steps are
    skipped — upload the zips to the store dashboards manually. Store review
    still decides when users get it.
 

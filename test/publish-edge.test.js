@@ -94,6 +94,15 @@ test('surfaces validation errors from a failed upload', async () => {
   await assert.rejects(run(fetchImpl), /Edge upload failed \[InvalidPackage\]: Bad zip\n {2}manifest.json missing/);
 });
 
+test('explains a publish blocked by a submission still in certification', async () => {
+  const routes = happyRoutes();
+  routes[`GET ${product}/submissions/operations/pub-1`] = [
+    status({ status: 'Failed', errorCode: 'InProgressSubmission', message: "Can't publish extension as your extension submission is in progress. Please try again later." }),
+  ];
+  const { fetchImpl } = fakeApi(routes);
+  await assert.rejects(run(fetchImpl), /Edge publish failed \[InProgressSubmission\][^]*uploaded as a draft[^]*edge-publish\.yml/);
+});
+
 test('gives up after maxPolls instead of waiting forever', async () => {
   const routes = happyRoutes();
   routes[`GET ${product}/submissions/draft/package/operations/up-1`] = [
