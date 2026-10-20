@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.9.0] - 2026-10-20
+
 ### Added
 
 - **Firefox AI playground.** Firefox exposes none of Chrome's built-in AI web APIs, so the API playground cannot demo anything there. New `playground-firefox/`: a standalone Firefox add-on (not part of Comment Vibe, excluded from both store zips) with one live demo per `browser.trial.ml` task — zero-shot (including Comment Vibe's multilingual model), sentiment, NER, question answering, fill-mask, summarization, translation, Flan-T5, text generation and embeddings — plus model download progress, the raw `runEngine` output, a code sample and a "delete cached models" button. Firefox allows one engine per extension run, so switching task reloads the add-on and reopens the page on that task.
