@@ -24,7 +24,7 @@ The popup's model-download states can be checked the same way with
 `popup.html` with a stubbed Prompt API. Modes: `?state=downloadable`,
 `downloading`, `available`, `unavailable`; options `&start=0.4`,
 `&duration=6000`, `&activation=required`, `&fail=1`, `&reattach=0.2`; `?browser=firefox`
-(`&ffshape=bytes|unknown`, `&blocked=1` for AI controls blocking it) for the Firefox setup flow. Reload mid-download to
+(`&ffshape=bytes|unknown`, `&blocked=1` for AI controls blocking it, `&granted=1&blocked=1` for a popup reopened after that block) for the Firefox setup flow. Reload mid-download to
 simulate reopening the popup.
 
 Full manual testing on Chrome requires:

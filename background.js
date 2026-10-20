@@ -42,6 +42,19 @@ function hasML() {
   return typeof browser !== 'undefined' && !!browser.trial?.ml;
 }
 
+// Firefox checks its AI prefs (AI controls) before validating the task, so a
+// createEngine call with an unknown task reports a block without creating an
+// engine or downloading anything.
+async function mlBlocked() {
+  if (!hasML()) return false;
+  try {
+    await browser.trial.ml.createEngine({ taskName: 'cv-probe' });
+    return false;
+  } catch (error) {
+    return /trial ml api is disabled/i.test(error?.message || '');
+  }
+}
+
 async function mlAvailable() {
   if (!hasML()) return false;
   try {
@@ -152,7 +165,10 @@ async function warmup() {
 function handleMessage(message) {
   switch (message?.type) {
     case 'cv-status':
-      return mlAvailable().then(available => ({ available }));
+      return mlAvailable().then(async granted => {
+        const blocked = granted && await mlBlocked();
+        return { available: granted && !blocked, granted, blocked };
+      });
     case 'cv-analyze':
       return analyze(String(message.text ?? ''))
         .then(result => ({ ok: true, result }))

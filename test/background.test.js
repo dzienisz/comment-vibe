@@ -14,13 +14,20 @@ const {
 
 const LABELS = ['friendly and appreciative', 'a neutral factual statement', 'critical or dismissive', 'insulting or hateful'];
 
-function stubBrowser({ runOutput, granted = true } = {}) {
+const DISABLED = 'Trial ML API is disabled. This API is only available when "extensions.ml.enabled" and browser.ml.enable" preferences are set to true.';
+
+function stubBrowser({ runOutput, granted = true, blocked = false } = {}) {
   const calls = { create: 0, run: 0, args: null, options: null, notified: [] };
   global.browser = {
     permissions: { contains: async () => granted },
     trial: {
       ml: {
-        createEngine: async () => { calls.create++; },
+        // Firefox checks the AI prefs before the task name.
+        createEngine: async ({ taskName } = {}) => {
+          if (blocked) throw new Error(DISABLED);
+          if (taskName === 'cv-probe') throw new Error('Unsupported task cv-probe');
+          calls.create++;
+        },
         runEngine: async ({ args, options }) => {
           calls.run++;
           calls.args = args;
@@ -129,7 +136,8 @@ test('an "Engine already created" rejection is treated as an existing engine', a
 test('handleMessage answers cv-status, cv-analyze, and cv-warmup', async () => {
   const calls = stubBrowser({ runOutput: { labels: ['a neutral factual statement'], scores: [0.8] } });
 
-  assert.deepEqual(await handleMessage({ type: 'cv-status' }), { available: true });
+  assert.deepEqual(await handleMessage({ type: 'cv-status' }), { available: true, granted: true, blocked: false });
+  assert.equal(calls.create, 0);
 
   const analyzed = await handleMessage({ type: 'cv-analyze', text: 'plain facts here' });
   assert.equal(analyzed.ok, true);
@@ -150,6 +158,19 @@ test('handleMessage reports errors instead of throwing', async () => {
 
   const warmed = await handleMessage({ type: 'cv-warmup' });
   assert.equal(warmed.ok, false);
+});
+
+test('cv-status reports a granted permission blocked by AI controls as unavailable', async () => {
+  const calls = stubBrowser({ blocked: true });
+  assert.deepEqual(await handleMessage({ type: 'cv-status' }), { available: false, granted: true, blocked: true });
+  assert.equal(calls.create, 0);
+
+  stubBrowser({ granted: false });
+  assert.deepEqual(await handleMessage({ type: 'cv-status' }), { available: false, granted: false, blocked: false });
+
+  const warmed = await (stubBrowser({ blocked: true }), handleMessage({ type: 'cv-warmup' }));
+  assert.equal(warmed.ok, false);
+  assert.match(warmed.error, /Trial ML API is disabled/);
 });
 
 test('warmup requires the trialML permission', async () => {
