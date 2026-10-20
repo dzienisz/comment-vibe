@@ -70,6 +70,14 @@ function showSetup() {
   document.getElementById(isEdge() ? 'setup-edge' : 'setup').classList.add('visible');
 }
 
+// Blocking AI in Firefox's AI controls (148+) turns extensions.ml.enabled off,
+// and browser.trial.ml then rejects with "Trial ML API is disabled".
+function firefoxSetupHint(error = '') {
+  return /trial ml api is disabled/i.test(error)
+    ? 'Firefox is blocking AI features: allow them in Settings → AI controls, then try again.'
+    : 'Check the steps below and try again.';
+}
+
 // The "On-device AI" toggle moved from System to the AI settings page in Chrome 152.
 function aiSettingsUrl(userAgent = navigator.userAgent) {
   const major = Number(/Chrome\/(\d+)/.exec(userAgent)?.[1]);
@@ -509,8 +517,8 @@ async function initFirefoxPopup(els, fastMode) {
     } else {
       enable.disabled = false;
       bar.hidden = true;
-      progress.textContent = `Setup failed: ${result?.error || 'unknown error'}. ` +
-        'Check the about:config flags below and try again.';
+      progress.textContent = `Setup failed: ${(result?.error || 'unknown error').replace(/\.$/, '')}. ` +
+        firefoxSetupHint(result?.error);
       setStatus(els, 'err', 'On-device AI not available');
     }
   });

@@ -24,7 +24,8 @@
     <a href="?browser=firefox">fraction</a> ·
     <a href="?browser=firefox&amp;ffshape=bytes">bytes</a> ·
     <a href="?browser=firefox&amp;ffshape=unknown">unknown shape</a> ·
-    <a href="?browser=firefox&amp;fail=1">fails</a></p>
+    <a href="?browser=firefox&amp;fail=1">fails</a> ·
+    <a href="?browser=firefox&amp;blocked=1">blocked by AI controls</a></p>
   <p>Edge: <a href="?browser=edge&amp;state=none">no Prompt API (old or unsupported Edge)</a> ·
     <a href="?browser=edge&amp;state=unavailable">unavailable</a> ·
     <a href="?browser=edge&amp;state=downloadable">downloadable</a> ·
@@ -44,6 +45,7 @@
     duration: Number(q.get('duration') || 6000),
     activation: q.get('activation') === 'required',
     fail: q.get('fail') === '1',
+    blocked: q.get('blocked') === '1',
     reattach: q.has('reattach') ? Number(q.get('reattach')) : null,
     firefox: q.get('browser') === 'firefox',
     edge: q.get('browser') === 'edge',
@@ -99,6 +101,9 @@
         onMessage: { addListener: fn => listeners.push(fn) },
         async sendMessage(message) {
           if (message?.type !== 'cv-warmup') return undefined;
+          if (cfg.blocked) {
+            return { ok: false, error: 'Trial ML API is disabled. This API is only available when "extensions.ml.enabled" and browser.ml.enable" preferences are set to true.' };
+          }
           const steps = 20;
           for (let i = 1; i <= steps; i++) {
             await new Promise(r => setTimeout(r, cfg.duration / steps));

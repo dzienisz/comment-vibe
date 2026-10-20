@@ -48,6 +48,7 @@ ONE-TIME SETUP
 Because on-device AI in Firefox is still experimental, you turn it on yourself:
 • Open the Comment Vibe popup and click "Enable on-device AI" (this grants the optional trialML permission and downloads the model once).
 • On Firefox 134–139 you may also need to set browser.ml.enable and extensions.ml.enabled to true in about:config (on by default since Firefox 140).
+• If you blocked AI features in Settings → AI controls (Firefox 148+), allow them again: blocking also switches off the AI API add-ons use.
 
 REQUIREMENTS
 • Firefox 134 or later, on desktop.
