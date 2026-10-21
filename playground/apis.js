@@ -41,16 +41,105 @@ function getApiOptions(api, values) {
   return api.demo?.options?.({ ...defaults, ...values }) ?? api.availabilityOptions ?? {};
 }
 
-async function runWithSession(id, values, report, run) {
+// prepare(options) może podmienić opcje tuż przed create() (np. sondą odczytu).
+async function runWithSession(id, values, report, run, prepare = options => options) {
   const api = APIS.find(api => api.id === id);
   const factory = getApi(api.globalName);
   if (typeof factory?.create !== 'function') throw new Error(`${api.name}: brak metody create() w tej przeglądarce.`);
-  const session = await factory.create({ ...getApiOptions(api, values), monitor: dl(report) });
+  const session = await factory.create(prepare({ ...getApiOptions(api, values), monitor: dl(report) }));
   try {
     return await run(session);
   } finally {
     session.destroy?.();
   }
+}
+
+// ── Pomiar Prompt API (MTP) ────────────────────────────────────────────────────
+
+const now = () => globalThis.performance?.now?.() ?? Date.now();
+const num = (value, digits = 1) => value.toFixed(digits).replace('.', ',');
+const secs = ms => ms < 1000 ? `${Math.round(ms)} ms` : `${num(ms / 1000)} s`;
+
+// WebIDL czyta tylko członków słownika, których przeglądarka zna, więc getter
+// mówi, czy create() w ogóle zobaczyło daną opcję. Nieznana opcja jest
+// ignorowana bez błędu — bez tej sondy nie widać, że MTP się nie włączy.
+function probeOption(options, key) {
+  if (!(key in options)) return { options, read: () => null };
+  const { [key]: value, ...rest } = options;
+  let read = false;
+  Object.defineProperty(rest, key, { enumerable: true, get() { read = true; return value; } });
+  return { options: rest, read: () => read };
+}
+
+// Liczba tokenów odpowiedzi: tokenizer sesji, jeśli go wystawia, inaczej szacunek.
+async function countTokens(session, text) {
+  for (const method of ['measureContextUsage', 'measureInputUsage']) {
+    if (typeof session[method] !== 'function') continue;
+    try {
+      const value = await session[method](text);
+      if (Number.isFinite(value) && value > 0) return { tokens: value, measured: true };
+    } catch {}
+  }
+  return { tokens: Math.max(1, Math.round(text.length / 4)), measured: false };
+}
+
+// Jedno wywołanie: TTFT (prefill + pierwszy token) i ciepłe dekodowanie
+// liczone od pierwszego fragmentu do końca strumienia.
+async function measurePromptRun(session, text) {
+  const t0 = now();
+  let output = '';
+  let firstAt = null;
+  if (typeof session.promptStreaming === 'function') {
+    for await (const chunk of session.promptStreaming(text)) {
+      firstAt ??= now();
+      // starsze buildy strumieniują cały tekst, nowsze — przyrosty
+      output = (chunk.length > output.length && chunk.startsWith(output)) ? chunk : output + chunk;
+    }
+  } else {
+    output = await session.prompt(text);
+  }
+  const end = now();
+  const { tokens, measured } = await countTokens(session, output);
+  const decodeMs = firstAt === null ? null : end - firstAt;
+  const decodeTokPerS = decodeMs > 0 && tokens > 1 ? (tokens - 1) / (decodeMs / 1000) : null;
+  return { output, tokens, measured, totalMs: end - t0, ttftMs: firstAt === null ? null : firstAt - t0,
+    decodeMs, decodeTokPerS, overallTokPerS: end > t0 ? tokens / ((end - t0) / 1000) : null };
+}
+
+const median = values => {
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+};
+
+function formatPromptMetrics({ legacy, samplingMode, samplingRead, createMs, runs }) {
+  const lines = ['── Pomiar ──'];
+  if (legacy) {
+    lines.push('samplingMode: nie dotyczy (stara przestrzeń window.ai.languageModel)');
+  } else if (samplingMode) {
+    lines.push(`samplingMode: '${samplingMode}' — ${samplingRead
+      ? 'przeglądarka przyjęła opcję'
+      : 'przeglądarka ZIGNOROWAŁA opcję (MTP się nie włączy; patrz opis wyżej)'}`);
+  } else {
+    lines.push('samplingMode: domyślny (próbkowanie — MTP nie działa)');
+  }
+  lines.push(`Tworzenie sesji: ${secs(createMs)} (z pobieraniem modelu, jeśli trwało)`);
+  runs.forEach((run, i) => {
+    const decode = run.decodeTokPerS === null ? '' : ` · dekodowanie ${num(run.decodeTokPerS)} tok/s`;
+    const ttft = run.ttftMs === null ? '' : ` · TTFT ${secs(run.ttftMs)}`;
+    lines.push(`#${i + 1}: ${run.tokens} tok${ttft}${decode} · całość ${secs(run.totalMs)}`);
+  });
+  const warm = runs.length > 1 ? runs.slice(1) : runs;
+  const rates = warm.map(run => run.decodeTokPerS).filter(Number.isFinite);
+  const range = runs.length > 1 ? `przebiegi 2–${runs.length}` : 'jeden przebieg — pierwszy bywa zimny';
+  const overall = warm.map(run => run.overallTokPerS).filter(Number.isFinite);
+  if (rates.length) lines.push(`Ciepłe dekodowanie (mediana, ${range}): ${num(median(rates))} tok/s`);
+  else if (overall.length) lines.push(`Bez strumieniowania: ${num(median(overall))} tok/s łącznie z prefill`);
+  lines.push(`Opóźnienie odpowiedzi (mediana, ${range}): ${secs(median(warm.map(run => run.totalMs)))}`);
+  lines.push(runs.every(run => run.measured)
+    ? 'Tokeny policzone tokenizerem sesji (measureContextUsage/measureInputUsage).'
+    : 'Tokeny ≈ szacunek (znaki/4) — ta przeglądarka nie wystawia tokenizera.');
+  return lines.join('\n');
 }
 
 const DECISION_SCHEMA = {
@@ -124,6 +213,17 @@ const APIS = [
       <br><br>Na web parametr <code>samplingMode</code> pozostaje osobnym origin trial, przedłużonym do Chrome 159
       (Chrome Status wpisuje wydanie na Chrome 160 — bez potwierdzenia). Tryb rozumowania
       (<code>thinkingEffort</code>) jest dopiero na etapie Intent to Prototype.
+      <br><br><strong>MTP (Multi-Token Prediction) dla Gemma 4 — developer trial w Chrome Canary.</strong>
+      Mały model-szkic proponuje kilka tokenów naraz, a Gemma 4 sprawdza je równolegle; Google podaje
+      +20–30% szybsze ciepłe dekodowanie. Działa tylko w sesjach zachłannych, czyli
+      z <code>samplingMode: 'most-predictable'</code> — demo poniżej ustawia je domyślnie.
+      Porównanie przed/po: <code>chrome://flags/#on-device-model-speculative-decoding</code> włączone (MTP),
+      a jako punkt odniesienia wyłączone przy włączonym <code>chrome://flags/#gemma4-for-built-in-ai</code>.
+      Uwaga: w Chrome 155 Stable i 158 Canary bez tokenu origin trial przeglądarka pomija
+      <code>samplingMode</code> bez błędu (także w rozszerzeniach) — odczytuje je dopiero
+      z <code>chrome://flags/#enable-experimental-web-platform-features</code>. Pomiar w demo mówi,
+      czy opcja została przyjęta, i podaje TTFT, tok/s ciepłego dekodowania (mediana bez pierwszego,
+      zimnego przebiegu) oraz opóźnienie odpowiedzi.
       <code>topK</code>, <code>temperature</code> i <code>LanguageModel.params()</code> to nadal ścieżka
       rozszerzeń, nie domyślne API strony. Rozwój kolejnych języków nie ma tu przypisanej daty stable.`,
     versions: [
@@ -139,6 +239,7 @@ const APIS = [
     usage: `const session = await LanguageModel.create({
   expectedInputs: [{ type: 'text', languages: ['en'] }],
   expectedOutputs: [{ type: 'text', languages: ['en'] }],
+  samplingMode: 'most-predictable', // zachłanne dekodowanie — wymagane przez MTP
   initialPrompts: [
     { role: 'system', content: 'You are a helpful assistant.' },
   ],
@@ -153,17 +254,40 @@ session.destroy();`,
       fields: [
         { type: 'textarea', id: 'text', label: 'Twój prompt (demo w języku angielskim)',
           value: 'Write a short, friendly welcome for viewers of my YouTube channel.' },
+        { type: 'select', id: 'sampling', label: 'Próbkowanie', value: 'most-predictable', options: [
+          ['most-predictable', "most-predictable — zachłanne, MTP"],
+          ['default', 'domyślne (bez MTP)'],
+        ] },
+        { type: 'select', id: 'runs', label: 'Liczba przebiegów (pomiar)', value: '3',
+          options: [['1', '1'], ['3', '3'], ['5', '5']] },
       ],
-      options: () => globalThis.LanguageModel ? {
+      options: v => globalThis.LanguageModel ? {
         expectedInputs: [{ type: 'text', languages: ['en'] }],
         expectedOutputs: [{ type: 'text', languages: ['en'] }],
+        ...(v.sampling === 'most-predictable' ? { samplingMode: 'most-predictable' } : {}),
       } : {},
       run: async (v, report) => {
         report.status('Tworzę sesję…');
-        return runWithSession('prompt', v, report, session => {
-          report.status('Generuję odpowiedź…');
-          return session.prompt(v.text);
-        });
+        const t0 = now();
+        let probe;
+        return runWithSession('prompt', v, report, async session => {
+          const createMs = now() - t0;
+          const total = Math.max(1, Number(v.runs) || 1);
+          const runs = [];
+          for (let i = 0; i < total; i++) {
+            report.status(`Generuję odpowiedź (${i + 1}/${total})…`);
+            // clone() zaczyna od czystego kontekstu, więc przebiegi są porównywalne
+            const run = typeof session.clone === 'function' ? await session.clone() : session;
+            try {
+              runs.push(await measurePromptRun(run, v.text));
+            } finally {
+              if (run !== session) run.destroy?.();
+            }
+          }
+          const metrics = formatPromptMetrics({ legacy: !globalThis.LanguageModel, samplingMode: 'samplingMode' in probe.options ? 'most-predictable' : null,
+            samplingRead: probe.read(), createMs, runs });
+          return `${runs.at(-1).output}\n\n${metrics}`;
+        }, options => (probe = probeOption(options, 'samplingMode')).options);
       },
     },
   },

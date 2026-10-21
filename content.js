@@ -175,7 +175,12 @@ async function constructSession() {
     // through the same option reductions as before so older Chrome builds keep
     // working. Each step is retried only for TypeError / NotSupportedError,
     // which indicate an unsupported option rather than a real model failure.
+    // samplingMode 'most-predictable' asks for greedy decoding, which Gemma 4
+    // needs for Multi-Token Prediction (MTP). Builds without the option ignore
+    // the member; a build that rejects it falls through to the same options
+    // without it.
     const combos = [
+      { initialPrompts, ...LANGUAGE_OPTIONS, responseConstraint: RESPONSE_SCHEMA, samplingMode: 'most-predictable' },
       { initialPrompts, ...LANGUAGE_OPTIONS, responseConstraint: RESPONSE_SCHEMA },
       { initialPrompts, responseConstraint: RESPONSE_SCHEMA },
       { initialPrompts, ...LANGUAGE_OPTIONS },
