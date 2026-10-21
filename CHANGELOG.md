@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.10.0] - 2026-10-21
+
 ### Added
 
 - **Tone check asks for greedy sampling, ready for Gemma 4 Multi-Token Prediction (MTP).** Chrome Canary's MTP developer trial (`chrome://flags/#on-device-model-speculative-decoding`) only speeds up sessions created with `samplingMode: 'most-predictable'`, so the tone-check session now requests it first. If a build rejects the option, the session is retried with the previous options, and the rest of the fallback chain is unchanged. The rewrite session keeps default sampling, since greedy rewrites tend to repeat themselves. Checked in Chrome 155 and 156 Stable and 158 Canary: without an origin-trial token, `create()` ignores `samplingMode` without an error in web pages, extension pages and content scripts alike. It only reads the option with `chrome://flags/#enable-experimental-web-platform-features`, and then rejects invalid values with a `TypeError`.
