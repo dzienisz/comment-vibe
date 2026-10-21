@@ -27,6 +27,8 @@ friendlier or more professional. Turn off automatic checks and use the
 
 By default all analysis runs locally — Chrome's on-device Gemini Nano model, or Firefox's on-device AI runtime. Your comments are never sent to any server.
 
+On Chrome with the [Decisions API](https://github.com/explainers-by-googlers/decisions-api) developer trial (`chrome://flags/#decisions-api`, Chrome 158 Dev/Canary) and its model downloaded, friendly and neutral comments get their verdict from that on-device classifier without running the language model at all; harsher ones still get an explanation and a rewrite from the Prompt API.
+
 **Optional Fast mode (cloud).** If you turn on *Fast tone check in the cloud* in the popup and paste your own [SubQ](https://subq.ai) or [TypeSafe](https://typesafe.ai) API key, the text being checked is sent to that provider's decision model (typically well under a second). It is off by default, the extension asks for access to the provider's host only when you enable it, and the key is kept in this browser's local storage (never synced). Fast mode only powers the tone badge — writing actions and rewrites still run on-device — and if a cloud call fails, Comment Vibe falls back to the on-device model.
 
 ## Microsoft Edge support

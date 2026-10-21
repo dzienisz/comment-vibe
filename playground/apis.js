@@ -583,8 +583,9 @@ console.log(result.corrections); // lista poprawek`,
       zdefiniowane pytania (<code>boolean</code>, <code>choice</code>, <code>score</code>), a w jednym
       przebiegu zwraca wybraną opcję, <strong>prawdopodobieństwa i pewność</strong>. Nie generuje tekstu,
       więc nie może zwrócić etykiety spoza listy. Google celuje w dziesiątki–setki milisekund na zwykłym
-      laptopie. Dla Comment Vibe to naturalny kandydat na sam badge tonu: pytanie z trybu Fast mode
-      (Jev) przenosi się 1:1.
+      laptopie. Comment Vibe już z niego korzysta: gdy <code>DecisionModel</code> jest dostępne, a model pobrany,
+      pewny werdykt „positive”/„neutral” zastępuje wywołanie Prompt API (pytanie z trybu Fast mode, Jev, przenosi się 1:1).
+      <code>create()</code> bez gestu użytkownika przy stanie „downloadable” zwraca <code>NotAllowedError</code>.
       <br><br><strong>Developer trial od Chrome 157</strong> za flagą <code>chrome://flags/#decisions-api</code>
       (backend EmbeddingGemma V1 albo Gemma 4 na CPU). Sprawdziliśmy w Chrome 158 Dev: z flagą
       pojawia się natywne <code>DecisionModel</code> z <code>availability()</code>, <code>create()</code>,

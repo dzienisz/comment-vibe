@@ -6,6 +6,8 @@
 
 **Maintain both Chrome AI API paths.** `content.js` and `popup.js` detect `LanguageModel` (standard global) and `window.ai.languageModel` (legacy namespace). Both paths must remain functional — different Chrome builds expose different namespaces depending on origin trial stage.
 
+**Decisions API fast path.** Before the Prompt API, `content.js` asks Chrome's `DecisionModel` (developer trial, `chrome://flags/#decisions-api`) for the tone when it is present and its model is already `available` — never `create()` while `downloadable`, which needs a user gesture. Confident positive/neutral verdicts skip the Prompt API; everything else falls back to it. Feature-detect only; the API shape may change.
+
 **Maintain the Firefox path.** When both Chrome globals are missing and `browser.runtime` exists, `content.js` delegates analysis to `background.js` over runtime messaging (`cv-status` / `cv-analyze` / `cv-warmup` / `cv-ml-ready`). `background.js` uses the Firefox WebExtensions AI API (`browser.trial.ml`, Firefox 134+, optional `trialML` permission) — it is background-only, runs a zero-shot classifier instead of a prompt LLM, and must never be referenced from the Chrome `manifest.json`. Chrome detection always wins over the Firefox path. `browser.trial.ml` is explicitly experimental: expect breaking renames across Firefox versions and guard with feature detection, not version checks.
 
 **CSS `!important` is intentional.** All badge/tooltip rules use `!important` to survive conflicting site stylesheets. Do not remove them.

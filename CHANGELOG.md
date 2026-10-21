@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Tone check uses Chrome's Decisions API when it is ready.** With `chrome://flags/#decisions-api` (developer trial, Chrome 158 Dev/Canary) and its model already downloaded, the tone check first asks `DecisionModel` one choice question (positive / neutral / negative / toxic), which answers without generating text. A positive or neutral verdict with at least 60% confidence is the whole result, so the Prompt API is not called. Negative and toxic verdicts still go through the Prompt API for the explanation and rewrite suggestion; a toxic verdict colors the badge first. Without the API, before its model is downloaded (Comment Vibe never starts that download: `create()` needs a user gesture), on low confidence or on an error, the tone check uses the Prompt API as before, and re-checks the Decisions API at most every 10 minutes. Checked on Chrome 158 Canary: `DecisionModel` (`availability`, `create`, `decide`, `destroy`) is exposed to extension content scripts with the flag, and `create()` rejects with `NotAllowedError` without a user gesture while the model is `downloadable`.
+
+### Changed
+
+- **Verdict cache keeps results longer.** Greedy sampling and the Decisions API give the same verdict for the same text, so the in-memory cache now keeps verdicts for 30 minutes instead of 5, ignores whitespace differences, and keeps at most 200 entries (least recently used evicted first).
+
 ## [1.10.0] - 2026-10-21
 
 ### Added

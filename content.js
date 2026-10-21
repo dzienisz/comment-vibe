@@ -8,7 +8,8 @@ const SESSION_TTL = 600_000;
 const ANALYSIS_TIMEOUT_MS = 30_000;
 const AVAILABILITY_TIMEOUT_MS = 5000;
 const MODEL_DOWNLOAD_TIMEOUT_MS = 300_000;
-const RESULT_CACHE_TTL = 300_000; // 5 minutes
+const RESULT_CACHE_TTL = 1_800_000; // 30 minutes
+const RESULT_CACHE_MAX = 200;
 // Firefox's classifier has no "downloading" availability probe; if an analysis
 // is still running after this delay it is almost certainly the first-run model
 // download, so the badge swaps to the honest "preparing" state.
@@ -257,6 +258,7 @@ function resetSessionState() {
   rewriteSessionCreation = null;
   rewriteLastUsedAt = 0;
   unavailableNoticed = false;
+  resetDecisionState();
 }
 
 function buildRewriteMessages(text, mode, lang) {
@@ -376,13 +378,16 @@ async function rewriteText(text, mode, lang, signal) {
 // ── Result cache ──────────────────────────────────────────────────────────────
 //
 // Built-in AI inference is not instant; avoid re-running the model for identical
-// input. Cache is keyed by trimmed text and invalidated on TTL expiry and on
-// explicit refresh (see the tooltip's ↻ button). Storing results in memory only
-// keeps the extension dependency-free and avoids leaking data to storage.
+// input. Cache is keyed by text with whitespace collapsed and invalidated on TTL
+// expiry and on explicit refresh (see the tooltip's ↻ button). Greedy sampling
+// and the Decisions API give the same verdict for the same text, so a long TTL
+// loses nothing; the size cap evicts the least recently used entry. Storing
+// results in memory only keeps the extension dependency-free and avoids leaking
+// data to storage.
 
 const resultCache = new Map();
 
-function cacheKey(text) { return text.trim(); }
+function cacheKey(text) { return text.trim().replace(/\s+/g, ' '); }
 
 function cleanResultCache(now = Date.now()) {
   for (const [key, entry] of resultCache.entries()) {
@@ -394,15 +399,17 @@ function getCachedResult(text) {
   const key = cacheKey(text);
   const entry = resultCache.get(key);
   if (!entry) return null;
-  if (Date.now() > entry.expiresAt) {
-    resultCache.delete(key);
-    return null;
-  }
+  resultCache.delete(key);
+  if (Date.now() > entry.expiresAt) return null;
+  resultCache.set(key, entry);
   return entry.result;
 }
 
 function setCachedResult(text, result) {
-  resultCache.set(cacheKey(text), { result, expiresAt: Date.now() + RESULT_CACHE_TTL });
+  const key = cacheKey(text);
+  resultCache.delete(key);
+  resultCache.set(key, { result, expiresAt: Date.now() + RESULT_CACHE_TTL });
+  while (resultCache.size > RESULT_CACHE_MAX) resultCache.delete(resultCache.keys().next().value);
 }
 
 // ── Site enablement (storage.sync prefs) ─────────────────────────────────────
@@ -650,6 +657,126 @@ async function analyzeViaJev(text) {
   return { ...normalize(response.result), engine: 'jev', providerLabel };
 }
 
+// ── Decisions API fast path (developer trial) ─────────────────────────────────
+//
+// Chrome's DecisionModel (chrome://flags/#decisions-api, Chrome 158 Dev/Canary) answers a
+// typed choice question without generating text (Google targets tens to
+// hundreds of milliseconds). When it is present and its model is on disk, a
+// confident positive/neutral verdict is the whole result and the Prompt API is
+// never called. Negative and toxic verdicts still go through the Prompt API for
+// the explanation and rewrite suggestion; a toxic verdict colors the badge
+// first. Anything else (no API, model not downloaded, low confidence, error)
+// falls back to the Prompt API silently. The API shape may still change.
+
+const DECISION_MIN_CONFIDENCE = 0.6;
+const DECISION_MAX_CHARS = 4_000;
+const DECISION_SCHEMA = {
+  context: 'Comment box tone check: how will other readers perceive the comment the user is about to post?',
+  questions: [
+    {
+      id: 'tone',
+      type: 'choice',
+      prompt: 'How will other readers perceive the tone of this comment? Judge how it is said, not what it is about: respectful criticism is fine.',
+      options: [
+        { label: 'positive', description: 'Friendly, appreciative, encouraging or supportive.' },
+        { label: 'neutral', description: 'Factual or a calm question, or criticism, disagreement, a complaint or disappointment stated calmly and politely, without harsh words or hostility.' },
+        { label: 'negative', description: 'Hostile delivery without insults: harsh or contemptuous wording, dismissive, sarcastic, mocking, condescending, passive-aggressive or blaming.' },
+        { label: 'toxic', description: 'Contains insults, name-calling, slurs, threats, harassment or hateful language aimed at people.' },
+      ],
+    },
+  ],
+};
+const DECISION_READS_AS = {
+  positive: 'friendly or appreciative',
+  neutral: 'neutral and factual',
+  negative: 'critical or harsh',
+  toxic: 'insulting or hostile',
+};
+
+let decisionModel = null;
+let decisionCreation = null;
+let decisionRetryAt = 0;
+
+function hasDecisionModel() {
+  return typeof DecisionModel !== 'undefined' && typeof DecisionModel?.create === 'function';
+}
+
+function resetDecisionState() {
+  decisionModel?.destroy?.();
+  decisionModel = null;
+  decisionCreation = null;
+  decisionRetryAt = 0;
+}
+
+function skipDecisionsForNow() {
+  decisionModel?.destroy?.();
+  decisionModel = null;
+  decisionRetryAt = Date.now() + SESSION_TTL;
+}
+
+// Only uses a model that is already downloaded: create() needs a user gesture
+// to start a download, and the tone badge must never wait for one. An
+// unavailable model is re-checked at most once per SESSION_TTL.
+async function getDecisionModel() {
+  if (!hasDecisionModel() || Date.now() < decisionRetryAt) return null;
+  if (decisionModel) return decisionModel;
+  if (!decisionCreation) {
+    const creation = (async () => {
+      if (await availabilityWithTimeout(DecisionModel.availability(DECISION_SCHEMA)) !== 'available') return null;
+      return DecisionModel.create(DECISION_SCHEMA);
+    })()
+      .catch(() => null)
+      .then(model => {
+        if (decisionCreation === creation) decisionCreation = null;
+        if (model) decisionModel = model;
+        else skipDecisionsForNow();
+        return model;
+      });
+    decisionCreation = creation;
+  }
+  return decisionCreation;
+}
+
+// The explainer returns { label, confidence, probabilities: { label: p } };
+// the WebAI polyfill returns probabilities as [{ label, probability }].
+function parseDecision(result) {
+  const answer = result?.tone;
+  const raw = answer?.label ?? answer?.choice;
+  const sentiment = typeof raw === 'string' ? raw.trim().toLowerCase() : '';
+  if (!VALID_SENTIMENTS.has(sentiment)) return null;
+  const probs = answer.probabilities;
+  const probability = Array.isArray(probs)
+    ? probs.find(item => String(item?.label ?? '').trim().toLowerCase() === sentiment)?.probability
+    : probs?.[raw] ?? probs?.[sentiment];
+  const confidence = typeof answer.confidence === 'number' ? answer.confidence
+    : typeof probability === 'number' ? probability : null;
+  return { sentiment, confidence };
+}
+
+async function analyzeViaDecisions(text, signal) {
+  const model = await getDecisionModel();
+  if (!model) return null;
+  let decision;
+  try {
+    decision = parseDecision(await model.decide(String(text).slice(0, DECISION_MAX_CHARS), signal ? { signal } : undefined));
+  } catch (error) {
+    if (signal?.aborted) throw error;
+    console.warn('[CommentVibe] Decisions API failed, using the Prompt API:', error?.message || error);
+    skipDecisionsForNow();
+    return null;
+  }
+  if (!decision || decision.confidence === null || decision.confidence < DECISION_MIN_CONFIDENCE) return null;
+  const { sentiment, confidence } = decision;
+  return {
+    ...normalize({
+      sentiment,
+      reason: `Chrome's on-device decision model reads this as ${DECISION_READS_AS[sentiment]} (${Math.round(confidence * 100)}% sure).`,
+    }),
+    engine: 'decisions',
+    confidence,
+  };
+}
+
 // ── Localisation (Language Detector + Translator) ─────────────────────────────
 //
 // The model always reasons in English (reliable structured JSON). When the
@@ -824,6 +951,9 @@ async function analyzeText(text, onEarlySentiment, signal) {
 
 async function analyzeLocally(text, onEarlySentiment, signal) {
   if (isFirefoxMLContext()) return analyzeViaBackground(text);
+  const decided = await analyzeViaDecisions(text, signal);
+  if (decided && (decided.sentiment === 'positive' || decided.sentiment === 'neutral')) return decided;
+  if (decided?.sentiment === 'toxic') onEarlySentiment?.('toxic');
   const acquired = await getSession();
   const base = acquired.session;
   // Prompt API sessions are stateful: prompting the shared session would append
@@ -1986,6 +2116,7 @@ if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     analyzeText,
     analyzeViaBackground,
+    analyzeViaDecisions,
     analyzeViaJev,
     applyJevSetting,
     applySettings,
@@ -2000,6 +2131,7 @@ if (typeof module !== 'undefined' && module.exports) {
     cleanRewriteOutput,
     cleanResultCache,
     constructSession,
+    DECISION_SCHEMA,
     expireReusableSession,
     extractEarlySentiment,
     FEW_SHOT,
@@ -2018,11 +2150,13 @@ if (typeof module !== 'undefined' && module.exports) {
     normalizeDetectedLanguage,
     normalizeHost,
     parseAnalysisResponse,
+    parseDecision,
     parseResponse,
     resetSessionState,
     rewriteText,
     REWRITE_MODES,
     RESPONSE_SCHEMA,
+    RESULT_CACHE_MAX,
     RESULT_CACHE_TTL,
     shouldShowRatePrompt,
     analysisModeFrom,

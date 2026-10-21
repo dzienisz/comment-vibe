@@ -6,6 +6,7 @@ const assert = require('node:assert/strict');
 const {
   analyzeText,
   analyzeViaBackground,
+  analyzeViaDecisions,
   analyzeViaJev,
   applyJevSetting,
   applySettings,
@@ -20,6 +21,7 @@ const {
   cleanRewriteOutput,
   cleanResultCache,
   constructSession,
+  DECISION_SCHEMA,
   expireReusableSession,
   extractEarlySentiment,
   FEW_SHOT,
@@ -38,11 +40,13 @@ const {
   normalizeDetectedLanguage,
   normalizeHost,
   parseAnalysisResponse,
+  parseDecision,
   parseResponse,
   resetSessionState,
   rewriteText,
   REWRITE_MODES,
   RESPONSE_SCHEMA,
+  RESULT_CACHE_MAX,
   RESULT_CACHE_TTL,
   shouldShowRatePrompt,
   analysisModeFrom,
@@ -84,6 +88,7 @@ test.afterEach(() => {
   resetSessionState();
   cleanResultCache(0);
   delete global.LanguageModel;
+  delete global.DecisionModel;
   delete global.window;
   delete global.browser;
   delete global.document;
@@ -1733,4 +1738,165 @@ test('manual mode: applying a rewrite shows the applied badge, not idle', async 
     state.cleanup();
     applySettings([], true, 'auto');
   }
+});
+
+// ── Decisions API fast path ──────────────────────────────────────────────────
+
+function decisionApi({ availability = 'available', decide, onCreate } = {}) {
+  const calls = { availability: 0, create: 0, decide: 0, destroyed: 0 };
+  global.DecisionModel = {
+    availability: async schema => { calls.availability++; assert.equal(schema, DECISION_SCHEMA); return availability; },
+    create: async schema => {
+      calls.create++;
+      onCreate?.(schema);
+      return {
+        decide: async (text, options) => { calls.decide++; return decide(text, options); },
+        destroy: () => { calls.destroyed++; },
+      };
+    },
+  };
+  return calls;
+}
+
+function promptApiReturning(json) {
+  const calls = { create: 0, prompt: 0 };
+  const run = {
+    async * promptStreaming() { calls.prompt++; yield JSON.stringify(json); },
+    destroy() {},
+  };
+  global.LanguageModel = modernApi(async () => { calls.create++; return { clone: async () => run, destroy() {} }; });
+  return calls;
+}
+
+const toneAnswer = (label, confidence) => ({ tone: { label, confidence, probabilities: { [label]: confidence } } });
+
+test('analyzeText uses a confident positive Decisions verdict and never creates a Prompt API session', async () => {
+  const dm = decisionApi({ decide: () => toneAnswer('positive', 0.91) });
+  const prompt = promptApiReturning({ sentiment: 'negative', reason: 'x', rewrite: null, respectful: false });
+
+  const result = await analyzeText('Thanks so much, this really helped!');
+
+  assert.equal(result.engine, 'decisions');
+  assert.equal(result.sentiment, 'positive');
+  assert.equal(result.label, 'Positive');
+  assert.equal(result.rewrite, null);
+  assert.match(result.reason, /friendly or appreciative \(91% sure\)/);
+  assert.equal(prompt.create, 0);
+  assert.equal(dm.create, 1);
+
+  await analyzeText('The meeting is at 3pm.');
+  assert.equal(dm.create, 1, 'the decision model is reused');
+  assert.equal(dm.decide, 2);
+});
+
+test('DECISION_SCHEMA asks one tone choice question over the four badge sentiments', () => {
+  assert.equal(DECISION_SCHEMA.questions.length, 1);
+  const [tone] = DECISION_SCHEMA.questions;
+  assert.equal(tone.id, 'tone');
+  assert.equal(tone.type, 'choice');
+  assert.deepEqual(tone.options.map(o => o.label), ['positive', 'neutral', 'negative', 'toxic']);
+});
+
+test('analyzeText falls back to the Prompt API when the Decisions verdict is not confident', async () => {
+  decisionApi({ decide: () => toneAnswer('neutral', 0.41) });
+  const prompt = promptApiReturning({ sentiment: 'positive', reason: 'Kind.', rewrite: null, respectful: true });
+
+  const result = await analyzeText('ok then');
+
+  assert.equal(result.engine, undefined);
+  assert.equal(result.sentiment, 'positive');
+  assert.equal(prompt.prompt, 1);
+});
+
+test('analyzeText sends toxic Decisions verdicts through the Prompt API for the rewrite, coloring the badge first', async () => {
+  decisionApi({ decide: () => toneAnswer('toxic', 0.95) });
+  const prompt = promptApiReturning({ sentiment: 'toxic', reason: 'Insulting.', rewrite: 'I disagree.', respectful: false });
+  const early = [];
+
+  const result = await analyzeText('you are an idiot', sentiment => early.push([sentiment, prompt.prompt]));
+
+  assert.deepEqual(early[0], ['toxic', 0], 'badge colors before the Prompt API runs');
+  assert.equal(prompt.prompt, 1);
+  assert.equal(result.sentiment, 'toxic');
+  assert.equal(result.rewrite, 'I disagree.');
+});
+
+test('analyzeText does not flash an early negative Decisions verdict', async () => {
+  decisionApi({ decide: () => toneAnswer('negative', 0.88) });
+  promptApiReturning({ sentiment: 'negative', reason: 'Calm.', rewrite: null, respectful: true });
+  const early = [];
+
+  const result = await analyzeText('I disagree with this approach.', sentiment => early.push(sentiment));
+
+  assert.deepEqual(early, []);
+  assert.equal(result.sentiment, 'neutral');
+});
+
+test('analyzeText never downloads the decision model and re-checks availability only after SESSION_TTL', async () => {
+  const dm = decisionApi({ availability: 'downloadable', decide: () => toneAnswer('positive', 0.9) });
+  const prompt = promptApiReturning({ sentiment: 'positive', reason: 'Kind.', rewrite: null, respectful: true });
+
+  await analyzeText('thanks!');
+  await analyzeText('thank you!');
+
+  assert.equal(dm.availability, 1);
+  assert.equal(dm.create, 0);
+  assert.equal(prompt.prompt, 2);
+});
+
+test('analyzeText falls back and drops the decision model when decide() fails', async () => {
+  const warn = console.warn;
+  console.warn = () => {};
+  try {
+    const dm = decisionApi({ decide: () => { throw new Error('model crashed'); } });
+    const prompt = promptApiReturning({ sentiment: 'neutral', reason: 'Factual.', rewrite: null, respectful: true });
+
+    const result = await analyzeText('The meeting is at 3pm.');
+    await analyzeText('The meeting is at 4pm.');
+
+    assert.equal(result.sentiment, 'neutral');
+    assert.equal(result.engine, undefined);
+    assert.equal(dm.destroyed, 1);
+    assert.equal(dm.decide, 1, 'not retried until SESSION_TTL');
+    assert.equal(prompt.prompt, 2);
+  } finally {
+    console.warn = warn;
+  }
+});
+
+test('analyzeViaDecisions passes the abort signal and rethrows aborts', async () => {
+  const controller = new AbortController();
+  let seen;
+  decisionApi({ decide: (text, options) => { seen = options; controller.abort(); throw new DOMException('aborted', 'AbortError'); } });
+
+  await assert.rejects(analyzeViaDecisions('hello', controller.signal), { name: 'AbortError' });
+  assert.equal(seen.signal, controller.signal);
+});
+
+test('analyzeViaDecisions returns null without the API', async () => {
+  assert.equal(await analyzeViaDecisions('hello'), null);
+});
+
+test('parseDecision reads explainer maps and WebAI polyfill arrays', () => {
+  assert.deepEqual(parseDecision(toneAnswer('Negative', 0.7)), { sentiment: 'negative', confidence: 0.7 });
+  assert.deepEqual(
+    parseDecision({ tone: { label: 'toxic', probabilities: [{ label: 'positive', probability: 0.1 }, { label: 'toxic', probability: 0.8 }] } }),
+    { sentiment: 'toxic', confidence: 0.8 },
+  );
+  assert.deepEqual(parseDecision({ tone: { label: 'neutral' } }), { sentiment: 'neutral', confidence: null });
+  assert.equal(parseDecision({ tone: { label: 'angry', confidence: 1 } }), null);
+  assert.equal(parseDecision(null), null);
+});
+
+test('result cache collapses whitespace and evicts the least recently used entry past RESULT_CACHE_MAX', () => {
+  setCachedResult('hello   big\nworld', { sentiment: 'positive' });
+  assert.ok(getCachedResult(' hello big world '));
+
+  for (let i = 0; i < RESULT_CACHE_MAX; i++) {
+    if (i === 10) getCachedResult('hello big world'); // touch: becomes most recent
+    setCachedResult(`text ${i}`, { sentiment: 'neutral' });
+  }
+  assert.ok(getCachedResult('hello big world'), 'recently used entry survives');
+  assert.equal(getCachedResult('text 0'), null, 'oldest entry is evicted');
+  assert.ok(getCachedResult(`text ${RESULT_CACHE_MAX - 1}`));
 });
