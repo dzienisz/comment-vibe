@@ -45,9 +45,9 @@ Możesz użyć dowolnego istniejącego serwera statycznego — nie instaluj zale
 - **Proofreader** pozostaje w developer trial. Może wymagać flag lub udziału w Early Preview Program.
   Nie zakładamy, że wygasły origin trial oznacza wydanie stable.
 - **Decisions API** (`DecisionModel`) jest w developer trial od Chrome 157 za flagą
-  `chrome://flags/#decisions-api` (sprawdzone w Chrome 158 Dev; w 155 Stable go nie ma). Demo działa też
+  `chrome://flags/#decisions-api` (sprawdzone w Chrome 158 Dev; w 156 Stable go nie ma). Demo działa też
   z [rozszerzeniem WebAI](https://web-ai.studio/extension), które dodaje `DecisionModel` z lokalnym modelem Laya.
-- **Semantic Embedder API** (`SemanticEmbedder`) to wczesna propozycja; w Chrome 155 działa za flagą
+- **Semantic Embedder API** (`SemanticEmbedder`) to wczesna propozycja; od Chrome 155 (także w 156 Stable) działa za flagą
   `chrome://flags/#semantic-embedder-api` (model pobiera się przy pierwszym `create()`).
 - **WebMCP** pozostaje w origin trial (przedłużonym do Chrome 162). Lokalnie Google udostępnia flagę
   `chrome://flags/#enable-webmcp-testing`. Wykrycie `registerTool` nie potwierdza obecności agenta.
