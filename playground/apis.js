@@ -213,15 +213,17 @@ const APIS = [
       <br><br>Na web parametr <code>samplingMode</code> pozostaje osobnym origin trial, przedłużonym do Chrome 159
       (Chrome Status wpisuje wydanie na Chrome 160 — bez potwierdzenia). Tryb rozumowania
       (<code>thinkingEffort</code>) jest dopiero na etapie Intent to Prototype.
-      <br><br><strong>MTP (Multi-Token Prediction) dla Gemma 4 — developer trial w Chrome Canary.</strong>
+      <br><br><strong>MTP (Multi-Token Prediction) dla Gemma 4 — developer trial w Chrome Canary (flagi są też w Chrome 156 Stable).</strong>
       Mały model-szkic proponuje kilka tokenów naraz, a Gemma 4 sprawdza je równolegle; Google podaje
       +20–30% szybsze ciepłe dekodowanie. Działa tylko w sesjach zachłannych, czyli
       z <code>samplingMode: 'most-predictable'</code> — demo poniżej ustawia je domyślnie.
       Porównanie przed/po: <code>chrome://flags/#on-device-model-speculative-decoding</code> włączone (MTP),
       a jako punkt odniesienia wyłączone przy włączonym <code>chrome://flags/#gemma4-for-built-in-ai</code>.
-      Uwaga: w Chrome 155 Stable i 158 Canary bez tokenu origin trial przeglądarka pomija
+      Uwaga: w Chrome 156 Stable i 158 Canary bez tokenu origin trial przeglądarka pomija
       <code>samplingMode</code> bez błędu (także w rozszerzeniach) — odczytuje je dopiero
-      z <code>chrome://flags/#enable-experimental-web-platform-features</code>. Pomiar w demo mówi,
+      z flagą MTP albo z <code>chrome://flags/#enable-experimental-web-platform-features</code>.
+      Przy samym <code>#gemma4-for-built-in-ai</code> opcja jest pomijana, więc dla zachłannego punktu odniesienia
+      włącz też <code>#enable-experimental-web-platform-features</code>. Pomiar w demo mówi,
       czy opcja została przyjęta, i podaje TTFT, tok/s ciepłego dekodowania (mediana bez pierwszego,
       zimnego przebiegu) oraz opóźnienie odpowiedzi.
       <code>topK</code>, <code>temperature</code> i <code>LanguageModel.params()</code> to nadal ścieżka
@@ -586,7 +588,7 @@ console.log(result.corrections); // lista poprawek`,
       <br><br><strong>Developer trial od Chrome 157</strong> za flagą <code>chrome://flags/#decisions-api</code>
       (backend EmbeddingGemma V1 albo Gemma 4 na CPU). Sprawdziliśmy w Chrome 158 Dev: z flagą
       pojawia się natywne <code>DecisionModel</code> z <code>availability()</code>, <code>create()</code>,
-      <code>decide()</code> i <code>destroy()</code>; w Chrome 155 Stable go nie ma. Bez dostępnego
+      <code>decide()</code> i <code>destroy()</code>; w Chrome 156 Stable go nie ma (nie ma też tej flagi). Bez dostępnego
       modelu (np. wyłączone <em>On-device AI</em> w <code>chrome://settings/ai</code>) zwraca „unavailable”.
       Demo zadziała też z <a target="_blank" rel="noopener" href="https://web-ai.studio/extension">rozszerzeniem
       WebAI</a>, które dodaje <code>DecisionModel</code> na stronach z lokalnym modelem Laya (~690 MB).
@@ -653,8 +655,8 @@ if (await DecisionModel.availability(schema) !== 'unavailable') {
       wspólnych słów — to podstawa wyszukiwania semantycznego, grupowania, wykrywania duplikatów
       i lokalnego RAG. Nie generuje tekstu. Jedno wywołanie <code>embed()</code> przyjmuje tekst albo
       tablicę tekstów (batch); długie dokumenty trzeba samemu podzielić na fragmenty.
-      <br><br><strong>Wczesna propozycja Google</strong> (explainer, bez zgody na wydanie). W Chrome 155
-      Stable działa już za flagą <code>chrome://flags/#semantic-embedder-api</code> — sprawdziliśmy:
+      <br><br><strong>Wczesna propozycja Google</strong> (explainer, bez zgody na wydanie). Od Chrome 155
+      Stable działa za flagą <code>chrome://flags/#semantic-embedder-api</code> (w 156 Stable też jest) — sprawdziliśmy w 155:
       model pobrał się w ~10 s, wektor ma 768 wymiarów, a <code>embed()</code> trwa ~130–300 ms na CPU.
       Kształt wyniku i opcje mogą się jeszcze zmienić.`,
     versions: [
