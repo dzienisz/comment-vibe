@@ -83,8 +83,59 @@ test('legacy Prompt demo uses the same detected namespace and releases its sessi
     prompt: async text => text,
     destroy() { destroyed++; },
   }) } } });
-  assert.equal(await APIS[0].demo.run({ text: 'Hello' }, report), 'Hello');
+  const out = await APIS[0].demo.run({ text: 'Hello' }, report);
+  assert.match(out, /^Hello\n\n── Pomiar ──/);
+  assert.match(out, /samplingMode: nie dotyczy/);
   assert.equal(destroyed, 1);
+});
+
+test('modern Prompt demo asks for greedy sampling (MTP) unless default sampling is picked', () => {
+  const { APIS, getApiOptions } = loadPlayground({ LanguageModel: {} });
+  const api = APIS.find(api => api.id === 'prompt');
+  assert.equal(getApiOptions(api).samplingMode, 'most-predictable');
+  assert.equal('samplingMode' in getApiOptions(api, { sampling: 'default' }), false);
+  assert.match(api.description, /on-device-model-speculative-decoding/);
+  assert.match(api.description, /gemma4-for-built-in-ai/);
+  assert.match(api.description, /enable-experimental-web-platform-features/);
+  assert.match(api.usage, /samplingMode: 'most-predictable'/);
+});
+
+test('Prompt demo reports whether the browser read samplingMode', async () => {
+  for (const reads of [true, false]) {
+    const { APIS } = loadPlayground({ LanguageModel: { create: async options => {
+      if (reads) assert.equal(options.samplingMode, 'most-predictable');
+      return { prompt: async () => 'Hi there', destroy() {} };
+    } } });
+    const out = await APIS[0].demo.run({ text: 'Hello', runs: '1' }, report);
+    assert.match(out, reads ? /przeglądarka przyjęła opcję/ : /przeglądarka ZIGNOROWAŁA opcję/);
+  }
+});
+
+test('Prompt demo measures TTFT and warm decode tok/s on fresh clones', async () => {
+  let clock = 0;
+  let clones = 0;
+  let destroyed = 0;
+  const clone = () => ({
+    async *promptStreaming() { clock += 200; yield 'Hello'; clock += 500; yield ' world'; },
+    measureContextUsage: async () => 11,
+    destroy() { destroyed++; },
+  });
+  const { APIS } = loadPlayground({
+    performance: { now: () => clock },
+    LanguageModel: { create: async options => { void options.samplingMode; clock += 1000; return {
+      clone: async () => { clones++; return clone(); },
+      destroy() { destroyed++; },
+    }; } },
+  });
+  const out = await APIS[0].demo.run({ text: 'Hello', runs: '3' }, report);
+  assert.equal(clones, 3);
+  assert.equal(destroyed, 4);
+  assert.match(out, /^Hello world\n/);
+  assert.match(out, /Tworzenie sesji: 1,0 s/);
+  assert.match(out, /#2: 11 tok · TTFT 200 ms · dekodowanie 20,0 tok\/s · całość 700 ms/);
+  assert.match(out, /Ciepłe dekodowanie \(mediana, przebiegi 2–3\): 20,0 tok\/s/);
+  assert.match(out, /Opóźnienie odpowiedzi \(mediana, przebiegi 2–3\): 700 ms/);
+  assert.match(out, /tokenizerem sesji/);
 });
 
 for (const [id, globalName, method, result] of [
@@ -168,7 +219,7 @@ test('demo calls create synchronously to preserve user activation and retries cr
   const first = APIS[0].demo.run({ text: 'Hello' }, report);
   assert.equal(attempts, 1);
   await assert.rejects(first, /download interrupted/);
-  assert.equal(await APIS[0].demo.run({ text: 'Hello' }, report), 'Recovered');
+  assert.match(await APIS[0].demo.run({ text: 'Hello' }, report), /^Recovered\n/);
   assert.equal(attempts, 2);
 });
 

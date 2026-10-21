@@ -722,7 +722,28 @@ test('constructSession prefers standard API with initial prompts, language optio
   assert.deepEqual(optionsSeen[0].expectedInputs, [{ type: 'text', languages: ['en'] }]);
   assert.deepEqual(optionsSeen[0].expectedOutputs, [{ type: 'text', languages: ['en'] }]);
   assert.equal(optionsSeen[0].responseConstraint, RESPONSE_SCHEMA);
+  assert.equal(optionsSeen[0].samplingMode, 'most-predictable');
   assert.equal(legacyCreates, 0);
+});
+
+test('constructSession retries without samplingMode when a build rejects it', async () => {
+  const optionsSeen = [];
+  const session = { clone() {} };
+  global.LanguageModel = modernApi(async options => {
+    optionsSeen.push(options);
+    if ('samplingMode' in options) throw new TypeError("not a valid enum value of type LanguageModelSamplingMode");
+    return session;
+  });
+
+  const metadata = await constructSession();
+
+  assert.equal(metadata.session, session);
+  assert.equal(metadata.responseConstraint, true);
+  assert.equal(optionsSeen.length, 2);
+  assert.equal(optionsSeen[0].samplingMode, 'most-predictable');
+  assert.equal('samplingMode' in optionsSeen[1], false);
+  assert.equal(optionsSeen[1].responseConstraint, RESPONSE_SCHEMA);
+  assert.deepEqual(optionsSeen[1].expectedInputs, [{ type: 'text', languages: ['en'] }]);
 });
 
 test('constructSession retries through option reductions when response constraint or language options are unsupported', async () => {
@@ -730,7 +751,7 @@ test('constructSession retries through option reductions when response constrain
   const session = { clone() {} };
   global.LanguageModel = modernApi(async options => {
     optionsSeen.push(options);
-    if (optionsSeen.length < 4) throw new TypeError('unsupported options');
+    if (optionsSeen.length < 5) throw new TypeError('unsupported options');
     return session;
   });
 
@@ -739,20 +760,25 @@ test('constructSession retries through option reductions when response constrain
   assert.equal(metadata.session, session);
   assert.equal(metadata.fewShotBaked, true);
   assert.equal(metadata.responseConstraint, false);
-  assert.equal(optionsSeen.length, 4);
-  // 1st: full modern options including responseConstraint
+  assert.equal(optionsSeen.length, 5);
+  // 1st: full modern options with greedy sampling (MTP-eligible)
+  assert.equal(optionsSeen[0].samplingMode, 'most-predictable');
   assert.equal(optionsSeen[0].responseConstraint, RESPONSE_SCHEMA);
-  assert.deepEqual(optionsSeen[0].expectedInputs, [{ type: 'text', languages: ['en'] }]);
-  // 2nd: responseConstraint without language options
+  // 2nd: full modern options including responseConstraint, default sampling
+  assert.equal('samplingMode' in optionsSeen[1], false);
   assert.equal(optionsSeen[1].responseConstraint, RESPONSE_SCHEMA);
-  assert.equal('expectedInputs' in optionsSeen[1], false);
-  // 3rd: language options without responseConstraint
-  assert.equal('responseConstraint' in optionsSeen[2], false);
-  assert.deepEqual(optionsSeen[2].expectedInputs, [{ type: 'text', languages: ['en'] }]);
-  // 4th: minimal initialPrompts
-  assert.equal(optionsSeen[3].initialPrompts.length, 9);
-  assert.equal('expectedInputs' in optionsSeen[3], false);
+  assert.deepEqual(optionsSeen[1].expectedInputs, [{ type: 'text', languages: ['en'] }]);
+  // 3rd: responseConstraint without language options
+  assert.equal(optionsSeen[2].responseConstraint, RESPONSE_SCHEMA);
+  assert.equal('expectedInputs' in optionsSeen[2], false);
+  // 4th: language options without responseConstraint
   assert.equal('responseConstraint' in optionsSeen[3], false);
+  assert.deepEqual(optionsSeen[3].expectedInputs, [{ type: 'text', languages: ['en'] }]);
+  // 5th: minimal initialPrompts
+  assert.equal(optionsSeen[4].initialPrompts.length, 9);
+  assert.equal('expectedInputs' in optionsSeen[4], false);
+  assert.equal('responseConstraint' in optionsSeen[4], false);
+  for (const options of optionsSeen.slice(1)) assert.equal('samplingMode' in options, false);
 });
 
 test('constructSession falls back to the standard system prompt shape', async () => {
@@ -760,7 +786,7 @@ test('constructSession falls back to the standard system prompt shape', async ()
   const session = {};
   global.LanguageModel = modernApi(async options => {
     optionsSeen.push(options);
-    if (optionsSeen.length < 5) throw new DOMException('unsupported', 'NotSupportedError');
+    if (optionsSeen.length < 6) throw new DOMException('unsupported', 'NotSupportedError');
     return session;
   });
 
@@ -770,9 +796,10 @@ test('constructSession falls back to the standard system prompt shape', async ()
   assert.equal(metadata.fewShotBaked, false);
   assert.equal(metadata.responseConstraint, false);
   assert.equal(metadata.cloneCapable, false);
-  assert.equal(optionsSeen.length, 5);
-  assert.equal(typeof optionsSeen[4].systemPrompt, 'string');
-  assert.equal('initialPrompts' in optionsSeen[4], false);
+  assert.equal(optionsSeen.length, 6);
+  assert.equal(typeof optionsSeen[5].systemPrompt, 'string');
+  assert.equal('initialPrompts' in optionsSeen[5], false);
+  assert.equal('samplingMode' in optionsSeen[5], false);
 });
 
 test('constructSession does not retry operational creation failures', async () => {
