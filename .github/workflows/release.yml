@@ -71,7 +71,7 @@ jobs:
       # następuje dopiero po jej zakończeniu.
       #
       # Chrome Web Store — 4 sekrety repo (te same nazwy co w chrome-ssr-csr,
-      # wzór: store-secrets.env.example):
+      # wzór: store-secrets.tpl):
       #   CWS_EXTENSION_ID      — ID z adresu w panelu Web Store
       #   CWS_CLIENT_ID, CWS_CLIENT_SECRET, CWS_REFRESH_TOKEN — jednorazowa
       #   konfiguracja OAuth (klient typu "Aplikacja komputerowa"):

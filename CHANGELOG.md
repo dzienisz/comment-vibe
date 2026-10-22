@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- **Release workflow reads `CWS_*` secret names**, the same as chrome-ssr-csr, so one secrets file works for every extension repo (`store-secrets.env.example`, `gh secret set -f`). The old `CHROME_EXTENSION_ID`, `CLIENT_ID`, `CLIENT_SECRET` and `REFRESH_TOKEN` names still work as a fallback.
+- **Release workflow reads `CWS_*` secret names**, the same as chrome-ssr-csr, so one 1Password item fills every extension repo (`store-secrets.tpl` holds `op://` references for `op inject` + `gh secret set -f`). The old `CHROME_EXTENSION_ID`, `CLIENT_ID`, `CLIENT_SECRET` and `REFRESH_TOKEN` names still work as a fallback.
 
 ### Added
 
