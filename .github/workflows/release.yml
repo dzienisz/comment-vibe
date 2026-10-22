@@ -16,7 +16,7 @@ jobs:
     env:
       # Kontekst `secrets` nie jest dozwolony w `if` na poziomie kroku,
       # więc dostępność sekretów przekazujemy przez env.
-      HAS_CHROME_SECRETS: ${{ secrets.REFRESH_TOKEN != '' }}
+      HAS_CHROME_SECRETS: ${{ (secrets.CWS_REFRESH_TOKEN || secrets.REFRESH_TOKEN) != '' }}
       HAS_AMO_SECRETS: ${{ secrets.AMO_JWT_SECRET != '' }}
       HAS_EDGE_SECRETS: ${{ secrets.EDGE_PRODUCT_ID != '' && secrets.EDGE_CLIENT_ID != '' && secrets.EDGE_API_KEY != '' }}
     steps:
@@ -70,11 +70,14 @@ jobs:
       # "Publish" = wysłanie do recenzji sklepu — publikacja u użytkowników
       # następuje dopiero po jej zakończeniu.
       #
-      # Chrome Web Store — 4 sekrety repo:
-      #   CHROME_EXTENSION_ID   — ID z adresu w panelu Web Store
-      #   CLIENT_ID, CLIENT_SECRET, REFRESH_TOKEN — jednorazowa
+      # Chrome Web Store — 4 sekrety repo (te same nazwy co w chrome-ssr-csr,
+      # wzór: store-secrets.tpl):
+      #   CWS_EXTENSION_ID      — ID z adresu w panelu Web Store
+      #   CWS_CLIENT_ID, CWS_CLIENT_SECRET, CWS_REFRESH_TOKEN — jednorazowa
       #   konfiguracja OAuth (klient typu "Aplikacja komputerowa"):
       #   https://github.com/fregante/chrome-webstore-upload-keys
+      #   Stare nazwy (CHROME_EXTENSION_ID, CLIENT_ID, CLIENT_SECRET,
+      #   REFRESH_TOKEN) nadal działają jako zapas.
       #
       # AMO — 2 sekrety repo (z https://addons.mozilla.org/developers/addon/api/key/):
       #   AMO_JWT_ISSUER, AMO_JWT_SECRET
@@ -89,10 +92,10 @@ jobs:
       - name: Publish to Chrome Web Store
         if: ${{ env.HAS_CHROME_SECRETS == 'true' }}
         env:
-          EXTENSION_ID: ${{ secrets.CHROME_EXTENSION_ID }}
-          CLIENT_ID: ${{ secrets.CLIENT_ID }}
-          CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
-          REFRESH_TOKEN: ${{ secrets.REFRESH_TOKEN }}
+          EXTENSION_ID: ${{ secrets.CWS_EXTENSION_ID || secrets.CHROME_EXTENSION_ID }}
+          CLIENT_ID: ${{ secrets.CWS_CLIENT_ID || secrets.CLIENT_ID }}
+          CLIENT_SECRET: ${{ secrets.CWS_CLIENT_SECRET || secrets.CLIENT_SECRET }}
+          REFRESH_TOKEN: ${{ secrets.CWS_REFRESH_TOKEN || secrets.REFRESH_TOKEN }}
         run: |
           v="${GITHUB_REF_NAME#v}"
           out=$(npx --yes chrome-webstore-upload-cli@3 --source "comment-vibe-$v.zip" 2>&1) && status=0 || status=$?

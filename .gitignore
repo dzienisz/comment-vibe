@@ -2,3 +2,4 @@
 *.zip
 .claude/settings.local.json
 scenariusz.md
+store-secrets.env

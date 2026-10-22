@@ -78,8 +78,9 @@ packaging scripts, not a build step: they only zip raw source files, so the
    publishes a GitHub Release with both zips attached. (Manual fallback: run
    `scripts/package.sh` locally and upload the zips.)
 5. The same workflow then submits each zip to its store for review, **if** the
-   repo secrets are configured (Chrome: `CHROME_EXTENSION_ID`, `CLIENT_ID`,
-   `CLIENT_SECRET`, `REFRESH_TOKEN`; AMO: `AMO_JWT_ISSUER`, `AMO_JWT_SECRET`;
+   repo secrets are configured (Chrome: `CWS_EXTENSION_ID`, `CWS_CLIENT_ID`,
+   `CWS_CLIENT_SECRET`, `CWS_REFRESH_TOKEN` — the old unprefixed names still
+   work as a fallback; AMO: `AMO_JWT_ISSUER`, `AMO_JWT_SECRET`;
    Edge: `EDGE_PRODUCT_ID`, `EDGE_CLIENT_ID`, `EDGE_API_KEY` — setup links are
    in the workflow comments). Edge gets the Chrome zip unchanged via
    `scripts/publish-edge.js` (Edge Add-ons REST API, no deps). If Edge rejects the publish with `InProgressSubmission` (the previous version
