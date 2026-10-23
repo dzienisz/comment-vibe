@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Comment Vibe — Private AI Tone Checker",
+  "name": "Comment Vibe — Private AI Tone Checker & Comment Rewriter",
   "short_name": "Comment Vibe",
-  "description": "See how your comment sounds before you post. On-device AI tone check. 100% private — nothing leaves Firefox.",
+  "description": "On-device AI checks the tone of your comment on LinkedIn, X, YouTube or Reddit and offers a kinder rewrite before you post. Private, free.",
   "version": "1.11.0",
   "browser_specific_settings": {
     "gecko": {

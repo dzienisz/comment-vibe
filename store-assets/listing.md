@@ -6,19 +6,27 @@ The store shows the manifest `name`, so a title change ships with the next
 upload (any version bump — Chrome update reviews are usually fast). Keep the
 brand, append the searchable keywords people actually type:
 
-> **Comment Vibe — Private AI Tone Checker**
+> **Comment Vibe — Private AI Tone Checker & Comment Rewriter**
 
-Why: "Comment Vibe" alone carries zero search keywords; "tone checker",
-"comment", "AI" and "private" describe the benefit people are looking for.
+Why: "Comment Vibe" alone carries zero search keywords. Competing listings in
+the comment niche (Reepl, Replya, Leadmate, Comment Whisper, Englify) all put
+the action ("comment generator", "fix my comment", "rewriter") in the title;
+"tone checker", "comment rewriter", "AI" and "private" are the words people
+actually type.
 Do not fully rename — the listing URL, reviews and existing links stay tied to
 the current identity.
 
 ## Summary (max 132 chars — this is the `description` field in manifest.json)
 
-Recommended (129 chars):
-> Write with more clarity. Private, on-device AI shows how your comment may land and suggests a kinder rewrite before you post.
+Recommended (138 chars):
+> On-device AI checks the tone of your comment on LinkedIn, X, YouTube or Reddit and offers a kinder rewrite before you post. Private, free.
+
+Why: site names and "rewrite" are the search terms; "Private, free" answers the
+two most common complaints in competitor reviews (sign-in walls, paywalls).
 
 ## Detailed description (paste into the CWS dashboard — plain text, no markdown)
+
+You know the feeling: you fire off a comment on LinkedIn, X, YouTube or Reddit, and an hour later you wish you had said it differently. Comment Vibe gives you that second look before you post — without an account, without a server, and without ever posting for you.
 
 Your words matter. Comment Vibe gives you a quiet second look before you share them.
 
@@ -29,7 +37,10 @@ HOW IT WORKS
 2. See a small, steady badge beside your draft. It updates quietly as you write.
 3. Tap the badge for context. When your draft needs care, choose a kinder rewrite or copy it for later.
 
-YOU'RE IN CONTROL
+YOU STAY IN CONTROL
+• Never posts, edits or sends anything for you — you read every suggestion and decide
+• No account, no sign-in, no subscription, no "Pro" nags
+• Works offline once Chrome's model is downloaded — no "servers busy" errors
 • Hide the guidance on one site directly from the tone card
 • Turn Comment Vibe on or off globally, or set a site-specific preference
 • Changes apply right away and sync with your signed-in Chrome profile
