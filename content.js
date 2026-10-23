@@ -3,6 +3,8 @@
 // ── Config ──────────────────────────────────────────────────────────────────
 
 const MIN_LENGTH  = 15;
+// Characters of the user's draft shown next to the suggested rewrite.
+const DRAFT_PREVIEW_MAX = 220;
 const DEBOUNCE_MS = 900;
 const SESSION_TTL = 600_000;
 const ANALYSIS_TIMEOUT_MS = 30_000;
@@ -1319,7 +1321,7 @@ function renderBadge(badge, tooltip, result, actions = {}) {
   const { sentiment, emoji, label, reason, rewrite } = result;
   const {
     onRefresh, onApplyRewrite, onHideSite, onRewrite, onUndo, undoText,
-    showRatePrompt,
+    showRatePrompt, draftText,
   } = actions;
 
   const badgeEmoji = document.createElement('span');
@@ -1344,9 +1346,20 @@ function renderBadge(badge, tooltip, result, actions = {}) {
   if (rewrite) {
     const rewriteContainer = document.createElement('div');
     rewriteContainer.className = 'cv-tooltip-rewrite';
+    if (draftText) {
+      const draftLabel = document.createElement('span');
+      draftLabel.className = 'cv-tooltip-rewrite-label';
+      draftLabel.textContent = 'Your draft';
+      const draftEl = document.createElement('div');
+      draftEl.className = 'cv-tooltip-draft-text';
+      draftEl.textContent = draftText.length > DRAFT_PREVIEW_MAX
+        ? `${draftText.slice(0, DRAFT_PREVIEW_MAX).trimEnd()}…`
+        : draftText;
+      rewriteContainer.append(draftLabel, draftEl);
+    }
     const rewriteLabel = document.createElement('span');
     rewriteLabel.className = 'cv-tooltip-rewrite-label';
-    rewriteLabel.textContent = 'A kinder way to say it';
+    rewriteLabel.textContent = 'Suggested rewrite';
     const rewriteText = document.createElement('div');
     rewriteText.className = 'cv-tooltip-rewrite-text';
     rewriteText.textContent = rewrite;
@@ -1355,16 +1368,25 @@ function renderBadge(badge, tooltip, result, actions = {}) {
     const applyBtn = document.createElement('button');
     applyBtn.className = 'cv-tooltip-apply';
     applyBtn.textContent = 'Use this rewrite';
+    const keepBtn = document.createElement('button');
+    keepBtn.className = 'cv-tooltip-copy cv-tooltip-keep';
+    keepBtn.type = 'button';
+    keepBtn.textContent = 'Keep mine';
     const copyBtn = document.createElement('button');
     copyBtn.className = 'cv-tooltip-copy';
     copyBtn.textContent = 'Copy';
-    actionsRow.append(applyBtn, copyBtn);
+    actionsRow.append(applyBtn, keepBtn, copyBtn);
     rewriteContainer.append(rewriteLabel, rewriteText, actionsRow);
     tooltip.appendChild(rewriteContainer);
 
     applyBtn.addEventListener('click', e => {
       e.stopPropagation();
       onApplyRewrite?.(rewrite);
+    });
+
+    keepBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      hideTooltip(tooltip);
     });
 
     copyBtn.addEventListener('click', e => {
@@ -1618,6 +1640,7 @@ function attachToInput(el) {
       ...ui,
       undoText: state.undoText,
       showRatePrompt: shouldShowRatePrompt(rewriteCount, ratePromptState),
+      draftText: state.lastText,
     });
     restoreActionPanel(panel, activeMode);
     placeTooltip(tooltip, badge);

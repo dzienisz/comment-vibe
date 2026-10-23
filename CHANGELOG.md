@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Listing and tone card learn from the comment-assistant niche.** Competitor review themes (Grammarly, QuillBot, LanguageTool, Wordtune; Reepl, Replya, Leadmate, Comment Whisper, Englify): users punish sign-in walls, paywall nags and server errors, and the niche listings all lead with the platform and the action, promise "you review before posting", and show the original next to the rewrite. Store title becomes "Comment Vibe — Private AI Tone Checker & Comment Rewriter" and the summary names LinkedIn, X, YouTube and Reddit plus "Private, free". The listing opens with the problem and gets a "You stay in control" block (never posts for you, no account, works offline). The tone card shows the draft next to the suggested rewrite ("Your draft" / "Suggested rewrite") with "Use this rewrite", "Keep mine" and "Copy", so the choice is side by side like the best-rated comment tools. The popup's intro line states the same three promises.
+
 ## [1.11.0] - 2026-10-23
 
 ### Added
