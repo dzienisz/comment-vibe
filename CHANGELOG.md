@@ -7,9 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Changed
-
-- **Release workflow reads `CWS_*` secret names**, the same as chrome-ssr-csr, so one 1Password item fills every extension repo (`store-secrets.tpl` holds `op://` references for `op inject` + `gh secret set -f`). The old `CHROME_EXTENSION_ID`, `CLIENT_ID`, `CLIENT_SECRET` and `REFRESH_TOKEN` names still work as a fallback.
+## [1.11.0] - 2026-10-23
 
 ### Added
 
@@ -17,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Release workflow reads `CWS_*` secret names**, the same as chrome-ssr-csr, so one 1Password item fills every extension repo (`store-secrets.tpl` holds `op://` references for `op inject` + `gh secret set -f`). The old `CHROME_EXTENSION_ID`, `CLIENT_ID`, `CLIENT_SECRET` and `REFRESH_TOKEN` names still work as a fallback.
 - **Verdict cache keeps results longer.** Greedy sampling and the Decisions API give the same verdict for the same text, so the in-memory cache now keeps verdicts for 30 minutes instead of 5, ignores whitespace differences, and keeps at most 200 entries (least recently used evicted first).
 
 ## [1.10.0] - 2026-10-21
