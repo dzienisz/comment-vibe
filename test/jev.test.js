@@ -47,6 +47,39 @@ test.afterEach(() => {
   delete global.browser;
 });
 
+test('registers the anonymous uninstall survey URL once', () => {
+  const modulePath = require.resolve('../jev.js');
+  const cachedModule = require.cache[modulePath];
+  const calls = [];
+
+  delete require.cache[modulePath];
+  global.chrome = {
+    runtime: {
+      id: 'test-extension',
+      onMessage: { addListener() {} },
+      setUninstallURL(url) {
+        calls.push(url);
+      },
+    },
+  };
+
+  try {
+    require(modulePath);
+  } finally {
+    if (cachedModule) require.cache[modulePath] = cachedModule;
+    else delete require.cache[modulePath];
+    delete global.chrome;
+  }
+
+  assert.equal(calls.length, 1);
+  assert.equal(
+    calls[0],
+    'https://docs.google.com/forms/d/e/1FAIpQLScYgWw8fVE7B5xBDJp1if9fdgZQvur9g_dez72UYkL7EKMu-Q/viewform',
+  );
+  assert.match(calls[0], /^https:\/\/docs\.google\.com\/forms\//);
+  assert.equal(calls[0].includes('?'), false);
+});
+
 test('buildJevRequest asks one four-way tone choice and truncates long text', () => {
   const request = buildJevRequest('x'.repeat(5000));
   assert.equal(request.model, 'jev-latest');

@@ -31,6 +31,8 @@ On Chrome with the [Decisions API](https://github.com/explainers-by-googlers/dec
 
 **Optional Fast mode (cloud).** If you turn on *Fast tone check in the cloud* in the popup and paste your own [SubQ](https://subq.ai) or [TypeSafe](https://typesafe.ai) API key, the text being checked is sent to that provider's decision model (typically well under a second). It is off by default, the extension asks for access to the provider's host only when you enable it, and the key is kept in this browser's local storage (never synced). Fast mode only powers the tone badge — writing actions and rewrites still run on-device — and if a cloud call fails, Comment Vibe falls back to the on-device model.
 
+**Uninstall survey.** After uninstalling, your browser opens an optional Google Form. The extension sends no data with it, and the link has no identifiers. Answers are anonymous and covered by Google's [Privacy Policy](https://policies.google.com/privacy). This is separate from on-device processing and optional Fast mode; no comment text, results or API key are sent with the link.
+
 ## Microsoft Edge support
 
 Edge runs the Chrome build unchanged. The Edge Add-ons listing is in review;

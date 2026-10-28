@@ -58,6 +58,9 @@ GOOD TO KNOW
 OPTIONAL FAST MODE (CLOUD, OFF BY DEFAULT)
 Have a SubQ or TypeSafe API key? Turn on "Fast tone check in the cloud" in the popup to get the tone badge from the provider's decision model in well under a second, with no local model download. Only the text being checked is sent to the provider, with your own key, which stays in your browser. Turn it off at any time.
 
+UNINSTALL SURVEY
+After uninstalling, your browser opens an optional Google Form. The extension sends no data with it, and the link has no identifiers. Answers are anonymous and covered by Google's Privacy Policy (https://policies.google.com/privacy). This is separate from on-device processing and optional Fast mode.
+
 This Firefox build focuses on the tone badge and explanation. The kinder-rewrite suggestions and automatic translation available in the Chrome version rely on a generative on-device model that Firefox's AI API does not yet expose — so they are not part of the Firefox build. The tone check itself works the same way.
 
 Comment Vibe is open source. The WebExtensions AI API it depends on is explicitly experimental, so behaviour may change between Firefox versions.

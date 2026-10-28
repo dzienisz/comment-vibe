@@ -88,6 +88,9 @@ FOUR CLEAR TONE LABELS
 PRIVATE BY DESIGN
 No account, no tracking, no analytics. The on-device mode never sends your text anywhere; Fast mode sends only the text being checked, only after you turn it on.
 
+UNINSTALL SURVEY
+After uninstalling, your browser opens an optional Google Form. The extension sends no data with it, and the link has no identifiers. Answers are anonymous and covered by Google's Privacy Policy (https://policies.google.com/privacy). This is separate from on-device processing and optional Fast mode.
+
 Open source (MIT): https://github.com/dzienisz/comment-vibe
 
 ### Notes for certification
