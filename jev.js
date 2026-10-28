@@ -1,5 +1,12 @@
 'use strict';
 
+const UNINSTALL_SURVEY_URL = 'https://docs.google.com/forms/d/e/1FAIpQLScYgWw8fVE7B5xBDJp1if9fdgZQvur9g_dez72UYkL7EKMu-Q/viewform';
+
+// Opens only after uninstall; no extension data is sent with the link.
+if (typeof chrome !== 'undefined' && chrome.runtime?.setUninstallURL) {
+  chrome.runtime.setUninstallURL(UNINSTALL_SURVEY_URL);
+}
+
 // Optional "Fast mode": tone checks through a cloud decision model — SubQ
 // (https://docs.subq.ai) or TypeSafe's Jev (https://docs.typesafe.ai), same
 // request/response contract. This is the only code path that sends text off

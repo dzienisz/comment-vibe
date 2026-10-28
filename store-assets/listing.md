@@ -70,6 +70,9 @@ By default all analysis happens locally using Chrome's on-device Gemini Nano mod
 OPTIONAL FAST MODE (CLOUD, OFF BY DEFAULT)
 If you have a SubQ or TypeSafe API key, you can turn on "Fast tone check in the cloud" in the popup. The tone badge then comes from the provider's decision model in well under a second, even on computers that can't run Gemini Nano. Only the text being checked is sent to the provider, together with your own key, which stays in your browser and is never synced. Rewrites and writing actions still run on your device. Turn it off at any time.
 
+UNINSTALL SURVEY
+After uninstalling, your browser opens an optional Google Form. The extension sends no data with it, and the link has no identifiers. Answers are anonymous and covered by Google's Privacy Policy (https://policies.google.com/privacy). This is separate from on-device processing and optional Fast mode.
+
 REQUIREMENTS
 • Chrome 138 or later, on desktop (Windows, macOS or Linux)
 • Hardware eligible for Gemini Nano — Chrome downloads the on-device model (~2 GB) automatically the first time it's used
