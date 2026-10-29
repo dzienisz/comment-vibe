@@ -3,7 +3,7 @@
   "name": "Comment Vibe — Private AI Tone Checker & Comment Rewriter",
   "short_name": "Comment Vibe",
   "description": "On-device AI checks the tone of your comment on LinkedIn, X, YouTube or Reddit and offers a kinder rewrite before you post. Private, free.",
-  "version": "1.11.0",
+  "version": "1.12.0",
   "browser_specific_settings": {
     "gecko": {
       "id": "comment-vibe@dzienko.dev",
