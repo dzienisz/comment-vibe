@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.12.1] - 2026-10-29
+
+### Fixed
+
+- Manifest name and description fit store limits (132-character description, 45-character Firefox name), so the 1.12.0 changes reach the stores.
+
 ## [1.12.0] - 2026-10-29
 
 ### Added
