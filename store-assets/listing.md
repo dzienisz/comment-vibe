@@ -18,8 +18,8 @@ the current identity.
 
 ## Summary (max 132 chars — this is the `description` field in manifest.json)
 
-Recommended (138 chars):
-> On-device AI checks the tone of your comment on LinkedIn, X, YouTube or Reddit and offers a kinder rewrite before you post. Private, free.
+Recommended (132 chars):
+> On-device AI checks your comment's tone on LinkedIn, X, YouTube or Reddit and offers a kinder rewrite before posting. Private, free.
 
 Why: site names and "rewrite" are the search terms; "Private, free" answers the
 two most common complaints in competitor reviews (sign-in walls, paywalls).
