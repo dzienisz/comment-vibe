@@ -20,8 +20,47 @@ function availabilityWithTimeout(promise, onTimeout) {
 
 function storeUrl() {
   return navigator.userAgent.includes('Firefox')
-    ? 'https://addons.mozilla.org/firefox/addon/comment-vibe-on-device-check/'
-    : 'https://chromewebstore.google.com/detail/comment-vibe/kibcnjcipaofjlbbnjdjaobbkoajiejp';
+    ? 'https://addons.mozilla.org/firefox/addon/comment-vibe-on-device-check/reviews/'
+    : 'https://chromewebstore.google.com/detail/comment-vibe/kibcnjcipaofjlbbnjdjaobbkoajiejp/reviews';
+}
+
+async function initRatePrompt(api) {
+  const storage = api?.storage?.sync;
+  if (!storage?.get || !storage?.set) return;
+
+  const data = await Promise.resolve(storage.get({
+    cvInstalledAt: null,
+    cvPopupOpens: 0,
+    cvRatePrompt: '',
+    cvRatePromptShown: 0,
+  })).catch(() => null);
+  if (!data) return;
+
+  const now = Date.now();
+  const installedAt = Number.isFinite(data.cvInstalledAt) ? data.cvInstalledAt : now;
+  const popupOpens = (Number.isFinite(data.cvPopupOpens) ? data.cvPopupOpens : 0) + 1;
+  const ratePromptShown = Number.isFinite(data.cvRatePromptShown) ? data.cvRatePromptShown : 0;
+  const state = { ...data, cvInstalledAt: installedAt, cvPopupOpens: popupOpens, cvRatePromptShown: ratePromptShown };
+  const shouldShow = CommentVibeRatePrompt.shouldShowRatePrompt(state, now);
+  const updates = { cvInstalledAt: installedAt, cvPopupOpens: popupOpens };
+  if (shouldShow) updates.cvRatePromptShown = ratePromptShown + 1;
+
+  await Promise.resolve(storage.set(updates)).catch(() => {});
+  if (!shouldShow) return;
+
+  const banner = document.getElementById('rate-prompt');
+  banner.hidden = false;
+  const markDone = async () => {
+    banner.hidden = true;
+    await Promise.resolve(storage.set({ cvRatePrompt: 'done' })).catch(() => {});
+  };
+
+  document.getElementById('rate-prompt-rate').addEventListener('click', async () => {
+    await markDone();
+    if (api.tabs?.create) api.tabs.create({ url: storeUrl() });
+    else window.open(storeUrl(), '_blank', 'noopener');
+  });
+  document.getElementById('rate-prompt-dismiss').addEventListener('click', markDone);
 }
 
 // 'available' | 'downloadable' | 'downloading' | 'unavailable' — the middle
@@ -544,6 +583,7 @@ async function initFirefoxPopup(els, fastMode) {
 
   const api = getExtApi();
   document.getElementById('rate-link').href = storeUrl();
+  if (api) await initRatePrompt(api);
   // Pages cannot follow chrome:// links; only tabs.create can open them.
   const aiSettings = document.getElementById('open-ai-settings');
   if (api?.tabs?.create) {

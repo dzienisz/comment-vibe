@@ -27,6 +27,8 @@
     <a href="?browser=firefox&amp;fail=1">fails</a> ·
     <a href="?browser=firefox&amp;blocked=1">blocked by AI controls</a> ·
     <a href="?browser=firefox&amp;granted=1&amp;blocked=1">enabled, then blocked</a></p>
+  <p>Rating prompt: <a href="?rate=1">eligible in Chrome</a> ·
+    <a href="?browser=firefox&amp;rate=1">eligible in Firefox</a></p>
   <p>Edge: <a href="?browser=edge&amp;state=none">no Prompt API (old or unsupported Edge)</a> ·
     <a href="?browser=edge&amp;state=unavailable">unavailable</a> ·
     <a href="?browser=edge&amp;state=downloadable">downloadable</a> ·
@@ -51,6 +53,7 @@
     reattach: q.has('reattach') ? Number(q.get('reattach')) : null,
     firefox: q.get('browser') === 'firefox',
     edge: q.get('browser') === 'edge',
+    ratePrompt: q.get('rate') === '1',
     ffshape: q.get('ffshape') || 'fraction',
   };
 
@@ -122,14 +125,46 @@
     };
   }
 
+  function popupApi(cfg) {
+    const stored = cfg.ratePrompt ? {
+      cvInstalledAt: Date.now() - 4 * 24 * 60 * 60 * 1000,
+      cvPopupOpens: 2,
+      cvRatePrompt: '',
+      cvRatePromptShown: 0,
+    } : {};
+    const sync = {
+      async get(defaults = {}) { return { ...defaults, ...stored }; },
+      async set(changes) { Object.assign(stored, changes); },
+    };
+    const tabs = { create() {}, query: async () => [] };
+
+    if (cfg.firefox) {
+      window.browser.runtime.id = 'comment-vibe-popup-harness';
+      window.browser.storage = { sync };
+      window.browser.tabs = tabs;
+      return;
+    }
+
+    window.chrome = {
+      runtime: {
+        id: 'comment-vibe-popup-harness',
+        getManifest: () => ({ version: 'harness' }),
+      },
+      storage: { sync },
+      tabs,
+    };
+  }
+
   fetch('../popup.html').then(r => r.text()).then(html => {
     const edgeUA = cfg.edge
       ? `<script>Object.defineProperty(navigator, 'userAgent', { value: navigator.userAgent + ' Edg/141.0.0.0' })<\/script>`
       : '';
     const model = cfg.edge && cfg.state === 'none' ? '' : `<script>(${cfg.firefox ? ffStub : stub})(${JSON.stringify(cfg)})<\/script>`;
-    const setup = edgeUA + model;
+    const api = `<script>(${popupApi})(${JSON.stringify(cfg)})<\/script>`;
+    const setup = edgeUA + model + api;
     document.getElementById('popup').srcdoc = html
       .replace('href="popup.css"', 'href="../popup.css"')
+      .replace('src="rate-prompt.js"', 'src="../rate-prompt.js"')
       .replace('<script src="popup.js">', `${setup}<script src="../popup.js">`);
   });
 </script>

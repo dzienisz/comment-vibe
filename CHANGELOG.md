@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- A popup rating prompt can appear after three days and three opens, sharing its dismissal state with the in-page prompt.
+
 ## [1.12.1] - 2026-10-29
 
 ### Fixed

@@ -441,8 +441,8 @@ function shouldShowRatePrompt(count, ratePrompt) {
 
 function storeUrl() {
   return navigator.userAgent.includes('Firefox')
-    ? 'https://addons.mozilla.org/firefox/addon/comment-vibe-on-device-check/'
-    : 'https://chromewebstore.google.com/detail/comment-vibe/kibcnjcipaofjlbbnjdjaobbkoajiejp';
+    ? 'https://addons.mozilla.org/firefox/addon/comment-vibe-on-device-check/reviews/'
+    : 'https://chromewebstore.google.com/detail/comment-vibe/kibcnjcipaofjlbbnjdjaobbkoajiejp/reviews';
 }
 
 // Edge runs the Chrome build unchanged; only the setup wording differs.
