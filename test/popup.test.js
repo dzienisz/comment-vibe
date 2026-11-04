@@ -139,3 +139,20 @@ test('firefoxSetupHint points to AI controls when Firefox blocks the trial ML AP
   assert.doesNotMatch(context.firefoxSetupHint('Network error'), /AI controls/);
   assert.doesNotMatch(context.firefoxSetupHint(undefined), /AI controls/);
 });
+
+test('popup rating links open the Chrome or Firefox review page', () => {
+  const storeUrlFor = userAgent => {
+    const context = vm.createContext({ window: {}, navigator: { userAgent } });
+    vm.runInContext(popupDeclarations, context, { filename: 'popup.js' });
+    return vm.runInContext('storeUrl()', context);
+  };
+
+  assert.equal(
+    storeUrlFor('Mozilla/5.0 Chrome/137.0.0.0 Edg/137.0.0.0'),
+    'https://chromewebstore.google.com/detail/comment-vibe/kibcnjcipaofjlbbnjdjaobbkoajiejp/reviews',
+  );
+  assert.equal(
+    storeUrlFor('Mozilla/5.0 Firefox/140.0'),
+    'https://addons.mozilla.org/firefox/addon/comment-vibe-on-device-check/reviews/',
+  );
+});

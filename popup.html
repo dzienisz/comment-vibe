@@ -19,6 +19,14 @@
       <span class="private-mark" id="private-mark" title="Your comments stay on this device">On-device</span>
     </header>
 
+    <section id="rate-prompt" class="rate-prompt" role="region" aria-label="Rate Comment Vibe" hidden>
+      <p>Enjoying Comment Vibe? A review helps others find it.</p>
+      <div class="rate-prompt-actions">
+        <button id="rate-prompt-rate" type="button">Rate it</button>
+        <button id="rate-prompt-dismiss" type="button">Not now</button>
+      </div>
+    </section>
+
     <section id="status" class="status status--checking" aria-live="polite">
       <span class="status-dot" aria-hidden="true"></span>
       <span id="status-text">Checking on-device AI…</span>
@@ -149,6 +157,7 @@
       <span>LinkedIn, X, YouTube, and more · <a id="rate-link" target="_blank" rel="noopener">Rate ★</a><span id="version"></span></span>
     </footer>
   </main>
+  <script src="rate-prompt.js"></script>
   <script src="popup.js"></script>
 </body>
 </html>

@@ -198,6 +198,11 @@ if (typeof browser !== 'undefined') {
   // model swap in an update doesn't stall the first in-page analysis behind
   // a full download. Cached models make this a no-op.
   browser.runtime.onInstalled?.addListener(() => {
+    browser.storage.sync.get({ cvInstalledAt: null }).then(({ cvInstalledAt }) => {
+      if (!Number.isFinite(cvInstalledAt)) {
+        return browser.storage.sync.set({ cvInstalledAt: Date.now() });
+      }
+    }).catch(() => {});
     mlAvailable().then(available => { if (available) ensureEngine().catch(() => {}); });
   });
 }
