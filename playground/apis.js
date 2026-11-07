@@ -870,7 +870,7 @@ const FIREFOX_STATUS = {
   verifiedAt: '2026-11-07',
   release: 159,
   beta: 160,
-  nightly: 161,
+  nightly: 162,
   esr: '153.6.0esr',
   docs: 'https://firefox-source-docs.mozilla.org/toolkit/components/ml/extensions.html',
   playgroundUrl: 'https://github.com/dzienisz/comment-vibe/tree/main/playground-firefox',
