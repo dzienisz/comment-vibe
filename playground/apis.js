@@ -21,12 +21,12 @@ const dl = report => m =>
   });
 
 const RELEASE_INFO = {
-  verifiedAt: '2026-10-20',
-  stable: 156,
-  beta: 157,
-  nextStableDate: '2026-11-03',
+  verifiedAt: '2026-11-07',
+  stable: 157,
+  beta: 158,
+  nextStableDate: '2026-11-17',
   source: 'https://chromiumdash.appspot.com/schedule',
-  betaSource: 'https://chromestatus.com/release-notes/157',
+  betaSource: 'https://chromestatus.com/release-notes/158',
   roadmap: 'https://chromestatus.com/roadmap',
 };
 
@@ -210,8 +210,9 @@ const APIS = [
       Obsługę konkretnej kombinacji sprawdzaj przez <code>availability()</code> z tymi samymi
       <code>expectedInputs</code> i <code>expectedOutputs</code>, których użyjesz w <code>create()</code>;
       wejście audio wymaga GPU. Udokumentowane języki to en, ja, es, de i fr — demo domyślnie używa angielskiego.
-      <br><br>Na web parametr <code>samplingMode</code> pozostaje osobnym origin trial, przedłużonym do Chrome 159
-      (Chrome Status wpisuje wydanie na Chrome 160 — bez potwierdzenia). Tryb rozumowania
+      <br><br>Na web parametr <code>samplingMode</code> pozostaje osobnym origin trial, przedłużonym do Chrome 159.
+      Chrome Status planuje włączenie go domyślnie w Chrome 160 (Beta 2.12.2026, Stable 5.01.2027) — wpis ma
+      status Proposed, bez Intent to Ship, więc termin może się przesunąć. Tryb rozumowania
       (<code>thinkingEffort</code>) jest dopiero na etapie Intent to Prototype.
       <br><br><strong>MTP (Multi-Token Prediction) dla Gemma 4 — developer trial w Chrome Canary (flagi są też w Chrome 156 Stable).</strong>
       Mały model-szkic proponuje kilka tokenów naraz, a Gemma 4 sprawdza je równolegle; Google podaje
@@ -866,11 +867,11 @@ const AVAIL_META = {
 // stronach WWW — lokalne AI jest tylko dla rozszerzeń (browser.trial.ml), więc
 // dema na żywo są w osobnym rozszerzeniu playground-firefox/.
 const FIREFOX_STATUS = {
-  verifiedAt: '2026-10-20',
-  release: 158,
-  beta: 159,
-  nightly: 160,
-  esr: '153.5.0esr',
+  verifiedAt: '2026-11-07',
+  release: 159,
+  beta: 160,
+  nightly: 161,
+  esr: '153.6.0esr',
   docs: 'https://firefox-source-docs.mozilla.org/toolkit/components/ml/extensions.html',
   playgroundUrl: 'https://github.com/dzienisz/comment-vibe/tree/main/playground-firefox',
   webApis: [
@@ -898,14 +899,14 @@ const POSITION_META = {
 
 // Edge: stan wbudowanego AI (zakładka „Edge"). Edge ma te same globalne obiekty
 // co Chrome, więc dema z tego środowiska działają w Edge, gdy API jest włączone.
-// Źródło: dokumentacja Microsoft Edge (web-platform) i noty wydań 147–156.
+// Źródło: dokumentacja Microsoft Edge (web-platform) i noty wydań 147–158.
 const EDGE_STATUS = {
-  verifiedAt: '2026-10-20',
-  stable: 155,
-  beta: 156,
-  nextStableDate: '2026-10-22',
-  dev: 157,
-  canary: 158,
+  verifiedAt: '2026-11-07',
+  stable: 157,
+  beta: 158,
+  nextStableDate: '2026-11-19',
+  dev: 159,
+  canary: 160,
   docs: 'https://learn.microsoft.com/microsoft-edge/web-platform/prompt-api',
   demos: 'https://microsoftedge.github.io/Demos/built-in-ai/',
   insider: 'https://www.microsoft.com/edge/download/insider',
@@ -913,7 +914,7 @@ const EDGE_STATUS = {
     { id: 'prompt', state: 'preview', doc: 'prompt-api', note:
       'Canary/Dev 138+. Flaga <em>Prompt API for on-device language model</em> (wewnętrznie ' +
       '<code>edge-llm-prompt-api-for-phi-mini</code> w Stable 155, <code>edge-llm-prompt-api-for-default</code> w Dev 157). ' +
-      'Origin trial był w notach Edge 149–150; <code>topK</code>/<code>temperature</code> mają osobny OT (155–156).' },
+      'Origin trial był w notach Edge 149–150; <code>topK</code>/<code>temperature</code> mają osobny OT (w notach 155–158).' },
     { id: 'summarizer', state: 'insider', doc: 'writing-assistance-apis', note:
       'Włączone domyślnie w Canary/Dev od 138.0.3309.2 (developer preview); Microsoft nie opisuje Stable.' },
     { id: 'translator', state: 'default', doc: 'translator-api', note:

@@ -10,11 +10,11 @@
 // z własnego huba Mozilli oraz z organizacji Mozilla i Xenova na Hugging Face.
 
 const FIREFOX_INFO = {
-  verifiedAt: '2026-10-20',
-  release: 158,
-  beta: 159,
-  nightly: 160,
-  esr: '153.5.0esr',
+  verifiedAt: '2026-11-07',
+  release: 159,
+  beta: 160,
+  nightly: 161,
+  esr: '153.6.0esr',
   docs: 'https://firefox-source-docs.mozilla.org/toolkit/components/ml/extensions.html',
   examples: 'https://github.com/firefox-ai',
 };

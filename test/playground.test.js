@@ -23,10 +23,10 @@ function defaults(api) {
 
 test('release snapshot distinguishes stable from planned releases', () => {
   const { RELEASE_INFO, APIS } = loadPlayground();
-  assert.equal(RELEASE_INFO.verifiedAt, '2026-10-20');
-  assert.equal(RELEASE_INFO.stable, 156);
-  assert.equal(RELEASE_INFO.beta, 157);
-  assert.equal(RELEASE_INFO.nextStableDate, '2026-11-03');
+  assert.equal(RELEASE_INFO.verifiedAt, '2026-11-07');
+  assert.equal(RELEASE_INFO.stable, 157);
+  assert.equal(RELEASE_INFO.beta, 158);
+  assert.equal(RELEASE_INFO.nextStableDate, '2026-11-17');
   assert.equal(APIS.find(api => api.id === 'proofreader').status, 'dev-trial');
   assert.equal(APIS.find(api => api.id === 'writer').status, 'deprecating');
   assert.equal(APIS.find(api => api.id === 'rewriter').status, 'deprecating');
