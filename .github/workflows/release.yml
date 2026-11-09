@@ -73,6 +73,8 @@ jobs:
       # Chrome Web Store — 4 sekrety repo (te same nazwy co w chrome-ssr-csr,
       # wzór: store-secrets.tpl):
       #   CWS_EXTENSION_ID      — ID z adresu w panelu Web Store
+      #   CWS_PUBLISHER_ID      — ID wydawcy (panel Web Store → Account),
+      #   wymagany przez API v2; ten sam dla wszystkich rozszerzeń
       #   CWS_CLIENT_ID, CWS_CLIENT_SECRET, CWS_REFRESH_TOKEN — jednorazowa
       #   konfiguracja OAuth (klient typu "Aplikacja komputerowa"):
       #   https://github.com/fregante/chrome-webstore-upload-keys
@@ -96,9 +98,14 @@ jobs:
           CLIENT_ID: ${{ secrets.CWS_CLIENT_ID || secrets.CLIENT_ID }}
           CLIENT_SECRET: ${{ secrets.CWS_CLIENT_SECRET || secrets.CLIENT_SECRET }}
           REFRESH_TOKEN: ${{ secrets.CWS_REFRESH_TOKEN || secrets.REFRESH_TOKEN }}
+          PUBLISHER_ID: ${{ secrets.CWS_PUBLISHER_ID }}
         run: |
+          if [ -z "$PUBLISHER_ID" ]; then
+            echo "::error::CWS_PUBLISHER_ID is not set - the Chrome Web Store v2 API requires it"
+            exit 1
+          fi
           v="${GITHUB_REF_NAME#v}"
-          out=$(npx --yes chrome-webstore-upload-cli@3 --source "comment-vibe-$v.zip" 2>&1) && status=0 || status=$?
+          out=$(npx --yes chrome-webstore-upload-cli@4 --source "comment-vibe-$v.zip" 2>&1) && status=0 || status=$?
           echo "$out"
           # CWS nie przyjmuje nowej wersji, dopóki poprzednia czeka na
           # recenzję — to stan sklepu, nie błąd release'u.

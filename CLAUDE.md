@@ -79,7 +79,7 @@ packaging scripts, not a build step: they only zip raw source files, so the
    `scripts/package.sh` locally and upload the zips.)
 5. The same workflow then submits each zip to its store for review, **if** the
    repo secrets are configured (Chrome: `CWS_EXTENSION_ID`, `CWS_CLIENT_ID`,
-   `CWS_CLIENT_SECRET`, `CWS_REFRESH_TOKEN` — the old unprefixed names still
+   `CWS_CLIENT_SECRET`, `CWS_REFRESH_TOKEN`, `CWS_PUBLISHER_ID` (Web Store API v2) — the old unprefixed names still
    work as a fallback; AMO: `AMO_JWT_ISSUER`, `AMO_JWT_SECRET`;
    Edge: `EDGE_PRODUCT_ID`, `EDGE_CLIENT_ID`, `EDGE_API_KEY` — setup links are
    in the workflow comments). Edge gets the Chrome zip unchanged via
