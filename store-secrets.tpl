@@ -14,8 +14,8 @@
 # Chrome Web Store API: Google Cloud OAuth client ("Desktop app"); refresh
 # token from `npx chrome-webstore-upload-keys`. Keep the OAuth consent screen
 # "In production": while it is "Testing", Google expires the refresh token
-# after 7 days. CWS_PUBLISHER_ID (CWS dashboard → Account) is only read by
-# chrome-ssr-csr and is the same for every extension.
+# after 7 days. CWS_PUBLISHER_ID (CWS dashboard → Account) is required by the
+# Chrome Web Store API v2 and is the same for every extension.
 CWS_CLIENT_ID={{ op://Personal/Extension store secrets/CWS_CLIENT_ID }}
 CWS_CLIENT_SECRET={{ op://Personal/Extension store secrets/CWS_CLIENT_SECRET }}
 CWS_REFRESH_TOKEN={{ op://Personal/Extension store secrets/CWS_REFRESH_TOKEN }}
