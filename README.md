@@ -253,11 +253,15 @@ comment-vibe/
 
 ### Build for the Chrome Web Store
 
-From inside the project folder:
+Run the packaging script from the repo root. It builds the Chrome/Edge zip
+and the Firefox zip from an explicit file list and verifies their contents:
 
 ```bash
-zip -r comment-vibe.zip . -x "*.DS_Store" -x "*.zip" -x "*.git*"
+bash scripts/package.sh
 ```
+
+Do not zip the folder by hand — a hand-rolled `zip` picks up local files
+that must not ship.
 
 ## How it works
 

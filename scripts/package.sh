@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Builds the Chrome Web Store and Firefox (AMO) distribution packages and
-# verifies each one contains the right per-store file set.
+# verifies each one contains exactly the right per-store file set.
 #
 # This is NOT a build step — the extension ships raw source files (see the
 # "no build tooling" constraint in CLAUDE.md). This script only zips and
@@ -8,7 +8,7 @@
 # locally and by .github/workflows/release.yml on a version tag.
 #
 # Usage:   scripts/package.sh
-# Outputs: comment-vibe-<version>.zip          (Chrome Web Store)
+# Outputs: comment-vibe-<version>.zip          (Chrome Web Store, also Edge)
 #          comment-vibe-firefox-<version>.zip  (addons.mozilla.org)
 set -euo pipefail
 
@@ -33,57 +33,88 @@ CHROME_ZIP="comment-vibe-$VERSION.zip"
 FF_ZIP="comment-vibe-firefox-$VERSION.zip"
 rm -f "$CHROME_ZIP" "$FF_ZIP"
 
-# ── Chrome Web Store ──────────────────────────────────────────────────────────
-# Everything except docs, dev/test tooling, store assets, and the Firefox-only
-# files (background.js and the Firefox manifest must never ship to Chrome).
-zip -rq "$CHROME_ZIP" . \
-  -x "*.DS_Store" -x "*.zip" -x "*.git*" -x ".claude/*" -x ".github/*" \
-     -x ".gitignore" -x "*.md" -x "store-assets/*" -x "playground/*" -x "playground-firefox/*" \
-     -x "test/*" -x "plans/*" -x "scripts/*" -x "icons/make-icons.html" \
-     -x "manifest.firefox.json" -x "background.js"
+# ── What ships ────────────────────────────────────────────────────────────────
+# Allow-list: ONLY the files named here go into a store package. Anything else
+# in the working tree (docs, tests, the landing page, editor or agent folders,
+# screenshots) can never leak in. A new runtime file must be added here; the
+# verification below fails the build when a manifest or popup.html references
+# a file that is not in the package.
+RUNTIME_FILES=(content.js content.css popup.html popup.css popup.js rate-prompt.js jev.js LICENSE)
+ICON_FILES=(icons/icon16.png icons/icon48.png icons/icon128.png)
+# background.js is Firefox-only and must never ship to Chrome.
+FIREFOX_ONLY_FILES=(background.js)
 
-# ── Firefox (addons.mozilla.org) ──────────────────────────────────────────────
-# Same runtime files plus background.js, with the Firefox manifest renamed to
-# manifest.json (zip can't rename, so stage in a temp dir).
-tmp="$(mktemp -d)"
-mkdir "$tmp/icons"
-cp content.js content.css popup.html popup.css popup.js rate-prompt.js background.js jev.js LICENSE "$tmp/"
-cp icons/icon16.png icons/icon48.png icons/icon128.png "$tmp/icons/"
-cp manifest.firefox.json "$tmp/manifest.json"
-( cd "$tmp" && zip -rq - . ) > "$ROOT/$FF_ZIP"
-rm -rf "$tmp"
+# build_zip <zip name> <manifest source> [extra root-level files...]
+# Stages the allow-listed files in a temp dir, with the given manifest renamed
+# to manifest.json (zip can't rename), and zips that dir.
+build_zip() {
+  local zip_name="$1" manifest="$2"
+  shift 2
+  local tmp
+  tmp="$(mktemp -d)"
+  mkdir "$tmp/icons"
+  cp "${RUNTIME_FILES[@]}" "$@" "$tmp/"
+  cp "${ICON_FILES[@]}" "$tmp/icons/"
+  cp "$manifest" "$tmp/manifest.json"
+  ( cd "$tmp" && zip -rq - . ) > "$ROOT/$zip_name"
+  rm -rf "$tmp"
+}
+
+build_zip "$CHROME_ZIP" manifest.json
+build_zip "$FF_ZIP" manifest.firefox.json "${FIREFOX_ONLY_FILES[@]}"
 
 # ── Verify ────────────────────────────────────────────────────────────────────
-# Match against captured output with here-strings, never `cmd | grep -q`: under
-# `set -o pipefail` an early grep match closes the pipe and the producer takes a
-# SIGPIPE, which would be reported as a (false) verification failure.
+# Each zip must contain exactly its expected file set — nothing missing and
+# nothing extra — and the right manifest variant.
 fail=0
 ok()  { echo "  ✓ $1"; }
 bad() { echo "  ✗ $1" >&2; fail=1; }
-listing_has() { grep -qE "[[:space:]]$2\$" <<<"$1"; }
 
-chrome_list="$(unzip -l "$CHROME_ZIP")"
+# One path per line, sorted, directories dropped.
+zip_files()      { unzip -Z1 "$1" | grep -v '/$' | LC_ALL=C sort; }
+expected_files() { printf '%s\n' "${RUNTIME_FILES[@]}" "${ICON_FILES[@]}" manifest.json "$@" | LC_ALL=C sort; }
+
+check_file_set() {
+  local zip_name="$1"
+  shift
+  local actual expected
+  actual="$(zip_files "$zip_name")"
+  expected="$(expected_files "$@")"
+  if [ "$actual" = "$expected" ]; then
+    ok "exact file set ($(wc -l <<<"$actual" | tr -d ' ') files)"
+  else
+    bad "unexpected file set in $zip_name (< expected, > actual):"
+    diff <(echo "$expected") <(echo "$actual") >&2 || true
+  fi
+}
+
+# Every local file the packaged manifest.json or popup.html points at must be
+# in the zip — catches a runtime file that was never added to the allow-list.
+check_references() {
+  local zip_name="$1" actual refs ref missing=0
+  actual="$(zip_files "$zip_name")"
+  refs="$( { unzip -p "$zip_name" manifest.json | grep -oE '"[^":]+\.(js|css|html|png)"' | tr -d '"'
+             unzip -p "$zip_name" popup.html | grep -oE '(src|href)="[^":]+\.(js|css|png)"' | cut -d'"' -f2
+           } | LC_ALL=C sort -u )"
+  for ref in $refs; do
+    grep -qxF "$ref" <<<"$actual" || { bad "$zip_name: referenced file missing: $ref"; missing=1; }
+  done
+  [ "$missing" -eq 0 ] && ok "all referenced files present"
+  return 0
+}
+
 chrome_manifest="$(unzip -p "$CHROME_ZIP" manifest.json)"
-ff_list="$(unzip -l "$FF_ZIP")"
 ff_manifest="$(unzip -p "$FF_ZIP" manifest.json)"
 
 echo "Verifying $CHROME_ZIP:"
-listing_has "$chrome_list" "manifest.json"         && ok "manifest.json"           || bad "missing manifest.json"
-listing_has "$chrome_list" "content.js"            && ok "content.js"              || bad "missing content.js"
-listing_has "$chrome_list" "rate-prompt.js"        && ok "rate-prompt.js"          || bad "missing rate-prompt.js"
-listing_has "$chrome_list" "LICENSE"               && ok "LICENSE"                 || bad "missing LICENSE"
-listing_has "$chrome_list" "jev.js"                && ok "jev.js"                  || bad "missing jev.js"
-listing_has "$chrome_list" "background.js"         && bad "background.js must be Firefox-only" || ok "no background.js"
-listing_has "$chrome_list" "manifest.firefox.json" && bad "manifest.firefox.json leaked in"    || ok "no manifest.firefox.json"
+check_file_set "$CHROME_ZIP"
+check_references "$CHROME_ZIP"
 grep -q minimum_chrome_version <<<"$chrome_manifest" \
   && ok "Chrome manifest variant" || bad "Chrome manifest is not the Chrome variant"
 
 echo "Verifying $FF_ZIP:"
-listing_has "$ff_list" "manifest.json" && ok "manifest.json"  || bad "missing manifest.json"
-listing_has "$ff_list" "background.js" && ok "background.js"  || bad "missing background.js"
-listing_has "$ff_list" "rate-prompt.js" && ok "rate-prompt.js" || bad "missing rate-prompt.js"
-listing_has "$ff_list" "LICENSE"       && ok "LICENSE"        || bad "missing LICENSE"
-listing_has "$ff_list" "jev.js"        && ok "jev.js"         || bad "missing jev.js"
+check_file_set "$FF_ZIP" "${FIREFOX_ONLY_FILES[@]}"
+check_references "$FF_ZIP"
 grep -q '"gecko"' <<<"$ff_manifest" \
   && ok "Firefox gecko variant" || bad "Firefox manifest missing gecko settings"
 grep -q data_collection_permissions <<<"$ff_manifest" \
