@@ -1901,6 +1901,13 @@ function attachToInput(el) {
         abortController.abort();
         if (isCurrentRequest(state, requestId)) sp(badge, 'display', 'none');
       }, modelStatus === 'available' ? ANALYSIS_TIMEOUT_MS : MODEL_DOWNLOAD_TIMEOUT_MS);
+      // An invalidated request (new input, cleanup, site disabled) aborts this
+      // controller. Its timers must not outlive it, even when the model call
+      // itself never settles (e.g. a create() stuck on a stalled download).
+      abortController.signal.addEventListener('abort', () => {
+        clearTimeout(slowTimer);
+        clearTimeout(giveUpTimer);
+      }, { once: true });
       try {
         const onEarlySentiment = sentiment => {
           if (!isCurrentRequest(state, requestId)) return;

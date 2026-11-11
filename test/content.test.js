@@ -1900,3 +1900,29 @@ test('result cache collapses whitespace and evicts the least recently used entry
   assert.equal(getCachedResult('text 0'), null, 'oldest entry is evicted');
   assert.ok(getCachedResult(`text ${RESULT_CACHE_MAX - 1}`));
 });
+
+test('cleanup clears the give-up timer of an analysis that never settles', async () => {
+  const realSet = global.setTimeout;
+  const realClear = global.clearTimeout;
+  const longTimers = new Set();
+  global.setTimeout = (fn, ms, ...rest) => {
+    const handle = realSet(fn, ms, ...rest);
+    if (ms >= 30_000) longTimers.add(handle);
+    return handle;
+  };
+  global.clearTimeout = handle => { longTimers.delete(handle); return realClear(handle); };
+  global.LanguageModel = { availability: async () => 'available', create: () => new Promise(() => {}) };
+  applySettings([], true, 'auto');
+  const { el, state } = attachFakeField();
+  try {
+    await typeAndAnalyze(el, 'a comment whose analysis never finishes');
+    assert.equal(longTimers.size, 1);
+    state.cleanup();
+    assert.equal(longTimers.size, 0);
+  } finally {
+    state.cleanup();
+    for (const handle of longTimers) realClear(handle);
+    global.setTimeout = realSet;
+    global.clearTimeout = realClear;
+  }
+});

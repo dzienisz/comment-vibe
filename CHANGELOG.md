@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **An abandoned tone check no longer leaves a timer running.** When a check was replaced by new typing (or its field went away) while the model call never answered, its give-up timer stayed alive for up to five minutes. It is now cancelled with the request. This also brings `node --test` down from several minutes to about 25 seconds.
+
 ## [1.13.0] - 2026-11-04
 
 ### Added
