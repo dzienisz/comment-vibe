@@ -23,6 +23,7 @@ const {
   cleanResultCache,
   constructSession,
   DECISION_SCHEMA,
+  effectiveMode,
   expireReusableSession,
   extractEarlySentiment,
   FEW_SHOT,
@@ -37,6 +38,7 @@ const {
   isChromeBuild,
   isEdgeBrowser,
   isFirefoxMLContext,
+  jevAutoHost,
   normalize,
   normalizeDetectedLanguage,
   normalizeHost,
@@ -1975,4 +1977,100 @@ test('attachOnFocus still skips zero-size fields', () => {
   el.getBoundingClientRect = () => ({ top: 0, bottom: 0, left: 0, right: 0, width: 0, height: 0 });
   attachOnFocus({ target: el });
   assert.equal(tracked.has(el), false);
+});
+
+// ── Fast mode scope: automatic only on known comment sites ───────────────────
+
+test('jevAutoHost matches the comment sites and their subdomains only', () => {
+  assert.equal(jevAutoHost('www.linkedin.com'), true);
+  assert.equal(jevAutoHost('x.com'), true);
+  assert.equal(jevAutoHost('mobile.twitter.com'), true);
+  assert.equal(jevAutoHost('studio.youtube.com'), true);
+  assert.equal(jevAutoHost('mail.google.com'), false);
+  assert.equal(jevAutoHost('notlinkedin.com'), false);
+  assert.equal(jevAutoHost('linkedin.com.evil.example'), false);
+  assert.equal(jevAutoHost(''), false);
+});
+
+test('effectiveMode forces click-to-check for Fast mode outside the comment sites', () => {
+  assert.equal(effectiveMode('auto', false, 'mail.google.com'), 'auto');
+  assert.equal(effectiveMode('auto', true, 'mail.google.com'), 'manual');
+  assert.equal(effectiveMode('auto', true, 'www.linkedin.com'), 'auto');
+  assert.equal(effectiveMode('manual', false, 'www.linkedin.com'), 'manual');
+  assert.equal(effectiveMode('manual', true, 'www.linkedin.com'), 'manual');
+  assert.equal(effectiveMode('auto', true, null), 'auto');
+});
+
+function jevRuntimeRecording(calls) {
+  return {
+    runtime: {
+      sendMessage: async message => {
+        calls.push(message.type);
+        return { ok: true, result: { sentiment: 'negative', reason: 'Reads as harsh.', rewrite: null, provider: 'subq' } };
+      },
+    },
+  };
+}
+
+test('Fast mode on an unlisted site sends nothing until the badge is clicked', async () => {
+  const calls = [];
+  global.chrome = jevRuntimeRecording(calls);
+  global.location = { hostname: 'mail.example.com' };
+  applySettings([], true, 'auto');
+  applyJevSetting(true);
+  const { el, state } = attachFakeField();
+  try {
+    await typeAndAnalyze(el, 'this is a private draft that must stay local');
+    assert.deepEqual(calls, []);
+    assert.match(state.badge.className, /cv-badge--idle/);
+
+    state.badge.click();
+    await sleep(50);
+    assert.deepEqual(calls, ['cv-jev-analyze']);
+    assert.match(state.badge.className, /cv-badge--negative/);
+  } finally {
+    state.cleanup();
+    applyJevSetting(false);
+    delete global.location;
+    delete global.chrome;
+  }
+});
+
+test('Fast mode on a known comment site still checks automatically', async () => {
+  const calls = [];
+  global.chrome = jevRuntimeRecording(calls);
+  global.location = { hostname: 'www.linkedin.com' };
+  applySettings([], true, 'auto');
+  applyJevSetting(true);
+  const { el, state } = attachFakeField();
+  try {
+    await typeAndAnalyze(el, 'this take is lazy and badly argued');
+    assert.deepEqual(calls, ['cv-jev-analyze']);
+    assert.match(state.badge.className, /cv-badge--negative/);
+  } finally {
+    state.cleanup();
+    applyJevSetting(false);
+    delete global.location;
+    delete global.chrome;
+  }
+});
+
+test('turning Fast mode on switches an already-tracked field to click-to-check', async () => {
+  const stats = { analyses: 0 };
+  global.LanguageModel = nanoReturning(stats, NEGATIVE_WITH_REWRITE);
+  global.location = { hostname: 'mail.example.com' };
+  applySettings([], true, 'auto');
+  const { el, state } = attachFakeField();
+  try {
+    await typeAndAnalyze(el, 'on-device check of a long enough comment');
+    assert.equal(stats.analyses, 1);
+    assert.match(state.badge.className, /cv-badge--negative/);
+
+    applyJevSetting(true);
+    assert.match(state.badge.className, /cv-badge--idle/);
+  } finally {
+    state.cleanup();
+    applyJevSetting(false);
+    delete global.location;
+  }
 });

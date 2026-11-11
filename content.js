@@ -619,12 +619,37 @@ function getLocalStorageArea() {
   return null;
 }
 
+// Fast mode is the only path that sends text off the device, and the input
+// selectors also match private editors (mail, chat). So it checks while you
+// type only on these comment sites; everywhere else it waits for an explicit
+// request (badge click or Alt+Shift+C), exactly like manual mode.
+const JEV_AUTO_HOSTS = ['linkedin.com', 'x.com', 'twitter.com', 'youtube.com'];
+
+function jevAutoHost(host) {
+  const normalized = normalizeHost(host);
+  return JEV_AUTO_HOSTS.some(known => normalized === known || normalized.endsWith(`.${known}`));
+}
+
+function currentHost() {
+  return typeof location === 'undefined' ? null : location.hostname;
+}
+
+// 'manual' when the user chose it, or when Fast mode is on outside the comment
+// sites above. Without a location (unit tests) Fast mode stays automatic.
+function effectiveMode(mode = analysisMode, fast = jevEnabled, host = currentHost()) {
+  if (mode === 'manual') return 'manual';
+  if (fast && host !== null && !jevAutoHost(host)) return 'manual';
+  return 'auto';
+}
+
 function applyJevSetting(value) {
   const next = value === true;
   if (next === jevEnabled) return;
   jevEnabled = next;
   resultCache.clear(); // cached verdicts came from the other engine
   if (jevEnabled) onJevEnabled?.();
+  // Tracked fields switch between automatic and click-to-check right away.
+  if (!siteDisabled()) for (const state of liveStates) state.onSettingsChange?.();
 }
 
 function loadJevSetting() {
@@ -1807,7 +1832,7 @@ function attachToInput(el) {
       dismissTooltip(tooltip);
       return;
     }
-    if (analysisMode === 'manual' && (!force || manualOnly)) {
+    if (effectiveMode() === 'manual' && (!force || manualOnly)) {
       if (!state.applying) {
         state.lastResult = null;
         dismissTooltip(tooltip);
@@ -1993,7 +2018,7 @@ function attachToInput(el) {
   state.onSettingsChange = () => onInput({
     force: true,
     immediate: true,
-    manualOnly: analysisMode === 'manual',
+    manualOnly: effectiveMode() === 'manual',
   });
   el.addEventListener('focus',  onFocus);
   el.addEventListener('blur',   onBlur);
@@ -2174,6 +2199,7 @@ if (typeof module !== 'undefined' && module.exports) {
     cleanResultCache,
     constructSession,
     DECISION_SCHEMA,
+    effectiveMode,
     expireReusableSession,
     extractEarlySentiment,
     FEW_SHOT,
@@ -2188,6 +2214,7 @@ if (typeof module !== 'undefined' && module.exports) {
     isChromeBuild,
     isEdgeBrowser,
     isFirefoxMLContext,
+    jevAutoHost,
     normalize,
     normalizeDetectedLanguage,
     normalizeHost,
