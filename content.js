@@ -2050,6 +2050,16 @@ function attachCandidate(el) {
   attachToInput(el);
 }
 
+// Safety net for fields the scans miss: an input that was hidden (zero-size)
+// when it was inserted, or that only became editable later through an
+// attribute change, is never re-scanned by the childList observer. Focusing a
+// field is the clearest signal it is in use, so attach on demand.
+function attachOnFocus(event) {
+  const el = event?.target;
+  if (!el || el.nodeType !== 1 || tracked.has(el)) return;
+  if (matchesInputSelector(el)) attachCandidate(el);
+}
+
 function scanSubtree(root) {
   forEachInputCandidate(root, attachCandidate);
 }
@@ -2073,6 +2083,7 @@ function cleanupSubtree(root) {
 
 function watchDOM() {
   document.addEventListener('click', dismissActiveTooltip);
+  document.addEventListener('focusin', attachOnFocus, true);
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape') dismissActiveTooltip();
   });
@@ -2151,6 +2162,7 @@ if (typeof module !== 'undefined' && module.exports) {
     applyJevSetting,
     applySettings,
     applyRewrite,
+    attachOnFocus,
     attachToInput,
     applyViaExecCommand,
     beginInputChange,

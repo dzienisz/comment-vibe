@@ -12,6 +12,7 @@ const {
   applySettings,
   applyRewrite,
   applyViaExecCommand,
+  attachOnFocus,
   attachToInput,
   beginInputChange,
   buildMessages,
@@ -1925,4 +1926,53 @@ test('cleanup clears the give-up timer of an analysis that never settles', async
     global.setTimeout = realSet;
     global.clearTimeout = realClear;
   }
+});
+
+// ── Focus fallback: fields the scans missed ──────────────────────────────────
+
+function fakeEditable(attrs = { contenteditable: 'true', role: 'textbox' }) {
+  const document_ = {
+    activeElement: null,
+    body: new FakeEl('body'),
+    createElement: tag => { const el = new FakeEl(tag); el.ownerDocument = document_; return el; },
+    addEventListener() {},
+  };
+  global.document = document_;
+  global.window = { innerWidth: 1024, innerHeight: 768, addEventListener() {}, removeEventListener() {}, open() {} };
+  global.ResizeObserver = class { observe() {} disconnect() {} };
+  const el = document_.createElement('div');
+  el.nodeType = 1;
+  el.closest = () => null;
+  for (const [name, value] of Object.entries(attrs)) el.setAttribute(name, value);
+  return el;
+}
+
+test('attachOnFocus attaches a matching field that the scans missed', () => {
+  const el = fakeEditable();
+  assert.equal(tracked.has(el), false);
+  attachOnFocus({ target: el });
+  try {
+    assert.equal(tracked.has(el), true);
+    const state = tracked.get(el);
+    attachOnFocus({ target: el });
+    assert.equal(tracked.get(el), state, 'a second focus must not re-attach');
+  } finally {
+    tracked.get(el)?.cleanup();
+    tracked.delete(el);
+  }
+});
+
+test('attachOnFocus ignores elements that are not comment fields', () => {
+  const el = fakeEditable({ role: 'button' });
+  attachOnFocus({ target: el });
+  assert.equal(tracked.has(el), false);
+  attachOnFocus({ target: null });
+  attachOnFocus({});
+});
+
+test('attachOnFocus still skips zero-size fields', () => {
+  const el = fakeEditable();
+  el.getBoundingClientRect = () => ({ top: 0, bottom: 0, left: 0, right: 0, width: 0, height: 0 });
+  attachOnFocus({ target: el });
+  assert.equal(tracked.has(el), false);
 });
