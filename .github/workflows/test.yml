@@ -1,0 +1,37 @@
+name: Tests
+
+# Uruchamia testy jednostkowe (node --test — bez npm i bez zależności) oraz
+# próbne pakowanie obu paczek przy każdym PR i każdym pushu do main.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+# Nowy commit na tej samej gałęzi przerywa poprzedni przebieg.
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    # Cały zestaw trwa ok. 25 s; limit łapie test, który zawiesi proces.
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Node version
+        run: node --version
+
+      - name: Unit tests
+        run: node --test
+
+      # Pakowanie niczego nie publikuje — sprawdza tylko, czy obie paczki
+      # dają się zbudować i przechodzą weryfikację zawartości.
+      - name: Package smoke test
+        run: bash scripts/package.sh

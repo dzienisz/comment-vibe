@@ -23,6 +23,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
+      # Nie pakujemy i nie wysyłamy do sklepów wersji, która nie przechodzi testów.
+      - name: Unit tests
+        run: node --test
+
       - name: Build packages
         run: bash scripts/package.sh
 

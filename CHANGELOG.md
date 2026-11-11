@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Tests run in CI.** A new `Tests` workflow runs `node --test` and a packaging smoke test on every pull request and push to `main`, and the release workflow now runs the tests before it packages and submits to the stores.
+
 ### Fixed
 
 - **An abandoned tone check no longer leaves a timer running.** When a check was replaced by new typing (or its field went away) while the model call never answered, its give-up timer stayed alive for up to five minutes. It is now cancelled with the request. This also brings `node --test` down from several minutes to about 25 seconds.
