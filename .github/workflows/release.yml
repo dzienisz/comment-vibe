@@ -23,6 +23,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
+      # Nie pakujemy i nie wysyłamy do sklepów wersji, która nie przechodzi testów.
+      - name: Unit tests
+        id: unit_tests
+        run: node --test
+
       - name: Build packages
         run: bash scripts/package.sh
 
@@ -117,8 +122,9 @@ jobs:
 
       - name: Publish to Firefox Add-ons (AMO)
         # !cancelled(): submit to AMO even if the Chrome step failed —
-        # the two stores' submissions are independent.
-        if: ${{ !cancelled() && env.HAS_AMO_SECRETS == 'true' }}
+        # the two stores' submissions are independent. !cancelled() also
+        # runs after a failed step, so the test result is checked explicitly.
+        if: ${{ !cancelled() && steps.unit_tests.outcome == 'success' && env.HAS_AMO_SECRETS == 'true' }}
         env:
           WEB_EXT_API_KEY: ${{ secrets.AMO_JWT_ISSUER }}
           WEB_EXT_API_SECRET: ${{ secrets.AMO_JWT_SECRET }}
@@ -131,8 +137,9 @@ jobs:
             --source-dir amo-src --approval-timeout 0
 
       - name: Publish to Microsoft Edge Add-ons
-        # !cancelled(): niezależnie od wyniku kroków Chrome i AMO.
-        if: ${{ !cancelled() && env.HAS_EDGE_SECRETS == 'true' }}
+        # !cancelled(): niezależnie od wyniku kroków Chrome i AMO — ale tylko
+        # po zaliczonych testach (!cancelled() uruchamia też po błędzie kroku).
+        if: ${{ !cancelled() && steps.unit_tests.outcome == 'success' && env.HAS_EDGE_SECRETS == 'true' }}
         env:
           EDGE_PRODUCT_ID: ${{ secrets.EDGE_PRODUCT_ID }}
           EDGE_CLIENT_ID: ${{ secrets.EDGE_CLIENT_ID }}

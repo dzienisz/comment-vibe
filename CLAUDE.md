@@ -29,6 +29,10 @@ The popup's model-download states can be checked the same way with
 (`&ffshape=bytes|unknown`, `&blocked=1` for AI controls blocking it, `&granted=1&blocked=1` for a popup reopened after that block) for the Firefox setup flow. Reload mid-download to
 simulate reopening the popup.
 
+CI runs `node --test` and a `scripts/package.sh` smoke test on every pull
+request and push to `main` (`.github/workflows/test.yml`); the release
+workflow runs the tests again before packaging.
+
 Full manual testing on Chrome requires:
 - Chrome 127+ (desktop only — no mobile support)
 - Gemini Nano enabled via `chrome://flags/#optimization-guide-on-device-model` and `chrome://flags/#prompt-api-for-gemini-nano`
