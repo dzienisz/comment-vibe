@@ -16,6 +16,48 @@ actually type.
 Do not fully rename — the listing URL, reviews and existing links stay tied to
 the current identity.
 
+### Measuring this title (hold until 2026-11-28)
+
+The title above has shipped since 1.12.1 (tagged 2026-10-29). A title change
+resets the comparison, so do not change `name` or the summary again before
+**2026-11-28** — one title needs about 30 days of data.
+
+Record these from the Chrome Web Store Developer Dashboard (Analytics) and,
+for Edge, from Partner Center. Use the date the 1.12.1 update actually went
+live in each store, which can be later than the tag:
+
+| Chrome Web Store | Impressions | Listing views | Installs |
+|---|---|---|---|
+| 30 days before the title went live | | | |
+| 30 days after | | | |
+
+| Edge Add-ons | Impressions | Listing views | Installs |
+|---|---|---|---|
+| 30 days before the title went live | | | |
+| 30 days after | | | |
+
+Firefox still uses the older title ("Comment Vibe — Private AI Tone Checker";
+AMO names are capped lower), but it is not a usable control: on 2026-11-13 the
+public AMO API reported 1 average daily user and 0 weekly downloads.
+
+Decision rule:
+
+- Impressions and installs clearly up: keep the title.
+- No movement after 30 days: test one candidate for the next 30 days —
+  **Comment Vibe — AI Tone Checker & Comment Rewriter for LinkedIn** (62 chars;
+  the Chrome limit is 75). It trades "Private" for the platform keyword.
+  Known costs: a third-party trademark in the title (store review or a
+  complaint can force a rename), and it reads as LinkedIn-only although the
+  extension works on X, YouTube and Reddit too.
+
+Considered and set aside: "…AI Tone Checker & Grammar Fix for LinkedIn".
+"Grammar" is the highest-volume writing keyword, but it puts the listing up
+against dedicated grammar checkers, grammar fixing is a secondary action here,
+and the Firefox build has no rewrite or grammar action at all.
+
+Changing `name` or `description` also means updating `test/manifest.test.js`,
+which pins the description text and the Firefox name.
+
 ## Summary (max 132 chars — this is the `description` field in manifest.json)
 
 Recommended (132 chars):
