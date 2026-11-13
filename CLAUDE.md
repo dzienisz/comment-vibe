@@ -123,5 +123,5 @@ sources" extensions on restart — reload the unpacked extension before
 testing. `popup.js` `isEdge()` swaps in the `#setup-edge` help; check it with
 `test/popup-harness.html?browser=edge&state=none`.
 Regenerate PNGs with `store-assets/render.sh` and `store-assets/firefox/render-firefox.sh`.
-Store assets must never ship inside the extension zip (they aren't — see the
-exclusions in `scripts/package.sh`).
+Store assets must never ship inside the extension zip (they aren't —
+`scripts/package.sh` ships only an explicit allow-list).
