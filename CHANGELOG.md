@@ -11,10 +11,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Tests run in CI.** A new `Tests` workflow runs `node --test` and a packaging smoke test on every pull request and push to `main`, and the release workflow now runs the tests before it packages and submits to the stores.
 
+### Changed
+
+- **Fast mode no longer checks automatically outside comment sites.** With Fast mode on, text is sent to the cloud provider while you type only on LinkedIn, X/Twitter and YouTube. On every other site the badge reads "Check tone" and nothing is sent until you click it or press Alt+Shift+C. On-device checks are unchanged.
+
 ### Fixed
 
 - **An abandoned tone check no longer leaves a timer running.** When a check was replaced by new typing (or its field went away) while the model call never answered, its give-up timer stayed alive for up to five minutes. It is now cancelled with the request. This also brings `node --test` down from several minutes to about 25 seconds.
 - **Chrome and Edge packages no longer contain non-extension files.** `scripts/package.sh` built the Chrome zip from a deny-list, so `site/index.html` and `store-secrets.tpl` shipped in every package and a locally built zip also picked up editor and agent folders. Both zips are now staged from one explicit allow-list, and the script fails when a zip contains anything else or when a file referenced by the manifest or `popup.html` is missing.
+- **Comment boxes that were hidden when the page built them now get a badge.** A field inserted inside a collapsed container, or one that only became editable after a click, was skipped by the page scan and never picked up again. Comment Vibe now also attaches when such a field receives focus.
 
 ## [1.13.0] - 2026-11-04
 
