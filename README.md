@@ -35,21 +35,20 @@ On Chrome with the [Decisions API](https://github.com/explainers-by-googlers/dec
 
 ## Microsoft Edge support
 
-Edge runs the Chrome build unchanged. The Edge Add-ons listing is in review;
-until it's live, Edge users can install from the Chrome Web Store (Edge offers
-*Allow extensions from other stores*).
+Edge runs the Chrome build unchanged. Install it from
+[Edge Add-ons](https://microsoftedge.microsoft.com/addons/detail/jcaifonhljffcnioedpodaaagdefmccj).
 
-- **On-device (preview):** Edge's Prompt API is a developer preview — enable
-  *Prompt API for on-device language model* in `edge://flags` and restart
-  (officially supported on Canary/Dev since 138; the flag also exists on
-  Stable). Everything, rewrites included, then runs on Edge's built-in
-  language model — verified on Edge Dev 157. Requirements: Windows 10/11 or
-  macOS 13.3+, 5.5 GB VRAM, 20 GB free disk, unmetered network
+- **On-device (preview):** Edge's Prompt API is a developer preview — in
+  Edge 158 or later, enable *Prompt API* in `edge://flags` and restart.
+  Everything, rewrites included, then runs on Edge's built-in language model.
+  Since November 2026 that model is **Aion Instruct** (2.3B parameters), which
+  replaced Phi-4-mini. Requirements: Windows 10/11, macOS 13.3+, or 64-bit
+  Linux with Vulkan drivers (Edge 159+); 3 GB VRAM, 20 GB free disk, unmetered
+  network
   ([hardware requirements](https://learn.microsoft.com/microsoft-edge/web-platform/prompt-api#hardware-requirements)),
-  *Device performance class* High+ in `edge://on-device-internals`; orgs can
-  turn it off by policy. If `create()` fails, the CPU-only prerelease model
-  (*Enable prerelease on-device language model* flag, Dev/Canary 150+) works
-  without a GPU.
+  *Device performance class* Medium or higher in `edge://on-device-internals`.
+  *On-device AI* under Settings → Copilot and AI must be on, and orgs can turn
+  the model off by policy.
 - **Everywhere else on Edge:** turn on **Fast mode** in the popup with your
   SubQ or TypeSafe key for the tone badge.
 
@@ -120,7 +119,7 @@ cd playground && python3 -m http.server 8000   # → http://localhost:8000
 
 ### Edge and Firefox
 
-The sidebar's **Other browsers** section has an **Edge** tab ([`playground/#edge`](https://dzienko.dev/comment-vibe/playground/#edge)): Edge exposes the same globals, so the demos run there once an API is enabled. As of Edge 155, Translator and Language Detector are on by default; Prompt, Writer, Rewriter and Proofreader need a flag on Canary/Dev.
+The sidebar's **Other browsers** section has an **Edge** tab ([`playground/#edge`](https://dzienko.dev/comment-vibe/playground/#edge)): Edge exposes the same globals, so the demos run there once an API is enabled. As of Edge 158, Translator and Language Detector are on by default; Prompt, Summarizer, Writer, Rewriter, Proofreader and Decisions need a flag in `edge://flags` (developer preview, model: Aion Instruct).
 
 
 Firefox exposes none of these APIs to web pages. Its on-device AI is extension-only (`browser.trial.ml`), so the website has a **Firefox** tab ([`playground/#firefox`](https://dzienko.dev/comment-vibe/playground/#firefox)) with the current status and Mozilla's standards positions, and live demos live in a separate add-on: [`playground-firefox/`](playground-firefox/). Load it via `about:debugging#/runtime/this-firefox` → **Load Temporary Add-on…** → `playground-firefox/manifest.json`. It is not part of either store zip.
