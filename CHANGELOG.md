@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.13.1] - 2026-11-21
+
 ### Added
 
 - **Tests run in CI.** A new `Tests` workflow runs `node --test` and a packaging smoke test on every pull request and push to `main`, and the release workflow now runs the tests before it packages and submits to the stores.
