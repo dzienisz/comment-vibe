@@ -694,6 +694,9 @@ async function analyzeViaJev(text) {
 // the explanation and rewrite suggestion; a toxic verdict colors the badge
 // first. Anything else (no API, model not downloaded, low confidence, error)
 // falls back to the Prompt API silently. The API shape may still change.
+// Edge 158+ exposes the same global behind edge://flags/#edge-decisions-api
+// (model: Aion Instruct) with the same documented shape, so this path needs no
+// Edge-specific code.
 
 const DECISION_MIN_CONFIDENCE = 0.6;
 const DECISION_MAX_CHARS = 4_000;
@@ -797,7 +800,7 @@ async function analyzeViaDecisions(text, signal) {
   return {
     ...normalize({
       sentiment,
-      reason: `Chrome's on-device decision model reads this as ${DECISION_READS_AS[sentiment]} (${Math.round(confidence * 100)}% sure).`,
+      reason: `${isEdgeBrowser() ? "Edge's" : "Chrome's"} on-device decision model reads this as ${DECISION_READS_AS[sentiment]} (${Math.round(confidence * 100)}% sure).`,
     }),
     engine: 'decisions',
     confidence,

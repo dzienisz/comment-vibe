@@ -103,22 +103,30 @@ Store listing text and promo images live in `store-assets/` — Chrome copy in
 Edge Add-ons copy + Partner Center answers in `store-assets/edge/listing.md`.
 
 **Edge** runs the Chrome build. The Prompt API on Edge is a developer
-preview, not on by default — Microsoft officially supports it on Canary/Dev
-since 138, and it is flag-gated everywhere it exists. Enable _Prompt API for
-on-device language model_ in `edge://flags`; the flag's internal name differs
-by build (`edge-llm-prompt-api-for-phi-mini` on Stable 155,
-`edge-llm-prompt-api-for-default` on Dev 157). With the flag on,
-`LanguageModel` is exposed to extension pages, content scripts and web pages
-alike — verified end-to-end on Edge Dev 157 (popup shows "Edge AI ready ✓",
-content script classified a comment "Toxic" via a real session). Hardware:
-Windows 10/11 or macOS 13.3+, 5.5 GB VRAM, 20 GB disk, unmetered network,
-_Device performance class_ High+ in `edge://on-device-internals`; orgs can
-disable it (`GenAILocalFoundationalModelSettings`). Known failure: the
-Phi-4-mini GPU model session can crash the model process on some machines
-(observed on macOS arm64, Stable 155 and Dev 157 —
-`InvalidStateError`/`NotSupportedError` from `create()`); the prerelease CPU
-model (Aion-1.0-Instruct, flag `edge-llm-on-device-model-prerelease`,
-Dev/Canary 150+) bypasses it. Edge may also auto-disable unpacked "other
+preview, not on by default. Since Edge 158 (Stable included) the flag is
+_Prompt API_ in `edge://flags` (`#edge-prompt-api`); the older
+`edge-llm-prompt-api-for-*` flags are gone. Since 19 Nov 2026 the built-in
+model is Aion Instruct (2.3B parameters), which replaced Phi-4-mini. With the
+flag on, `LanguageModel` is exposed to extension pages and web pages —
+checked on Edge Stable 158 on Linux (the globals appear in the popup and on a
+page; no session was run there because that machine has no GPU). The last
+real session, popup "Edge AI ready ✓" and a comment classified "Toxic", was on
+Edge Dev 157 with the previous model. Hardware: Windows 10/11, macOS 13.3+ or
+64-bit Linux with Vulkan drivers (Edge 159+), 3 GB VRAM, 20 GB disk (the
+model is deleted under 5 GB), unmetered network, _Device performance class_
+Medium+ in `edge://on-device-internals`. _On-device AI_ under Settings →
+Copilot and AI must be on (off by default on Canary/Dev/Beta; enabling the
+flag turns it on); orgs can disable the model
+(`GenAILocalFoundationalModelSettings`, `ComponentUpdatesEnabled`). On a
+Linux VM without a GPU ("GPU blocked" in on-device-internals) `availability()`
+did not settle within 20 s — keep the timeouts.
+Edge also has the Decisions API: `DecisionModel` behind the _Decisions API_
+flag (`#edge-decisions-api`, present in Stable 158 although Microsoft
+documents it for Canary), same shape as Chrome's, so the fast path needs no
+Edge-specific code. Microsoft's Prompt API origin trial is documented for
+HTTPS websites only, not for extensions. _Prerelease on-device language
+model_ (`#edge-on-device-model-prerelease`) swaps in the prerelease model
+component. Edge may also auto-disable unpacked "other
 sources" extensions on restart — reload the unpacked extension before
 testing. `popup.js` `isEdge()` swaps in the `#setup-edge` help; check it with
 `test/popup-harness.html?browser=edge&state=none`.

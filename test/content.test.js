@@ -1783,13 +1783,26 @@ test('analyzeText uses a confident positive Decisions verdict and never creates 
   assert.equal(result.sentiment, 'positive');
   assert.equal(result.label, 'Positive');
   assert.equal(result.rewrite, null);
-  assert.match(result.reason, /friendly or appreciative \(91% sure\)/);
+  assert.match(result.reason, /^Chrome's on-device decision model reads this as friendly or appreciative \(91% sure\)/);
   assert.equal(prompt.create, 0);
   assert.equal(dm.create, 1);
 
   await analyzeText('The meeting is at 3pm.');
   assert.equal(dm.create, 1, 'the decision model is reused');
   assert.equal(dm.decide, 2);
+});
+
+test('a Decisions verdict names Edge in the reason when running in Edge', async () => {
+  const restoreNavigator = stubNavigator({ userAgent: 'Mozilla/5.0 Chrome/158.0.0.0 Edg/158.0' });
+  decisionApi({ decide: () => toneAnswer('neutral', 0.8) });
+  promptApiReturning({ sentiment: 'negative', reason: 'x', rewrite: null, respectful: false });
+  try {
+    const result = await analyzeText('The meeting moved to Thursday at 3pm.');
+    assert.equal(result.engine, 'decisions');
+    assert.match(result.reason, /^Edge's on-device decision model reads this as neutral and factual \(80% sure\)/);
+  } finally {
+    restoreNavigator();
+  }
 });
 
 test('DECISION_SCHEMA asks one tone choice question over the four badge sentiments', () => {

@@ -899,36 +899,41 @@ const POSITION_META = {
 
 // Edge: stan wbudowanego AI (zakładka „Edge"). Edge ma te same globalne obiekty
 // co Chrome, więc dema z tego środowiska działają w Edge, gdy API jest włączone.
-// Źródło: dokumentacja Microsoft Edge (web-platform) i noty wydań 147–158.
+// Źródło: dokumentacja Microsoft Edge (web-platform), wpis o Aion Instruct z 19.11.2026
+// oraz edge://flags w Edge 158 Stable i 160 Canary.
 const EDGE_STATUS = {
-  verifiedAt: '2026-11-07',
-  stable: 157,
-  beta: 158,
-  nextStableDate: '2026-11-19',
-  dev: 159,
+  verifiedAt: '2026-11-21',
+  stable: 158,
+  beta: 159,
+  dev: 160,
   canary: 160,
+  model: 'Aion Instruct',
+  modelCard: 'https://huggingface.co/microsoft/Aion-1.0-Instruct-2.3B',
+  announcement: 'https://blogs.windows.com/msedgedev/2026/11/19/hybrid-intelligence-on-the-web-introducing-aion-instruct-and-prompt-api-in-microsoft-edge/',
   docs: 'https://learn.microsoft.com/microsoft-edge/web-platform/prompt-api',
   demos: 'https://microsoftedge.github.io/Demos/built-in-ai/',
   insider: 'https://www.microsoft.com/edge/download/insider',
   apis: [
     { id: 'prompt', state: 'preview', doc: 'prompt-api', note:
-      'Canary/Dev 138+. Flaga <em>Prompt API for on-device language model</em> (wewnętrznie ' +
-      '<code>edge-llm-prompt-api-for-phi-mini</code> w Stable 155, <code>edge-llm-prompt-api-for-default</code> w Dev 157). ' +
-      'Origin trial był w notach Edge 149–150; <code>topK</code>/<code>temperature</code> mają osobny OT (w notach 155–158).' },
-    { id: 'summarizer', state: 'insider', doc: 'writing-assistance-apis', note:
-      'Włączone domyślnie w Canary/Dev od 138.0.3309.2 (developer preview); Microsoft nie opisuje Stable.' },
+      'Developer preview od Edge 158, także w Stable: flaga <em>Prompt API</em> (<code>edge://flags/#edge-prompt-api</code>). ' +
+      'Model: Aion Instruct. Dla stron WWW jest też origin trial; Microsoft opisuje go tylko dla domen HTTPS, ' +
+      'nie dla rozszerzeń.' },
+    { id: 'summarizer', state: 'preview', doc: 'writing-assistance-apis', note:
+      'Developer preview od Edge 158, flaga <em>Summarizer API</em>. Model: Aion Instruct.' },
     { id: 'translator', state: 'default', doc: 'translator-api', note:
-      'Od Edge 148, własny model tłumaczeń wbudowany w Edge (nie Phi-4-mini).' },
+      'Od Edge 148, własny model tłumaczeń wbudowany w Edge (nie Aion Instruct).' },
     { id: 'detector', state: 'default', doc: 'languagedetector-api', note:
       'Od Edge 148; od 151 rozróżnia <code>zh-Hant</code> i <code>zh-Hans</code>.' },
     { id: 'writer', state: 'preview', doc: 'writing-assistance-apis', note:
-      'Canary/Dev 138+, flaga <em>Writer API for on-device language model</em> (do Edge 149: „… for Phi mini”). ' +
-      'Origin trial wygasł 21.04.2026.' },
+      'Developer preview od Edge 158, flaga <em>Writer API</em>. Od 158 tekst ma niewidoczny znak wodny „wygenerowane przez AI”.' },
     { id: 'rewriter', state: 'preview', doc: 'writing-assistance-apis', note:
-      'Canary/Dev 138+, flaga <em>Rewriter API for on-device language model</em>. Origin trial wygasł 21.04.2026.' },
+      'Developer preview od Edge 158, flaga <em>Rewriter API</em>. Znak wodny jak w Writer API.' },
     { id: 'proofreader', state: 'preview', doc: 'proofreader-api', note:
-      'Canary/Dev 142+, flaga <em>Proofreader API for Phi mini</em>. Origin trial wygasł 19.05.2026.' },
-    { id: 'decisions', state: 'none', note: 'Brak w dokumentacji i notach wydań Edge.' },
+      'Developer preview od Edge 158, flaga <em>Proofreader API</em>.' },
+    { id: 'decisions', state: 'preview', doc: 'decisions-api', note:
+      'Developer preview, flaga <em>Decisions API</em> (<code>edge://flags/#edge-decisions-api</code>). Microsoft opisuje ją ' +
+      'dla Canary, ale flaga jest też w Edge 158 Stable. Model: Aion Instruct. Ten sam kształt co w Chrome: ' +
+      '<code>DecisionModel.availability()</code>, <code>create()</code>, <code>decide()</code>.' },
     { id: 'embedder', state: 'none', note: 'Brak w dokumentacji i notach wydań Edge.' },
     { id: 'webmcp', state: 'ot', note: 'Origin trial (noty wydań Edge 150–156).' },
   ],
@@ -936,8 +941,7 @@ const EDGE_STATUS = {
 
 const EDGE_STATE_META = {
   default: { label: '✅ Włączone domyślnie', cls: 'av-ok' },
-  insider: { label: '✅ Domyślnie w Canary/Dev', cls: 'av-ok' },
-  preview: { label: '🧪 Flaga, Canary/Dev', cls: 'av-dl' },
+  preview: { label: '🧪 Flaga (developer preview)', cls: 'av-dl' },
   ot:      { label: 'Origin Trial', cls: 'av-pending' },
   none:    { label: '🚫 Brak w Edge', cls: 'av-no' },
 };

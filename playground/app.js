@@ -317,10 +317,12 @@ function renderEdge() {
 
   main.appendChild(el('h1', { text: 'Microsoft Edge — wbudowane AI' }));
   main.appendChild(el('p', { class: 'lead', html:
-    `Edge ma <strong>te same API</strong> co Chrome (<code>LanguageModel</code>, <code>Translator</code>…), ale z innymi
-     modelami (Phi-4-mini lub Aion-1.0-Instruct zamiast Gemini Nano) i innym stanem wdrożenia. Dema w tym środowisku
-     działają w Edge, gdy dane API jest włączone. Stan na <strong>${edge.verifiedAt}</strong>: Edge ${edge.stable} Stable,
-     ${edge.beta} Beta (Stable ${edge.nextStableDate}), ${edge.dev} Dev, ${edge.canary} Canary.` }));
+    `Edge ma <strong>te same API</strong> co Chrome (<code>LanguageModel</code>, <code>Translator</code>…), ale z innym
+     modelem i innym stanem wdrożenia. Od 19.11.2026 wbudowanym modelem jest
+     <a target="_blank" rel="noopener" href="${edge.modelCard}">${edge.model}</a> (2,3 mld parametrów) zamiast Phi-4-mini;
+     w Chrome to Gemini Nano. Dema w tym środowisku działają w Edge, gdy dane API jest włączone.
+     Stan na <strong>${edge.verifiedAt}</strong>: Edge ${edge.stable} Stable, ${edge.beta} Beta, ${edge.dev} Dev,
+     ${edge.canary} Canary.` }));
 
   const card = el('div', { class: 'card' });
   card.appendChild(el('h2', { text: 'API w Edge' }));
@@ -346,25 +348,27 @@ function renderEdge() {
   main.appendChild(card);
 
   const setup = el('div', { class: 'card' });
-  setup.appendChild(el('h2', { text: 'Jak włączyć (Canary/Dev)' }));
+  setup.appendChild(el('h2', { text: `Jak włączyć (Edge ${edge.stable}+)` }));
   setup.appendChild(el('ol', { class: 'links' }, [
-    el('li', { html: `Zainstaluj <a target="_blank" rel="noopener" href="${edge.insider}">Edge Canary lub Dev</a>.` }),
+    el('li', { html: `Użyj Edge ${edge.stable} lub nowszego. Flagi są też w Stable; nowsze kompilacje to ` +
+      `<a target="_blank" rel="noopener" href="${edge.insider}">Edge Beta, Dev i Canary</a>.` }),
     el('li', { html: 'W <code>edge://flags</code> włącz flagę danego API (nazwy w tabeli) i uruchom Edge ponownie.' }),
     el('li', { html: 'W <code>edge://on-device-internals</code> sprawdź <em>Device performance class</em>: ' +
-      '<strong>High</strong> lub wyżej obsługuje Phi-4-mini (GPU).' }),
-    el('li', { html: 'Przy klasie Medium/Low albo gdy sesja Phi-4-mini się wysypuje: włącz <em>Enable prerelease on-device ' +
-      'language model</em> (Canary/Dev 150.0.4070+) — Aion-1.0-Instruct działa na CPU i zastępuje Phi-4-mini.' }),
+      `<strong>Medium</strong> lub wyżej obsługuje ${edge.model}.` }),
+    el('li', { html: 'W Ustawienia → Copilot i AI włącz <em>On-device AI</em>. W Canary, Dev i Beta ta opcja jest ' +
+      'domyślnie wyłączona; włączenie flagi API włącza ją automatycznie.' }),
   ]));
   setup.appendChild(el('ul', { class: 'tips' }, [
-    el('li', { html: '<strong>Sprzęt:</strong> Windows 10/11 lub macOS 13.3+, 5,5 GB VRAM, 20 GB wolnego miejsca ' +
-      '(poniżej 10 GB model jest usuwany), sieć bez limitu danych.' }),
-    el('li', { html: 'Edge nie ma odpowiednika <code>chrome://settings/ai</code>. Administrator może wyłączyć model ' +
-      'polityką <code>GenAILocalFoundationalModelSettings</code>.' }),
+    el('li', { html: '<strong>Sprzęt:</strong> Windows 10/11, macOS 13.3+ albo 64-bitowy Linux ze sterownikami Vulkan ' +
+      '(od Edge 159); 3 GB VRAM, 20 GB wolnego miejsca (poniżej 5 GB model jest usuwany), sieć bez limitu danych.' }),
+    el('li', { html: 'Administrator może wyłączyć model politykami <code>GenAILocalFoundationalModelSettings</code> ' +
+      'lub <code>ComponentUpdatesEnabled</code>.' }),
   ]));
   main.appendChild(setup);
 
   main.appendChild(el('p', { class: 'muted', html:
     `Źródła: <a target="_blank" rel="noopener" href="${edge.docs}">Prompt API w Edge</a> · ` +
+    `<a target="_blank" rel="noopener" href="${edge.announcement}">wpis o ${edge.model}</a> · ` +
     `<a target="_blank" rel="noopener" href="https://learn.microsoft.com/microsoft-edge/web-platform/release-notes/">noty wydań Edge</a> · ` +
     `<a target="_blank" rel="noopener" href="${edge.demos}">dema Microsoftu</a>` }));
 }
@@ -623,7 +627,7 @@ function injectBanner(main) {
     if (location.hash === '#edge') return;
     const edgeBanner = el('div', { class: 'banner' }, [
       el('span', { html: '⚠️ <strong>Prompt API</strong> nie jest dostępne w tym Edge. W Edge to wciąż developer preview: ' +
-        'Canary lub Dev i flaga w <code>edge://flags</code>. Zobacz <a href="#edge">stan API w Edge</a>; ' +
+        'Edge 158+ i flaga <em>Prompt API</em> w <code>edge://flags</code>. Zobacz <a href="#edge">stan API w Edge</a>; ' +
         'Translator i Language Detector działają domyślnie od Edge 148.' }),
       el('button', { class: 'banner-x', text: '✕', title: 'Ukryj',
         onclick: () => { sessionStorage.setItem('cv-banner-dismissed', '1'); edgeBanner.remove(); } }),
